@@ -1,7 +1,8 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
+  /* max-width: 1280px;  ← 제거좁아짐 원인 */
+  max-width: none;          /*  전체 폭 사용 */
   margin: 0 auto;
   padding: 2rem;
   font-weight: normal;
@@ -23,13 +24,13 @@ a,
 
 @media (min-width: 1024px) {
   body {
-    display: flex;
-    place-items: center;
+
+    display: block;             /* 중앙 정렬로 좁아지는 것 방지 */
+    place-items: initial;
   }
 
   #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: block;             /*   반만 차는 현상 방지 */
     padding: 0 2rem;
   }
 }
