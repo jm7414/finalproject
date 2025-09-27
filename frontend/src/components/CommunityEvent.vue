@@ -1,138 +1,118 @@
-<template>
-  <div class="post-container">
-    <div class="filter-buttons">
-      <button class="filter-button active">실종</button>
-      <button class="filter-button">게시글</button>
-      <button class="filter-button">이벤트</button>
-    </div>
-
-    <div class="content-card">
-      <div class="profile-image">
-        </div>
-      <div class="user-info">
-        <p class="user-details">홍길동 / 남 / 72세</p>
-        <p class="post-time">N 시간 전</p>
-      </div>
-    </div>
-
-    </div>
-</template>
-
 <script setup>
-// 이 화면은 정적 UI이므로 스크립트 로직은 비워둡니다.
+import { ref, onMounted, onUnmounted } from 'vue';
+
+// 웹 화면용 내비게이션 아이템
+const navItems = ['일정', '기록', '홈', '긴급', '종합지원'];
+
+// 헤더가 보이는지 여부를 저장하는 변수. 기본값은 true (보임)
+const isHeaderVisible = ref(true);
+// 마지막 스크롤 위치를 저장하는 변수
+const lastScrollY = ref(0);
+
+// 스크롤 이벤트를 감지하는 함수
+const handleScroll = () => {
+  const currentScrollY = window.scrollY;
+
+  // 페이지 최상단에서는 항상 헤더를 보여줌
+  if (currentScrollY < 50) {
+    isHeaderVisible.value = true;
+    lastScrollY.value = currentScrollY;
+    return;
+  }
+  
+  // 스크롤을 내릴 때 (현재 위치 > 이전 위치) 헤더를 숨김
+  if (currentScrollY > lastScrollY.value) {
+    isHeaderVisible.value = false;
+  } 
+  // 스크롤을 올릴 때 (현재 위치 < 이전 위치) 헤더를 보여줌
+  else {
+    isHeaderVisible.value = true;
+  }
+
+  // 마지막 스크롤 위치를 현재 위치로 업데이트
+  lastScrollY.value = currentScrollY;
+};
+
+// 컴포넌트가 화면에 나타나면 스크롤 이벤트를 감지하기 시작
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll);
+});
+
+// 컴포넌트가 화면에서 사라지면 이벤트 감지를 중단
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
 </script>
 
+<template>
+  <header class="app-header" :class="{ 'header-hidden': !isHeaderVisible }">
+    <div class="icon-wrapper mobile-only">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path></svg>
+    </div>
+
+    <div class="app-title">치매케어</div>
+
+    <nav class="header-desktop-nav">
+      <a href="#" v-for="item in navItems" :key="item">{{ item }}</a>
+    </nav>
+    
+    <div class="icon-wrapper">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+    </div>
+  </header>
+</template>
+
 <style scoped>
-/* 전체적인 폰트 스타일 및 박스 크기 계산법 설정 */
-* {
-  box-sizing: border-box;
-  font-family: 'Quicksand', sans-serif; /* 'Quicksand' 폰트가 시스템에 설치되어 있어야 합니다. */
-}
-
-/* 가장 바깥쪽 흰색 카드 컨테이너 (수정됨) */
-.post-container {
+/* --- 기본 (보이는 상태) 스타일 --- */
+.app-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  padding: 24px;
-  gap: 20px;
-  
-  /* --- 수정된 부분 --- */
-  width: 100%; /* 너비를 100%로 채움 */
-  max-width: 500px; /* 최대 너비는 375px로 제한 */
-  margin: 20px auto; /* 페이지 중앙에 보이도록 자동 마진 추가 */
-
-  height: 800px;
-  
-
-  /* height 속성은 제거하여 내용에 따라 높이가 결정되도록 함 */
-  
-  background: #FFFFFF;
-  box-shadow: 0px 0px 40px rgba(0, 0, 0, 0.15);
-  border-radius: 32px;
-}
-
-/* 필터 버튼들을 감싸는 컨테이너 */
-.filter-buttons {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
   width: 100%;
-}
-
-/* 기본 필터 버튼 스타일 (수정됨) */
-.filter-button {
-  /* --- 추가된 부분 --- */
-  flex: 1; /* 사용 가능한 공간을 1:1:1 비율로 나눠가짐 */
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  height: 80px; /* 기본 헤더 높이 */
+  padding: 0 24px;
+  background-color: rgba(255, 255, 255, 0.85);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   
-  height: 30px;
-  padding: 0 16px; 
-  border-radius: 15px;
-  border: 1px solid #40B59F;
-  background: #FFFFFF;
+  /* 부드러운 전환 효과 (transform에 적용) */
+  transition: transform 0.4s ease-in-out;
+}
+
+/* --- 헤더를 숨기는 스타일 --- */
+.app-header.header-hidden {
+  /* transform을 사용해 헤더를 자신의 높이(-100%)만큼 위로 밀어올림 */
+  transform: translateY(-100%);
+}
+
+.app-title { font-size: 18px; font-weight: 700; color: #333; }
+.icon-wrapper .icon { width: 24px; height: 24px; fill: #000000; }
+.header-desktop-nav { display: none; }
+
+
+/* --- 화면이 768px 이상일 때 (웹) 스타일 --- */
+@media (min-width: 768px) {
+  /* 웹, 보이는 상태 */
+  .app-header {
+    height: 90px;
+    background-color: rgba(142, 151, 253, 0.95);
+    box-shadow: 0 5px 15px rgba(45, 55, 158, 0.2);
+    padding: 0 40px;
+  }
   
-  font-weight: 700;
-  font-size: 15px;
-  color: #40B59F;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* 활성화된 필터 버튼 스타일 */
-.filter-button.active {
-  background: #40B59F;
-  color: #FFFFFF;
-  border: none;
-}
-
-/* 정보가 담긴 콘텐츠 카드 */
-.content-card {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  
-  width: 100%;
-  padding: 12px;
-  gap: 16px;
-  
-  background: #FFFFFF;
-  border: 1px solid #40B59F;
-  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
-  border-radius: 15px;
-}
-
-/* 프로필 이미지 (자리만 잡아둠) */
-.profile-image {
-  width: 70px;
-  height: 70px;
-  border-radius: 15px;
-  background-color: #f0f0f0;
-  flex-shrink: 0;
-}
-
-/* 사용자 정보 텍스트 영역 */
-.user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* 유저 상세 정보 (이름/성별/나이) */
-.user-details {
-  margin: 0;
-  font-weight: 700;
-  font-size: 16px;
-  color: #3E4958;
-}
-
-/* 포스팅 시간 */
-.post-time {
-  margin: 0;
-  font-size: 13px;
-  color: #97ADB6;
+  /* ... (나머지 웹 스타일은 이전과 동일) ... */
+  .app-title { color: #FFFFFF; }
+  .icon-wrapper.mobile-only { display: none; }
+  .icon-wrapper .icon { fill: #FFFFFF; }
+  .header-desktop-nav {
+    display: flex; gap: 30px; position: absolute; left: 50%; transform: translateX(-50%);
+  }
+  .header-desktop-nav a { color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 16px; }
 }
 </style>
