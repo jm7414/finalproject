@@ -15,7 +15,7 @@ const router = createRouter({
     {
       path: '/about',
       name: 'about',
-      component: () => import('../views/AboutView.vue'),
+
       component: AboutView,
     },
     {
@@ -34,6 +34,11 @@ const router = createRouter({
       component: () => import('../views/CommunityView.vue'),
     },
     {
+      path: '/predict-location',
+      name: 'predict-location',
+      component: () => import('../views/PredictLocation.vue'),
+    },
+    {
       path: '/CommunityMissing',
       name: 'CommunityMissing',
       component: () => import('../components/CommunityMissing.vue'),
@@ -48,15 +53,6 @@ const router = createRouter({
       name: 'CommunityEvent',
       component: () => import('../components/CommunityEvent.vue'),
     },        
-      path: '/post',
-      name: 'post',
-      component: () => import('../views/Post.vue'),
-    },
-    {
-      path: '/predict-location',
-      name: 'predict-location',
-      component: () => import('../views/PredictLocation.vue'),
-    },
   ],
 })
 
