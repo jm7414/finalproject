@@ -1,82 +1,129 @@
 <script setup>
 import { ref } from 'vue';
 
-// 실제로는 서버에서 받아올 게시물 데이터 예시입니다.
-// 이 배열의 내용이 바뀌면 화면도 자동으로 바뀝니다.
-const post = ref([
-  { id: 3, title: '게시물 3', time: 'N 시간 전' },
-  { id: 2, title: '게시물 2', time: 'N 시간 전' },
-  { id: 1, title: '게시물 1', time: 'N 시간 전' },
-  // { id: 4, title: '새 게시물', time: '방금 전' }, // <- 이 줄의 주석을 풀면 아이템이 추가됩니다.
+import image1 from '@/assets/images/Post.jpg';
+
+// '게시글 목록'에 해당하는 데이터 예시입니다.
+const posts = ref([
+  { 
+    id: 1, 
+    title: '오목 초보만', 
+    content: '13시 점심먹고 ㄱㄱ', 
+    time: '1 시간 전' 
+  },
+  { 
+    id: 2, 
+    title: '꽃이.예쁘네요...', 
+    content: '꽃게.입니다.', 
+    time: '3 시간 전',
+    image: image1
+  },
+  // ... 나중에 실제 데이터가 이 배열에 들어옵니다.
 ]);
 </script>
 
 <template>
   <div class="post-list-container">
-    <div v-for="post in post" :key="post.id" class="post-card">
-      <div class="post-image-placeholder"></div>
-      <div class="post-info">
-        <p class="post-title">{{ post.title }}</p>
-      </div>
-      <div class="post-time">
-        <span>{{ post.time }}</span>
+    <button class="fab-button">+</button>
+
+    <div 
+      v-for="post in posts" 
+      :key="post.id" 
+      class="post-card"
+    >
+      <div class="card-content">
+        <h3 class="post-title">{{ post.title }}</h3>
+        <p class="post-body">{{ post.content }}</p>
+        
+        <img v-if="post.image" :src="post.image" alt="게시물 이미지" class="post-image">
+
+        <span class="post-time">{{ post.time }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 게시물 목록 전체를 감싸는 컨테이너 */
 .post-list-container {
   display: flex;
-  flex-direction: column; /* 아이템들을 세로로 쌓습니다 */
-  gap: 16px; /* 아이템 사이의 간격 */
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
+  position: relative; /* FAB 버튼의 기준점이 되기 위해 필요 */
 }
 
-/* 개별 게시물 카드 */
+/* 카드 전체 스타일 */
 .post-card {
-  display: flex;
-  flex-direction: row; /* 카드 내부 요소들을 가로로 배치 */
-  align-items: center; /* 세로 중앙 정렬 */
+  padding: 20px;
   width: 100%;
-  padding: 12px;
-  
   background: #FFFFFF;
-  border: 1px solid #40B59F;
-  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid #E0E0E0; /* 연한 회색 테두리 */
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.07);
   border-radius: 15px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-/* 게시물 이미지 (자리만 잡아둠) */
-.post-image-placeholder {
-  width: 70px;
-  height: 50px;
-  border-radius: 10px;
-  background-color: #f0f0f0; /* 이미지가 없을 때 회색으로 표시 */
-  flex-shrink: 0; /* 크기가 줄어들지 않도록 설정 */
-  margin-right: 16px; /* 오른쪽 텍스트와의 간격 */
+/* 마우스를 올렸을 때 살짝 커지는 효과 */
+.post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* 게시물 정보 (제목) */
-.post-info {
-  flex-grow: 1; /* 남는 공간을 모두 차지하도록 설정 */
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 내부 요소들 사이의 간격 */
 }
 
 .post-title {
   margin: 0;
-  font-family: 'Quicksand', sans-serif;
   font-weight: 700;
-  font-size: 18px;
-  color: #40B59F;
+  font-size: 16px;
+  color: #3F414E;
 }
 
-/* 게시물 시간 */
+.post-body {
+  margin: 0;
+  font-size: 14px;
+  color: #555761;
+  line-height: 1.5;
+}
+
+.post-image {
+  width: 100%;
+  height: auto; /* 이미지 비율 유지 */
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
 .post-time {
-  font-family: 'Quicksand', sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  color: #40B59F;
-  white-space: nowrap; /* 시간이 줄바꿈되지 않도록 설정 */
+  margin-top: 12px;
+  font-size: 12px;
+  color: #a0a0a0;
+  text-align: right; /* 시간 텍스트를 오른쪽으로 정렬 */
+}
+
+/* 글 작성 버튼 (Floating Action Button) */
+.fab-button {
+  position: fixed; /* 화면에 고정 */
+  bottom: 100px; /* 푸터 높이를 고려한 위치 */
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%; /* 원형 버튼 */
+  background-color: #808AFF; /* 보라색 배경 */
+  color: white;
+  font-size: 32px;
+  line-height: 56px;
+  text-align: center;
+  border: none;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 900;
+  transition: transform 0.2s ease;
+}
+.fab-button:hover {
+  transform: scale(1.05); /* 마우스 올리면 살짝 커짐 */
 }
 </style>

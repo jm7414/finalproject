@@ -1,172 +1,103 @@
 <script setup>
-
 import { ref } from 'vue';
 
-function changeTab(tabName) {
-  activeTab.value = tabName;
-}
-const activeTab = ref('Post');
+import image1 from '@/assets/images/Missing.jpg';
 
+
+// '실종자 목록'에 해당하는 데이터 예시입니다.
+const missingPeople = ref([
+  { id: 1, image: image1, name: '오일남', age: 76, gender: '남', time: '12 시간 전' },
+  { id: 2, image: '', name: '이영희', age: 82, gender: '여', time: '2 일 전' },
+  // ... 나중에 실제 데이터가 이 배열에 들어옵니다.
+]);
 </script>
 
-
 <template>
-  <div class="post-container">
-    <div class="filter-buttons">
-      <button class="filter-button"
-        :class="{ active: activeTab === 'Missing' }"
-        @click="changeTab('Missing')">
-        실종
-      </button>
-      <button class="filter-button"
-        :class="{ active: activeTab === 'Post' }"
-        @click="changeTab('Post')">
-        게시글
-      </button>
-      <button class="filter-button"
-        :class="{ active: activeTab === 'Event' }"
-        @click="changeTab('Event')">
-        이벤트
-      </button>
-    </div>
-
-    <div class="content-area">
-      <div v-if="activeTab === 'Missing'">
-        <p>실종자 목록이 여기에 표시됩니다.</p>
-        </div>
-      <div v-if="activeTab === 'Post'">
-        <CommunityPost /> 
-        </div>
-      <div v-if="activeTab === 'Event'">
-        <p>이벤트 목록이 여기에 표시됩니다.</p>
-        </div>
-    </div>
-
-    <div class="content-card">
-      <div class="profile-image">
+  <div class="list-container">
+    <div 
+      v-for="person in missingPeople" 
+      :key="person.id" 
+      class="list-card"
+      @click="handleCardClick(person.id)"
+    >
+      <div class="image-placeholder">
+        <span class="image-text">사진</span>
       </div>
-      <div class="user-info">
-        <p class="user-details">홍길동 / 남 / 72세</p>
-        <p class="post-time">N 시간 전</p>
+      <div class="info-area">
+        <p class="name-details">{{ person.name }} / {{ person.age }}세 / {{ person.gender }}</p>
+        <p class="time-stamp">{{ person.time }}</p>
       </div>
     </div>
-
   </div>
 </template>
 
-
-
 <style scoped>
-/* 전체적인 폰트 스타일 및 박스 크기 계산법 설정 */
-* {
-  box-sizing: border-box;
-  font-family: 'Quicksand', sans-serif;
-  /* 'Quicksand' 폰트가 시스템에 설치되어 있어야 합니다. */
-}
-
-/* 가장 바깥쪽 흰색 카드 컨테이너 (수정됨) */
-.post-container {
+.list-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 24px;
-  gap: 20px;
-
-  /* --- 수정된 부분 --- */
+  gap: 16px;
   width: 100%;
-  /* 너비를 100%로 채움 */
-  max-width: 500px;
-  /* 최대 너비는 375px로 제한 */
-  margin: 20px auto;
-  /* 페이지 중앙에 보이도록 자동 마진 추가 */
-  height: 800px;
-  background: #FFFFFF;
-  box-shadow: 0px 0px 40px rgba(0, 0, 0, 0.15);
-  border-radius: 32px;
 }
 
-/* 필터 버튼들을 감싸는 컨테이너 */
-.filter-buttons {
+/* 카드 전체 스타일, 클릭 가능하도록 cursor: pointer 추가 */
+.list-card {
   display: flex;
-  flex-direction: row;
-  gap: 12px;
+  flex-direction: row; /* 이미지와 텍스트를 가로로 배치 */
+  align-items: center; /* 세로 중앙 정렬 */
+  padding: 16px;
   width: 100%;
+  
+  background: #FFFFFF;
+  border: 1px solid #808AFF; /* Figma 디자인의 보라색 테두리 */
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-/* 기본 필터 버튼 스타일 (수정됨) */
-.filter-button {
-  /* --- 추가된 부분 --- */
-  flex: 1;
-  /* 사용 가능한 공간을 1:1:1 비율로 나눠가짐 */
+/* 마우스를 올렸을 때 살짝 커지는 효과 */
+.list-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.12);
+}
 
+.image-placeholder {
+  width: 90px;
+  height: 90px;
+  border-radius: 12px;
+  background-color: #f0f0f0;
+  flex-shrink: 0;
+  margin-right: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
+}
 
-  height: 30px;
-  padding: 0 16px;
-  border-radius: 15px;
-  border: 1px solid #40B59F;
-  background: #FFFFFF;
-
+.image-text {
   font-weight: 700;
-  font-size: 15px;
-  color: #40B59F;
-  cursor: pointer;
-  white-space: nowrap;
+  color: #a0a0a0;
 }
 
-/* 활성화된 필터 버튼 스타일 */
-.filter-button.active {
-  background: #40B59F;
-  color: #FFFFFF;
-  border: none;
-}
-
-/* 정보가 담긴 콘텐츠 카드 */
-.content-card {
+.info-area {
+  flex-grow: 1; /* 남는 공간을 모두 차지 */
   display: flex;
-  flex-direction: row;
-  align-items: center;
-
-  width: 100%;
-  padding: 12px;
-  gap: 16px;
-
-  background: #FFFFFF;
-  border: 1px solid #40B59F;
-  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
-  border-radius: 15px;
+  flex-direction: column; /* 텍스트들을 세로로 배치 */
+  justify-content: space-between; /* 위아래로 텍스트를 떨어트림 */
+  align-self: stretch; /* info-area가 카드 높이를 꽉 채우도록 설정 */
+  padding: 4px 0; /* 위아래 약간의 여백 */
 }
 
-/* 프로필 이미지 (자리만 잡아둠) */
-.profile-image {
-  width: 70px;
-  height: 70px;
-  border-radius: 15px;
-  background-color: #f0f0f0;
-  flex-shrink: 0;
-}
-
-/* 사용자 정보 텍스트 영역 */
-.user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* 유저 상세 정보 (이름/성별/나이) */
-.user-details {
+.name-details {
   margin: 0;
   font-weight: 700;
-  font-size: 16px;
-  color: #3E4958;
+  font-size: 18px;
+  color: #3F414E;
 }
 
-/* 포스팅 시간 */
-.post-time {
+.time-stamp {
   margin: 0;
-  font-size: 13px;
-  color: #97ADB6;
+  font-size: 14px;
+  color: #a0a0a0;
+  text-align: right; /* 시간 텍스트를 오른쪽으로 정렬 */
 }
 </style>
