@@ -28,10 +28,25 @@ const router = createRouter({
       component: GD_main,
     },
     {
-      path: '/post',
-      name: 'post',
-      component: () => import('../views/Post.vue'),
+      path: '/CommunityView',
+      name: 'CommunityView',
+      component: () => import('../views/CommunityView.vue'),
     },
+    {
+      path: '/CommunityMissing',
+      name: 'CommunityMissing',
+      component: () => import('../components/CommunityMissing.vue'),
+    },
+    {
+      path: '/CommunityPost',
+      name: 'CommunityPost',
+      component: () => import('../components/CommunityPost.vue'),
+    },
+    {
+      path: '/CommunityEvent',
+      name: 'CommunityEvent',
+      component: () => import('../components/CommunityEvent.vue'),
+    },        
   ],
 })
 
