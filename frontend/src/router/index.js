@@ -22,6 +22,11 @@ const router = createRouter({
       name: 'post',
       component: () => import('../views/Post.vue'),
     },
+    {
+      path: '/predict-location',
+      name: 'predict-location',
+      component: () => import('../views/PredictLocation.vue'),
+    },
   ],
 })
 
