@@ -1,19 +1,16 @@
-<script setup>
-import AppHeader from './components/AppHeader.vue';
-import AppFooter from './components/AppFooter.vue';
-</script>
-
 <template>
   <div class="app-layout">
     <AppHeader />
     <main class="main-content">
       <RouterView /> </main>
-    <AppFooter />
-  </div>
+      <AppFooter />
+    </div>
 </template>
 
 
 <script setup>
+import AppHeader from './components/AppHeader.vue';
+import AppFooter from './components/AppFooter.vue';
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
 
@@ -51,7 +48,6 @@ function select(val) {
     case 'support': router.push({ name: 'support' }); break
   }
 }
->>>>>>>>> Temporary merge branch 2
 </script>
 
 <style scoped>
