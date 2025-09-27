@@ -15,17 +15,12 @@ const router = createRouter({
     {
       path: '/about',
       name: 'about',
-      component: AboutView,
+      component: () => import('../views/AboutView.vue'),
     },
     {
-      path: '/DP',
-      name: 'DP',
-      component: DP_main,
-    },
-    {
-      path: '/GD',
-      name: 'GD',
-      component: GD_main,
+      path: '/post',
+      name: 'post',
+      component: () => import('../views/Post.vue'),
     },
   ],
 })
