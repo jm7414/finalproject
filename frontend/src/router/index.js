@@ -15,14 +15,39 @@ const router = createRouter({
     {
       path: '/about',
       name: 'about',
-      component: () => import('../views/AboutView.vue'),
+      component: AboutView,
     },
     {
-      path: '/post',
-      name: 'post',
-      component: () => import('../views/Post.vue'),
+      path: '/DP',
+      name: 'DP',
+      component: DP_main,
     },
     {
+      path: '/GD',
+      name: 'GD',
+      component: GD_main,
+    },
+    {
+      path: '/CommunityView',
+      name: 'CommunityView',
+      component: () => import('../views/CommunityView.vue'),
+    },
+    {
+      path: '/CommunityMissing',
+      name: 'CommunityMissing',
+      component: () => import('../components/CommunityMissing.vue'),
+    },
+    {
+      path: '/CommunityPost',
+      name: 'CommunityPost',
+      component: () => import('../components/CommunityPost.vue'),
+    },
+    {
+      path: '/CommunityEvent',
+      name: 'CommunityEvent',
+      component: () => import('../components/CommunityEvent.vue'),
+    },        
+        {
       path: '/predict-location',
       name: 'predict-location',
       component: () => import('../views/PredictLocation.vue'),
