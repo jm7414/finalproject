@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
-import image1 from '@/assets/images/Missing.jpg';
+import image1 from '@/assets/images/Missing1.jpg';
+import image2 from '@/assets/images/Missing2.jpg';
 
 // 상세 정보가 포함된 실종자 목록 데이터 예시
 const missingPeople = ref([
@@ -8,8 +9,8 @@ const missingPeople = ref([
     id: 1,
     name: '오일남',
     age: 79,
-    timeSinceMissing: '3 시간',
-    missingTimestamp: '2025.09.28 13:35',
+    timeSinceMissing: '2 시간',
+    missingTimestamp: '2025.09.28 11:35',
     viewCount: 23,
     image: image1 , // 예시 이미지
     details: {
@@ -18,20 +19,7 @@ const missingPeople = ref([
       '함께하는 이웃': '3 명',
     },
   },
-  {
-    id: 2,
-    name: '김철수',
-    age: 78,
-    timeSinceMissing: '12 시간',
-    missingTimestamp: '2025.09.28 04:30',
-    viewCount: 45,
-    image: image1, // 이미지가 없는 경우
-    details: {
-      '실종 복장': '회색 점퍼와 검은 바지',
-      '예측 위치': '서울역 인근',
-      '함께하는 이웃': '5 명',
-    },
-  },
+  
 ]);
 
 function openMap(person) {
@@ -125,8 +113,8 @@ function joinSearch(person) {
 
 .profile-image,
 .profile-image-placeholder {
-  width: 120px;
-  height: 120px;
+  width: 135px;
+  height: 135px;
   border-radius: 15px;
   object-fit: cover;
   flex-shrink: 0;
@@ -145,7 +133,7 @@ function joinSearch(person) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .info-summary p {
@@ -153,7 +141,7 @@ function joinSearch(person) {
 }
 
 .info-summary .timestamp {
-  font-size: 14px;
+  font-size: 16px;
   color: #888;
 }
 
@@ -172,9 +160,10 @@ function joinSearch(person) {
 }
 
 .section-title {
-  font-size: 20px;
+  font-size: 30px;
   margin-top: 0;
   margin-bottom: 16px;
+  
 }
 
 .detail-item {
@@ -184,14 +173,18 @@ function joinSearch(person) {
 }
 
 .detail-key {
-  width: 100px;
+  width: 200px;
   font-weight: 600;
+  font-size: 20px;
   color: #555;
   flex-shrink: 0;
 }
 
 .detail-value {
   color: #333;
+  font-weight: 600;
+  font-size: 18px;
+  margin: 4px;
 }
 
 .card-actions {

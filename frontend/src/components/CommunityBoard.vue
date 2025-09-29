@@ -8,7 +8,7 @@ const posts = ref([
     id: 1, 
     author: '오일남',
     title: '치매에 좋은 음식', 
-    stats: { comments: 3, likes: 10, views: 23 },
+    stats: { comments: 1, likes: 0, views: 6 },
     time: '1 시간 전' 
   },
   { 
@@ -16,7 +16,7 @@ const posts = ref([
     author: '오일남',
     title: '꽃이 이쁘네요', 
     image: image1,
-    stats: { comments: 3, likes: 10, views: 23 },
+    stats: { comments: 2, likes: 7, views: 23 },
     time: '3 시간 전'
   },
 ]);
@@ -24,9 +24,9 @@ const posts = ref([
 const router = useRouter(); // 2. 라우터 인스턴스 생성
 
 // 3. 클릭 시 실행될 함수 정의
-function goToPostDetail(postId) {
-  // '/post/1', '/post/2' 와 같은 경로로 페이지를 이동시킵니다.
-  router.push(`/post/${postId}`);
+function goToPost(postId) {
+  // router.push(`/post/${postId}`);
+  router.push(`/CommunityPost`);
 }
 
 function goToPostWrite() {
@@ -39,7 +39,7 @@ function goToPostWrite() {
   <div class="post-list-container">
     <div class="sort-selector-wrapper">
       <select class="sort-selector">
-        <option>게시일</option>
+        <option>최신순</option>
         <option>인기순</option>
       </select>
     </div>
@@ -48,7 +48,7 @@ function goToPostWrite() {
       v-for="post in posts" 
       :key="post.id" 
       class="post-card"
-      @click="goToPostDetail(post.id)"
+      @click="goToPost(post.id)"
     >
       <div class="card-header">
         <h3 class="post-title">{{ post.title }}</h3>
