@@ -11,5 +11,6 @@ npm.cmd install axios // 서버에서 API불러올 때 사용함
 // 지겸
 
 // 병욱
+npm install bootstrap-vue-3
 
 // 지현
