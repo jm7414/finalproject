@@ -52,6 +52,13 @@ const router = createRouter({
       name: 'CommunityEvent',
       component: () => import('../components/CommunityEvent.vue'),
     },        
+    // 주형 종합지원 수정 시작
+    {
+      path: '/total-support',
+      name: 'totalSupport',
+      component: () => import('../views/TotalSupport.vue'),
+    },        
+    // 주형 종합지원 수정 끝
   ],
 })
 
