@@ -3,6 +3,8 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import DP_main from '@/views/DP_main.vue'
 import GD_main from '@/views/GD_main.vue'
+import GeoFencingView from '@/views/GeoFencingView.vue'
+import SearchRouteView from '@/views/SearchRouteView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -51,6 +53,16 @@ const router = createRouter({
       path: '/CommunityEvent',
       name: 'CommunityEvent',
       component: () => import('../components/CommunityEvent.vue'),
+    },
+        {
+      path: '/geo-fencing',
+      name: 'geo-fencing',
+      component: GeoFencingView,
+    },
+    {
+      path: '/search-route',
+      name: 'search-route',
+      component: SearchRouteView,
     },        
     // 주형 종합지원, 지원금안내페이지 수정 시작
     {
