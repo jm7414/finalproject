@@ -64,6 +64,18 @@ const router = createRouter({
       name: 'search-route',
       component: SearchRouteView,
     },        
+    // 주형 종합지원, 지원금안내페이지 수정 시작
+    {
+      path: '/total-support',
+      name: 'totalSupport',
+      component: () => import('../views/TotalSupport.vue'),
+    },        
+    {
+      path: '/money-support',
+      name: 'moneySupport',
+      component: () => import('../views/MoneySupport.vue'),
+    },        
+    // 주형 종합지원, 지원금안내페이지 수정 끝
   ],
 })
 
