@@ -52,13 +52,18 @@ const router = createRouter({
       name: 'CommunityEvent',
       component: () => import('../components/CommunityEvent.vue'),
     },        
-    // 주형 종합지원 수정 시작
+    // 주형 종합지원, 지원금안내페이지 수정 시작
     {
       path: '/total-support',
       name: 'totalSupport',
       component: () => import('../views/TotalSupport.vue'),
     },        
-    // 주형 종합지원 수정 끝
+    {
+      path: '/money-support',
+      name: 'moneySupport',
+      component: () => import('../views/MoneySupport.vue'),
+    },        
+    // 주형 종합지원, 지원금안내페이지 수정 끝
   ],
 })
 
