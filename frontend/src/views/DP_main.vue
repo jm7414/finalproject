@@ -1,103 +1,171 @@
 <template>
-  <v-container fluid class="pa-0">
-    <!-- 헤더 -->
-    <v-sheet color="white" class="px-4 pt-4 pb-2">
-      <v-list-item :title="'안녕하세요!'" :subtitle="user.name + '님'" :prepend-avatar="user.avatar">
-        <template #append>
-          <v-btn icon variant="text" density="comfortable" :ripple="false" @click="ping('알림(미구현)')">
-            <v-icon>mdi-bell-outline</v-icon>
-          </v-btn>
-        </template>
-      </v-list-item>
-    </v-sheet>
-    <v-divider />
+  <div class="patient-main-container">
+    <div class="background-decorations"></div>
 
-    <!-- 오늘의 일정 -->
-    <v-container class="py-4">
-      <v-card color="primary" variant="flat" rounded="xl" class="pa-4">
-        <div class="d-flex align-center justify-space-between">
-          <div class="text-white text-subtitle-1 font-weight-medium">오늘의 일정</div>
-          <v-btn icon variant="text" density="comfortable" :ripple="false" @click="ping('캘린더(미구현)')">
-            <v-icon color="white">mdi-calendar-month-outline</v-icon>
-          </v-btn>
+    <div class="schedule-card">
+      <div 
+        v-for="item in scheduleItems" 
+        :key="item.time" 
+        :class="['schedule-item', { 'is-current': item.isCurrent, 'is-past': item.isPast }]"
+      >
+        <span class="time">{{ item.time }}</span> - <span class="task">{{ item.task }}</span>
+      </div>
+    </div>
+
+    <div class="menu-grid">
+      <button 
+        v-for="item in menuItems" 
+        :key="item.id" 
+        :class="['menu-item', `menu-item-${item.id}`]"
+        @click="handleMenuClick(item)"
+      >
+        <div v-if="item.icon" class="icon-wrapper">
+          <img :src="item.icon" :alt="item.title" class="icon" />
         </div>
-
-        <v-card v-for="(it, i) in schedules" :key="i" class="mt-3 pa-3" color="white" variant="tonal" rounded="lg">
-          <div class="d-flex align-center justify-space-between">
-            <div>
-              <div class="text-white">{{ it.title }}</div>
-              <div class="text-white text-body-2">{{ it.sub }}</div>
-            </div>
-            <div class="text-right">
-              <div class="text-white">{{ it.time }}</div>
-              <div class="text-white text-caption">{{ it.eta }}</div>
-            </div>
-          </div>
-        </v-card>
-      </v-card>
-    </v-container>
-
-    <!-- 빠른 액션 2x2 -->
-    <v-container class="pt-2">
-      <v-row dense>
-        <v-col cols="6" v-for="a in actions" :key="a.key">
-          <v-card variant="outlined" rounded="xl" class="pa-4" @click="onAction(a.key)">
-            <div class="d-flex flex-column align-center">
-              <v-avatar size="56" :color="a.bg">
-                <v-icon :icon="a.icon" size="28" />
-              </v-avatar>
-              <div class="mt-3 text-body-1">{{ a.label }}</div>
-            </div>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-
-    <!-- SOS 큰 버튼 -->
-    <v-container class="py-6">
-      <v-btn color="error" size="large" rounded="xl" block @click="ping('비상연락(미구현)')">
-        <v-icon start>mdi-alert-circle-outline</v-icon>
-        비상연락
-      </v-btn>
-    </v-container>
-
-    <!-- 클릭 피드백 -->
-    <v-snackbar v-model="snack" timeout="1500" location="bottom">
-      {{ snackMsg }}
-    </v-snackbar>
-  </v-container>
+        <span class="menu-title">{{ item.title }}</span>
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-const user = ref({
-  name: '김환자',
-  avatar: 'https://placehold.co/80x80'
-})
+// 상단 스케줄 데이터
+const scheduleItems = ref([
+  { time: '8 : 30', task: '아침약 복용', isCurrent: false, isPast: true },
+  { time: '12 : 00', task: '점심식사', isCurrent: true, isPast: false },
+  { time: '14 : 00', task: '산책', isCurrent: false, isPast: false },
+]);
 
-const schedules = ref([
-  { title: '정기 검진', sub: '내과 - 김의사', time: '오후 2:30', eta: '1시간 30분 후' },
-  { title: '약물 복용', sub: '혈압약 복용 시간', time: '오후 6:00', eta: '5시간 후' }
-])
+// 메인 메뉴 데이터 (나중에 경로지정 path에서 하시면 됩니다.)
+const menuItems = ref([
+  { id: 'ai-chatbot', title: 'AI 챗봇', icon: null, path: '/chatbot' },
+  { id: 'emergency-contact', title: '응급 연락망', icon: 'heart_icon_path.svg', path: '/emergency' },
+  { id: 'daily-log', title: '오늘의 기록', icon: null, path: '/log' },
+  { id: 'my-info', title: '내 정보', icon: null, path: '/my-info' },
+]);
 
-const actions = ref([
-  { key: 'log', label: '기록', icon: 'mdi-clipboard-text-outline', bg: 'blue-lighten-4' },
-  { key: 'sos', label: '비상연락', icon: 'mdi-phone-alert-outline', bg: 'red-lighten-4' },
-  { key: 'profile', label: '내정보', icon: 'mdi-account-circle-outline', bg: 'green-lighten-4' },
-  { key: 'chat', label: 'AI챗봇', icon: 'mdi-robot-outline', bg: 'deep-purple-lighten-4' }
-])
+const handleMenuClick = (menuItem) => {
+  console.log(`${menuItem.title} 버튼 클릭!`);
 
-const snack = ref(false)
-const snackMsg = ref('')
-
-function ping(msg) {
-  snackMsg.value = msg
-  snack.value = true
-}
-
-function onAction(key) {
-  const a = actions.value.find(x => x.key === key)
-  ping(`${a?.label ?? key} (미구현)`)
-}
+};
 </script>
+
+<style scoped>
+/* 전체 컨테이너 스타일 */
+.patient-main-container {
+  position: relative;
+  background-color: #F2F2F2;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 15px;
+  box-sizing: border-box;
+  
+}
+
+/* 배경 장식용 도형들 */
+.background-decorations {
+  position: absolute;
+  width: 100%;
+  height: 300px;
+  top: 0;
+  left: 0;
+  background: linear-gradient(180deg, #FAF8F5 4.24%, rgba(255, 255, 255, 0) 72.25%);
+  z-index: 0;
+}
+
+/* 상단 스케줄 카드 */
+.schedule-card {
+  position: relative;
+  width: 100%;
+  max-width: 399px;
+  background: #F5F5F9;
+  border-radius: 20px;
+  padding: 29px 48px;
+  margin-bottom: 40px;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.schedule-item {
+  font-size: 20px;
+  color: #686868;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.schedule-item:last-child { margin-bottom: 0; }
+.schedule-item.is-past { color: #C0C0C0; }
+.schedule-item.is-current {
+  font-family: 'Pretendard', sans-serif;
+  font-weight: 700;
+  font-size: 34px;
+  color: #000000;
+}
+
+/* 메인 메뉴 그리드 */
+.menu-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: auto auto;
+  gap: 20px;
+  z-index: 1;
+}
+
+.menu-item {
+  position: relative;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  min-height: 230px;
+  font-family: 'Pretendard', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #FEF9F3;
+  overflow: hidden;
+  cursor: pointer;
+  border: none;
+  text-align: left; /* button 태그의 기본 중앙 정렬을 초기화 */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+/* [추가] 마우스 올렸을 때(hover) 입체감 효과 */
+.menu-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* [추가] 클릭했을 때(active) 눌리는 효과 */
+.menu-item:active {
+  transform: translateY(-2px) scale(0.98);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.menu-title { z-index: 2; }
+
+/* 각 메뉴 아이템의 배경색과 텍스트 색상 */
+.menu-item-ai-chatbot {
+  background-color: #8E97FD;
+  grid-row: 1 / 3;
+  min-height: 300px;
+  color: #FFECCC;
+}
+.menu-item-emergency-contact { background-color: #FA6E5A; }
+.menu-item-daily-log {
+  background-color: #FEB18F;
+  color: #3F414E;
+}
+.menu-item-my-info {
+  background-color: #FFCF86;
+  grid-row: 2 / 4;
+  min-height: 270px; /* 높이 조절 */
+  color: #3F414E;
+}
+</style>
