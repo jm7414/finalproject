@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.0.1",
     "@mdi/font": "^7.4.47",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",
