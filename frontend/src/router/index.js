@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import DP_main from '@/views/DP_main.vue'
 import GD_main from '@/views/GD_main.vue'
+import Signup from '@/views/Signup.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +27,11 @@ const router = createRouter({
       path: '/GD',
       name: 'GD',
       component: GD_main,
+    },
+    {
+      path: '/SignUp',
+      name: 'SignUp',
+      component: Signup,
     },
     {
       path: '/CommunityView',
