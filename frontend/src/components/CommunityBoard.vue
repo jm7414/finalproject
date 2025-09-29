@@ -1,11 +1,8 @@
 <script setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router'; // Vue Router 사용을 위해 import
-
+import { useRouter } from 'vue-router'; // 1. 라우터 import
 import image1 from '@/assets/images/Post.jpg';
 
-// '게시글 목록'에 해당하는 데이터 예시입니다.
-// 작성자(author), 내용(content), 이미지(image), 댓글/좋아요/조회수(stats) 등을 포함합니다.
 const posts = ref([
   { 
     id: 1, 
@@ -18,20 +15,24 @@ const posts = ref([
     id: 2, 
     author: '오일남',
     title: '꽃이 이쁘네요', 
-    image: image1 ,
+    image: image1,
     stats: { comments: 3, likes: 10, views: 23 },
-    time: '1 시간 전'
+    time: '3 시간 전'
   },
 ]);
 
-const router = useRouter(); // router 인스턴스 생성
+const router = useRouter(); // 2. 라우터 인스턴스 생성
 
-function goToPost(postId) {
-  // alert('ID가 ' + postId + '인 게시물로 이동합니다.');
-  
-  // 실제 페이지 이동 코드
+// 3. 클릭 시 실행될 함수 정의
+function goToPostDetail(postId) {
+  // '/post/1', '/post/2' 와 같은 경로로 페이지를 이동시킵니다.
   router.push(`/post/${postId}`);
 }
+
+function goToPostWrite() {
+  router.push(`/CommunityPostWrite`);
+}
+
 </script>
 
 <template>
@@ -47,7 +48,7 @@ function goToPost(postId) {
       v-for="post in posts" 
       :key="post.id" 
       class="post-card"
-      @click="goToPost(post.id)"
+      @click="goToPostDetail(post.id)"
     >
       <div class="card-header">
         <h3 class="post-title">{{ post.title }}</h3>
@@ -66,7 +67,7 @@ function goToPost(postId) {
       </div>
     </div>
     
-    <button class="fab-button">+ 글 작성</button>
+    <button class="fab-button" @click="goToPostWrite()">+ 글 작성</button>
   </div>
 </template>
 

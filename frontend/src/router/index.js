@@ -43,15 +43,25 @@ const router = createRouter({
       component: () => import('../components/CommunityMissing.vue'),
     },
     {
+      path: '/CommunityBoard',
+      name: 'CommunityBoard',
+      component: () => import('../components/CommunityBoard.vue'),
+    },
+    {
       path: '/CommunityPost',
       name: 'CommunityPost',
       component: () => import('../components/CommunityPost.vue'),
     },
     {
+      path: '/CommunityPostWrite',
+      name: 'CommunityPostWrite',
+      component: () => import('../components/CommunityPostWrite.vue'),
+    },
+    {
       path: '/CommunityEvent',
       name: 'CommunityEvent',
       component: () => import('../components/CommunityEvent.vue'),
-    },        
+    },         
   ],
 })
 
