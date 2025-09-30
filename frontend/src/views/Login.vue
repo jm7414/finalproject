@@ -4,17 +4,16 @@
       --topWaveH: 180px;    /* 상단 블랍 높이 */
       --topWaveX: 0px;      /* 상단 블랍 좌우 오프셋 */
 
-      /* 왼쪽 블랍: 통째로 보이게(지금 값 유지) */
-      --leftBlobW: 230px;
+      /* 왼쪽/오른쪽 블랍 크기 */
+      --leftBlobW: 230px;   /* 왼쪽 블랍: 통째로 보이게 */
+      --rightBlobW: 48px;   /* 오른쪽 블랍: 포인트만 */
+      --decoEdgeGap: 0px;   /* 데코 좌/우 여백(0이면 화면 끝에 맞춤) */
 
-      /* 오른쪽 블랍: 아주 작게 포인트 */
-      --rightBlobW: 48px;
-
-      /* 로그인 버튼/아이콘 크기 (필요시 여기만 조정) */
-      --go-h: 48px;         /* 버튼 높이 */
-      --go-minw: 64px;      /* 버튼 최소 너비 */
-      --go-icon: 40px;      /* 화살표 크기 */
-      --go-radius: 16px;    /* 버튼 라운드 */
+      /* 로그인 버튼/아이콘 크기 */
+      --go-h: 48px;
+      --go-minw: 64px;
+      --go-icon: 40px;
+      --go-radius: 16px;
     ">
     <!-- 상단 블랍 -->
     <img class="deco-top-img" :src="topWave" alt="" aria-hidden="true" />
@@ -75,7 +74,6 @@
         <div class="cta-row mb-4">
           <div class="cta-title">로그인</div>
           <button type="submit" class="lg-go shadow" aria-label="로그인">
-            <!-- 아이콘은 CSS로 크기 제어 -->
             <svg class="lg-go-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M8 12h8M13 7l5 5-5 5" stroke="#fff" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
@@ -178,7 +176,7 @@ function onLogin() {
   background: #fff;
 }
 
-/* CTA 행: 가운데 정렬 */
+/* CTA 행 */
 .cta-row {
   display: flex;
   align-items: center;
@@ -194,7 +192,7 @@ function onLogin() {
   line-height: 1;
 }
 
-/* === 로그인 버튼(라운드 네모, 필 형태) === */
+/* 로그인 버튼 */
 .lg-go {
   height: var(--go-h);
   min-width: var(--go-minw);
@@ -219,20 +217,21 @@ function onLogin() {
   transform: translateY(0);
 }
 
-/* 아이콘 크기 확실히 키움 */
+/* 아이콘 크기 */
 .lg-go-icon {
   width: var(--go-icon);
   height: var(--go-icon);
   display: block;
 }
 
-/* ===== 하단 블랍들 ===== */
+/* ===== 하단 블랍들: 좌/우 화면 끝에 맞춤 ===== */
 .deco-blob-left-img {
   position: absolute;
-  left: 24px;
+  left: var(--decoEdgeGap, 0);
+  /* ← 화면 왼쪽 끝 */
   bottom: 24px;
-  width: min(var(--leftBlobW, 360px), calc(100% - 48px));
-  aspect-ratio: 664 / 1014;
+  width: var(--leftBlobW, 230px);
+  /* 카드 여백 계산 제거 */
   height: auto;
   object-fit: contain;
   object-position: left bottom;
@@ -244,7 +243,8 @@ function onLogin() {
 
 .deco-blob-right-img {
   position: absolute;
-  right: 24px;
+  right: var(--decoEdgeGap, 0);
+  /* → 화면 오른쪽 끝 */
   bottom: 24px;
   width: var(--rightBlobW, 48px);
   height: auto;
