@@ -8,7 +8,7 @@
       <div class="avatar-ring rounded-circle">
         <img :src="u('/figma/Rectangle107.png')" alt="아바타" class="avatar-img rounded-circle" />
       </div>
-      <p class="greeting mb-0 text-center" style="margin-left:50px;"> {{ userName }}님 안녕하세요 </p>
+      <p class="greeting mb-0 text-center" style="margin-left:50px;"> 홍길동님 안녕하세요 </p>
     </section>
 
     <hr class="divider" />
@@ -17,79 +17,49 @@
     <div class="list-group rounded-3 shadow-sm my-2 mypage-menu" data-bs-theme="light">
 
       <!-- 내 정보 수정 -->
-      <button
-        type="button"
-        class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3"
-        @click="go('edit-info')"
-        @keydown.enter.prevent="go('edit-info')"
-        @keydown.space.prevent="go('edit-info')"
-      >
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
         <span class="menu-icon" style="background:#FFF4DE">
           <img :src="u('/figma/Bold Duotone/Essentional, UI/Question Circle.svg')" alt="내 정보 수정" class="icon-img" />
         </span>
         <span class="flex-grow-1 menu-text">내 정보 수정</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight`.svg')" alt="" class="chev-img" />
-      </button>
+      </div>
 
       <!-- 환자 QR 연결 -->
-      <button
-        type="button"
-        class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3"
-        @click="go('qr-connect')"
-        @keydown.enter.prevent="go('qr-connect')"
-        @keydown.space.prevent="go('qr-connect')"
-      >
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
         <span class="menu-icon" style="background:#EAF3FF">
           <img :src="u('/figma/qr.svg')" alt="환자 QR 연결" class="icon-img" />
         </span>
         <span class="flex-grow-1 menu-text">환자 QR 연결</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
-      </button>
+      </div>
 
       <!-- 환자 정보 관리 -->
-      <button
-        type="button"
-        class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3"
-        @click="go('manage-patient')"
-        @keydown.enter.prevent="go('manage-patient')"
-        @keydown.space.prevent="go('manage-patient')"
-      >
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
         <span class="menu-icon" style="background:#FFE2E2">
           <img :src="u('/figma/Bold Duotone/Security/Shield Star.svg')" alt="환자 정보 관리" class="icon-img" />
         </span>
         <span class="flex-grow-1 menu-text">환자 정보 관리</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
-      </button>
+      </div>
 
-      <!-- 안심존 설정 (정확한 파일명 + 폴백) -->
-      <button
-        type="button"
-        class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3"
-        @click="go('safezone')"
-        @keydown.enter.prevent="go('safezone')"
-        @keydown.space.prevent="go('safezone')"
-      >
+      <!-- 안심존 설정 -->
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
         <span class="menu-icon" style="background:#EDF6FF">
-          <img :src="safeIconSrc" @error="onSafeIconError" alt="안심존 설정" class="icon-img" />
+          <img :src="u('/figma/Bold Duotone/Security/Shield Star-1.svg')" alt="안심존 설정" class="icon-img" />
         </span>
         <span class="flex-grow-1 menu-text">안심존 설정</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
-      </button>
+      </div>
 
       <!-- 구독 및 결제 관리 -->
-      <button
-        type="button"
-        class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3"
-        @click="go('billing')"
-        @keydown.enter.prevent="go('billing')"
-        @keydown.space.prevent="go('billing')"
-      >
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" @click="goToBilling" style="cursor: pointer;">
         <span class="menu-icon" style="background:#EFF9EF">
           <img :src="u('/figma/Bold Duotone/Settings, Fine Tuning/Settings.svg')" alt="구독 및 결제 관리" class="icon-img" />
         </span>
         <span class="flex-grow-1 menu-text">구독 및 결제 관리</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
-      </button>
+      </div>
     </div>
 
     <!-- 구독 카드 (디테일 업) -->
@@ -102,12 +72,12 @@
 
         <!-- 텍스트: 또렷하게 -->
         <div class="flex-grow-1">
-          <div class="fw-bold text-dark sub-title-strong">현재 {{ plan }} 이용중</div>
-          <div class="text-secondary sub-date">다음 결제일&nbsp;{{ formattedBilling }}</div>
+          <div class="fw-bold text-dark sub-title-strong">현재 BASIC 이용중</div>
+          <div class="text-secondary sub-date">다음 결제일&nbsp;2025.10.18</div>
         </div>
 
         <!-- 버튼 -->
-        <button type="button" class="btn btn-upgrade rounded-pill px-3 py-1" @click="go('upgrade')">
+        <button type="button" class="btn btn-upgrade rounded-pill px-3 py-1">
           PLUS 구독하기
         </button>
       </div>
@@ -116,38 +86,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
-const props = defineProps({
-  userName: { type: String, default: 'OOO' },
-  plan: { type: String, default: 'BASIC' },
-  nextBilling: { type: String, default: '2025-10-18' },
-})
-
-const router = useRouter()
-function go(name: string) {
-  try { router.push({ name }) } catch { console.log('Clicked:', name) }
-}
 
 /** 공백/쉼표 포함 경로 안전 처리 */
 const u = (p: string) => encodeURI(p)
 
-/** 안심존 아이콘: 정확한 파일명 + 폴백 */
-const safeIconPrimary = u('/figma/Bold Duotone/Security/Shield Star-1.svg')
-const safeIconFallback = u('/figma/Bold Duotone/Security/ShielStar-1.svg')
-const safeIconSrc = ref(safeIconPrimary)
-function onSafeIconError(e: Event) {
-  if ((e.target as HTMLImageElement).src !== safeIconFallback) {
-    (e.target as HTMLImageElement).src = safeIconFallback
-  }
-}
+const router = useRouter()
 
-const formattedBilling = computed(() => {
-  const d = new Date(props.nextBilling)
-  if (isNaN(d.getTime())) return props.nextBilling
-  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`
-})
+// 구독 및 결제 관리 페이지로 이동
+const goToBilling = () => {
+  router.push('/basicplan')
+}
 </script>
 
 <style scoped>

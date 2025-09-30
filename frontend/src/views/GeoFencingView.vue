@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { lineString, buffer, simplify } from '@turf/turf'
 
 const mapContainer = ref(null)
@@ -30,6 +30,7 @@ const bufferLevel = ref('1')
 let mapInstance = null
 let currentPolyline = null
 let currentBuffer = null
+let currentSafetyZone = null
 let startMarker = null
 let endMarker = null
 
@@ -60,7 +61,7 @@ function loadKakaoMap(container) {
 }
 
 // 안전존 범위 변경 감지
-watch(selectedRange, () => {
+watch(bufferLevel, () => {
   if (mapInstance && currentPolyline) {
     updateSafetyZone()
   }
@@ -84,7 +85,7 @@ function updateSafetyZone() {
     '3': 100   // 100m
   }
 
-  const bufferDistance = rangeSettings[selectedRange.value] || 30
+  const bufferDistance = rangeSettings[bufferLevel.value] || 30
   
   // 폴리라인 경로 가져오기
   const path = currentPolyline.getPath()
@@ -405,12 +406,18 @@ function cancelSettings() {
 .page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
 }
 
 .map-box {
-  flex: 1;
+  height: 60vh;
   width: 100%;
   min-height: 0;
 }

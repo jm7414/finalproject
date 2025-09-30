@@ -1,9 +1,9 @@
 <!-- src/views/GD_main.vue -->
 <template>
   <!-- 헤더 높이만큼 위로 당김(지도 딱 붙게) -->
-  <div class="cg-wrap position-relative mx-auto bg-white" :style="wrapStyle">
+  <div class="cg-wrap position-relative bg-white" :style="wrapStyle">
     <!-- 지도 -->
-    <div ref="mapEl" class="w-100" style="height:720px;"></div>
+    <div ref="mapEl" class="w-100" style="height:900px;"></div>
 
     <!-- 지도 위 정보 카드 -->
     <div class="card cg-glass shadow-sm position-absolute cg-info">
@@ -13,7 +13,7 @@
         </div>
         <div class="flex-grow-1 lh-sm">
           <div class="fw-semibold cg-name">{{ patient.name }}님</div>
-          <div class="small text-muted">약 복용: {{ patient.taken }}/{{ patient.total }}</div>
+          <div class="small text-muted">13:00 | 마트 들려서 양..</div>
           <div class="small" :class="patient.safe ? 'text-success' : 'text-danger'">
             현재 위치: {{ patient.safe ? '안심존' : '주의구역' }}
           </div>
@@ -76,7 +76,7 @@
       <!-- 상단 두 타일 -->
       <div class="row g-2 mb-3" ref="topTilesRow">
         <div class="col-6">
-          <div class="card border-0 rounded-4" style="background:#DCFCE7;">
+          <div class="card border-0 rounded-4" style="background:#DCFCE7; cursor: pointer;" @click="goToGeoFencing">
             <div class="card-body py-3 d-flex align-items-center gap-2">
               <img :src="cir" alt="안심 아이콘" aria-hidden="true" class="icon-44" />
               <div class="fw-semibold">안심 zone</div>
@@ -84,7 +84,7 @@
           </div>
         </div>
         <div class="col-6">
-          <div class="card border-0 rounded-4" style="background:#F0F7FF;">
+          <div class="card border-0 rounded-4" style="background:#F0F7FF; cursor: pointer;" @click="goToPredictLocation">
             <div class="card-body py-3 d-flex align-items-center gap-2">
               <img :src="cirr" alt="예상 위치 아이콘" aria-hidden="true" class="icon-44" />
               <div class="fw-semibold">예상 위치</div>
@@ -101,7 +101,8 @@
         <!-- 좌측 큰: 커뮤니티 -->
         <div class="col-6">
           <div class="card border-0 rounded-3 text-light d-flex justify-content-end"
-            style="background:rgba(74,98,221,0.85);height:212px;position:relative;">
+            style="background:rgba(74,98,221,0.85);height:212px;position:relative;cursor:pointer;"
+            @click="goToCommunity">
             <img :src="cur" alt="커뮤니티 아이콘" aria-hidden="true"
               class="position-absolute top-0 end-0 p-0 icon-88 opacity-75" />
             <div class="p-3 fw-semibold fs-4" style="color:#FFECCC;">커뮤니티</div>
@@ -112,14 +113,16 @@
         <div class="col-6 d-flex flex-column gap-2">
           <!-- 종합 지원 -->
           <div class="card border-0 rounded-3"
-            style="background:rgba(170,194,254,0.91);height:100px;position:relative;">
+            style="background:rgba(170,194,254,0.91);height:100px;position:relative;cursor:pointer;"
+            @click="goToTotalSupport">
             <img :src="supportAgent" alt="지원 상담 아이콘" aria-hidden="true"
               class="position-absolute top-0 end-0 p-0 icon-64 opacity-75" />
             <div class="p-3 fw-semibold text-dark fs-5">종합 지원</div>
           </div>
 
           <!-- 건강 리포트 -->
-          <div class="card border-0 rounded-3" style="background:#FFECCC;height:100px;position:relative;">
+          <div class="card border-0 rounded-3" style="background:#FFECCC;height:100px;position:relative;cursor:pointer;"
+            @click="goToReport">
             <img :src="bookOpen" alt="건강 리포트 아이콘" aria-hidden="true"
               class="position-absolute end-0 bottom-0 p-2 icon-80 opacity-25" />
             <div class="p-3 fw-semibold fs-5" style="color:rgba(74,98,221,0.85);">건강 리포트</div>
@@ -143,16 +146,44 @@
 
 <script setup>
 import { ref, onMounted, defineProps, computed, nextTick, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import supportAgent from '@/assets/images/support_agent.svg'
 import cir from '@/assets/images/cir.svg'
 import cirr from '@/assets/images/cirr.svg'
 import cur from '@/assets/images/cur.svg'
 import bookOpen from '@/assets/images/Book open.svg'
 
+const router = useRouter()
+
+// 예상 위치 페이지로 이동하는 함수
+const goToPredictLocation = () => {
+  router.push('/predict-location')
+}
+
+// 안심존 페이지로 이동하는 함수
+const goToGeoFencing = () => {
+  router.push('/geo-fencing')
+}
+
+// 종합 지원 페이지로 이동하는 함수
+const goToTotalSupport = () => {
+  router.push('/total-support')
+}
+
+// 건강 리포트 페이지로 이동하는 함수
+const goToReport = () => {
+  router.push('/report')
+}
+
+// 커뮤니티 페이지로 이동하는 함수
+const goToCommunity = () => {
+  router.push('/CommunityView')
+}
+
 /* ===== 기존 지도/카드 props ===== */
 const props = defineProps({
   kakaoKey: { type: String, default: '' },
-  foldNudge: { type: Number, default: 50 },
+  foldNudge: { type: Number, default: -20 },
   center: { type: Object, default: () => ({ lat: 37.4943524920695, lng: 126.88767655688868 }) },
   patient: {
     type: Object,
@@ -235,7 +266,6 @@ let dragging = false
 
 const sheetStyle = computed(() => ({
   height: sheetHeight.value + 'px',
-  transform: `translateX(-50%)`,
 }))
 const backdropOpacity = computed(() => {
   const t = Math.max(0, Math.min(1, (sheetHeight.value - collapsedH.value) / (openH() - collapsedH.value)))
@@ -293,12 +323,11 @@ function onResize() {
 </script>
 
 <style scoped>
-/* ===== 전체 프레임: 414×896 ===== */
+/* ===== 전체 프레임: 화면 가득 채우기 ===== */
 .cg-wrap {
-  width: 414px;
-  height: 896px;
+  width: 100%;
+  min-height: 100vh;
   overflow: hidden;
-  border-radius: 8px;
 }
 
 @media (min-width:768px) {
@@ -309,9 +338,11 @@ function onResize() {
 
 /* 지도 카드 (위치: 변수화) */
 .cg-info {
-  left: 32px;
+  left: 50%;
+  transform: translateX(-50%);
   top: var(--infoTop, 124px);
-  width: 350px;
+  width: calc(100% - 32px);
+  max-width: 500px;
   height: 82px;
   border-radius: 8px;
   z-index: 10;
@@ -358,9 +389,11 @@ function onResize() {
 
 .bs-sheet {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 0;
-  width: 414px;
+  width: 100%;
+  max-width: 100%;
   background: #F0EFEF;
   border: 0;
   z-index: 999;
