@@ -22,21 +22,18 @@
           <img :src="u('/figma/Calendar.svg')" alt="일정 추가" class="tile-icon big" />
           <img :src="u('/figma/Plus.svg')" alt="plus" class="tile-plus" />
         </div>
-        <button class="tile-start btn btn-light rounded-pill">START</button>
       </article>
 
       <!-- 내 정보 수정하기 -->
       <article class="card-tile bg-blue3">
         <h3 class="tile-title">내 정보 수정하기</h3>
         <img :src="u('/figma/Edit.svg')" alt="내 정보 수정" class="tile-icon" />
-        <button class="tile-start btn btn-light rounded-pill">START</button>
       </article>
 
       <!-- QR 코드 보기 -->
       <article class="card-tile bg-blue1">
         <h3 class="tile-title">QR코드 보기</h3>
         <img :src="u('/figma/qr.svg')" alt="QR 코드" class="tile-icon" />
-        <button class="tile-start btn btn-light rounded-pill">START</button>
       </article>
     </section>
   </div>
@@ -49,23 +46,48 @@ const u = (p: string) => encodeURI(p)
 <style scoped>
 /* ===== Layout ===== */
 @media (min-width: 576px) {
-  .info-page.container { max-width: 480px; }
+  .info-page.container {
+    max-width: 480px;
+  }
 }
-.title { font-size: 1.7rem; line-height: 1.25; }
 
-.divider{ border-top:1px solid #D7D9E1; opacity:.9; margin: 12px 0; }
+.title {
+  font-size: 1.7rem;
+  line-height: 1.25;
+}
+
+.divider {
+  border-top: 1px solid #D7D9E1;
+  opacity: .9;
+  margin: 12px 0;
+}
 
 /* ===== Profile ===== */
-.avatar-ring{
-  width: 92px; height: 92px; padding: 3px;
-  border: 5px solid #FDC300; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
+.avatar-ring {
+  width: 92px;
+  height: 92px;
+  padding: 3px;
+  border: 5px solid #FDC300;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.avatar-img{ width: 84px; height: 84px; object-fit: cover; border-radius: 50%; }
-.greeting{ font-size: 1.18rem; color:#111; }
+
+.avatar-img {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.greeting {
+  font-size: 1.18rem;
+  color: #111;
+}
 
 /* ===== Cards (CSS Grid) ===== */
-.cards-grid{
+.cards-grid {
   --gap: 16px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -73,56 +95,73 @@ const u = (p: string) => encodeURI(p)
 }
 
 /* 공통 카드 */
-.card-tile{
+.card-tile {
   position: relative;
   border-radius: 14px;
   padding: 16px;
   min-height: 170px;
   color: #FFECCC;
-  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
 }
-.tile-title{
+
+.tile-title {
   font-size: 1.05rem;
   font-weight: 700;
   margin-bottom: 10px;
 }
 
 /* 아이콘 */
-.icon-wrap{
+.icon-wrap {
   position: relative;
   flex-grow: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.tile-icon{ width: 70px; height: 70px; object-fit: contain; }
-.tile-icon.big{ width: 120px; height: 120px; }
 
-/* 캘린더 plus 아이콘 */
-.tile-plus{
+.tile-icon {
   position: absolute;
-  top: 20%; right: 20%;
-  width: 28px; height: 28px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 85px;
+  height: 85px;
+  object-fit: contain;
 }
 
-/* START 버튼: 항상 오른쪽 하단 */
-.tile-start{
+.tile-icon.big {
+  width: 150px;
+  height: 150px;
+}
+
+/* 캘린더 plus 아이콘 */
+.tile-plus {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
-  padding: 6px 18px;
-  border: 0; font-weight: 700; color: #2F2D2B;
+  top: 20%;
+  right: 10%;
+  width: 32px;
+  height: 32px;
 }
 
 /* 큰 카드 */
-.tile-big{
+.tile-big {
   grid-row: span 2;
   min-height: 360px;
 }
-.bg-blue1 { background:#AAC1FD; }
-.bg-blue2 { background:#7D88FF; }
-.bg-blue3 { background:#4A62DD; }
+
+.bg-blue1 {
+  background: #AAC1FD;
+}
+
+.bg-blue2 {
+  background: #7D88FF;
+}
+
+.bg-blue3 {
+  background: #4A62DD;
+}
 </style>
