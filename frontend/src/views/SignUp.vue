@@ -1,26 +1,33 @@
 <!-- src/views/Signup.vue -->
 <template>
   <div class="sg-wrap position-relative mx-auto bg-white">
-    <!-- 장식: 상단 웨이브 -->
-    <svg class="deco-top" viewBox="0 0 414 150" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0,0 H414 V90 C320,140 230,80 110,100 C60,108 20,128 0,150 Z" fill="rgba(74,98,221,0.85)" />
+    <!-- 상단 웨이브: 화면 폭 끝까지 -->
+    <svg class="deco-top" viewBox="0 0 414 160" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,0 H414 V95 C330,145 230,84 120,102 C70,110 28,132 0,160 Z" fill="rgba(74,98,221,0.85)" />
     </svg>
 
-    <!-- 장식: 하단 블랍 -->
-    <div class="deco-bottom" aria-hidden="true"></div>
+    <!-- 좌하단 블랍 (조금 더 보이게, 크게) -->
+    <svg class="deco-blob-left" viewBox="0 0 400 320" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
+      <path d="M 0 40
+           C 65 0, 135 25, 175 60
+           C 215 95, 208 145, 206 170
+           C 203 210, 245 235, 302 260
+           C 350 282, 400 300, 400 320
+           L 0 320 Z" fill="var(--brand-blob, rgba(126,136,255,.90))" />
+    </svg>
 
     <!-- 타이틀 -->
-    <div class="text-center pt-5 mt-3">
+    <div class="text-center">
       <h1 class="fw-bold sg-title">회원 가입</h1>
     </div>
 
     <!-- 폼 -->
-    <form class="px-4 mt-2" @submit.prevent="onSubmit">
+    <form class="px-4 mt-2 form-offset" @submit.prevent="onSubmit">
       <!-- 성함 -->
       <div class="mb-4">
         <div class="input-group input-group-lg sg-pill sg-shadow">
           <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="8" r="4.5" stroke="#9A9A9A" stroke-width="1.6" />
               <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#9A9A9A" stroke-width="1.6" />
             </svg>
@@ -30,11 +37,11 @@
         </div>
       </div>
 
-      <!-- 아이디 + 중복체크 칩(오른쪽에 떠있게) -->
+      <!-- 아이디 + 중복체크 칩 -->
       <div class="mb-4 position-relative">
         <div class="input-group input-group-lg sg-pill sg-shadow">
           <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="8" r="4.5" stroke="#9A9A9A" stroke-width="1.6" />
               <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#9A9A9A" stroke-width="1.6" />
             </svg>
@@ -42,8 +49,7 @@
           <input v-model.trim="form.username" type="text" class="form-control border-0 sg-pill-end" placeholder="아이디"
             autocomplete="username" required />
         </div>
-
-        <button type="button" class="btn btn-light shadow-sm rounded-pill sg-id-chip" @click="checkDuplicate">
+        <button type="button" class="btn rounded-pill id-chip shadow-sm" @click="checkDuplicate">
           중복체크
         </button>
       </div>
@@ -52,7 +58,7 @@
       <div class="mb-4">
         <div class="input-group input-group-lg sg-pill sg-shadow">
           <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <rect x="4" y="10" width="16" height="10" rx="2" stroke="#9A9A9A" stroke-width="1.6" />
               <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9A9A9A" stroke-width="1.6" />
             </svg>
@@ -78,7 +84,7 @@
       <div class="mb-4">
         <div class="input-group input-group-lg sg-pill sg-shadow">
           <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <rect x="3" y="5" width="18" height="16" rx="2" stroke="#9A9A9A" stroke-width="1.6" />
               <path d="M3 9h18" stroke="#9A9A9A" stroke-width="1.6" />
               <path d="M8 3v4M16 3v4" stroke="#9A9A9A" stroke-width="1.6" />
@@ -90,10 +96,10 @@
       </div>
 
       <!-- 전화번호 -->
-      <div class="mb-4">
+      <div class="mb-3">
         <div class="input-group input-group-lg sg-pill sg-shadow">
           <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M6 2h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a3 3 0 0 1-3 3A17 17 0 0 1 3 5a3 3 0 0 1 3-3z"
                 stroke="#9A9A9A" stroke-width="1.6" />
             </svg>
@@ -103,32 +109,17 @@
         </div>
       </div>
 
-      <!-- 주소 -->
-      <div class="mb-4">
-        <div class="input-group input-group-lg sg-pill sg-shadow">
-          <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 22s8-7.1 8-12a8 8 0 1 0-16 0c0 4.9 8 12 8 12z" stroke="#9A9A9A" stroke-width="1.6" />
-              <circle cx="12" cy="10" r="2.5" stroke="#9A9A9A" stroke-width="1.6" />
-            </svg>
-          </span>
-          <input v-model.trim="form.address" type="text" class="form-control border-0 sg-pill-end" placeholder="주소"
-            autocomplete="street-address" />
-        </div>
-      </div>
-
-      <!-- 보호자 체크 -->
-      <div class="form-check mb-5 ms-1">
-        <input class="form-check-input" type="checkbox" id="isGuardian" v-model="form.isGuardian">
+      <!-- 보호자 체크: 전화번호 바로 아래로 붙임 -->
+      <div class="form-check guardian-row ms-1">
+        <input class="form-check-input" type="checkbox" id="isGuardian" v-model="form.isGuardian" />
         <label class="form-check-label" for="isGuardian">보호자일 경우 체크</label>
       </div>
 
-      <!-- CTA -->
-      <div class="d-grid gap-2 mb-5">
-        <button type="submit" class="btn btn-primary btn-lg rounded-pill sg-cta shadow">
-          회원가입
-        </button>
-      </div>
+      <!-- (주소칸 삭제로 인한 여백 최소화) -->
+      <div class="spacer-addr"></div>
+
+      <!-- 하단 텍스트(버튼 아님) -->
+      <div class="cta-text fw-bold">회원가입</div>
     </form>
   </div>
 </template>
@@ -142,16 +133,14 @@ const form = reactive({
   password: '',
   birth: '',
   phone: '',
-  address: '',
-  isGuardian: false,
+  isGuardian: false
 })
 
 const showPw = ref(false)
 
 function checkDuplicate() {
   if (!form.username) return alert('아이디를 입력하세요.')
-  // TODO: 실제 API 연동
-  alert(`'${form.username}' 중복여부를 확인했습니다(데모).`)
+  alert(`'${form.username}' 중복 확인(데모)`)
 }
 
 function onSubmit() {
@@ -160,51 +149,58 @@ function onSubmit() {
     return
   }
   console.log('submit', { ...form })
-  alert('회원가입 요청을 전송했습니다. (데모)')
+  alert('회원가입 요청 전송(데모)')
 }
 </script>
 
 <style scoped>
-/* 고정 캔버스(요구 해상도) */
+/* 캔버스 */
 .sg-wrap {
   width: 414px;
   height: 896px;
   border-radius: 8px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  --brand-blob: rgba(126, 136, 255, .9);
 }
 
-/* 타이틀 톤/간격 */
-.sg-title {
-  color: #262626;
-}
-
-/* 상단 웨이브 */
+/* ===== 데코 ===== */
 .deco-top {
   position: absolute;
   left: 0;
-  top: 0;
+  top: -10px;
   width: 414px;
-  height: 150px;
+  height: 136px;
+  z-index: 0;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .12));
-  z-index: 0;
+  pointer-events: none;
 }
 
-/* 하단 블랍 */
-.deco-bottom {
+.deco-blob-left {
   position: absolute;
-  left: -120px;
-  bottom: 70px;
-  width: 360px;
-  height: 260px;
-  background: rgba(126, 136, 255, .90);
-  border-top-right-radius: 140px;
-  border-bottom-left-radius: 120px;
-  transform: rotate(-10deg);
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .10));
+  left: -340px;
+  bottom: 105px;
+  width: 680px;
+  height: 440px;
   z-index: 0;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .09));
+  pointer-events: none;
 }
 
-/* 둥근 인풋 형태 + 그림자(스크린샷 톤) */
+/* 타이틀/폼 */
+.sg-title {
+  margin-top: 118px;
+  margin-bottom: 24px;
+  color: #262626;
+  position: relative;
+  z-index: 1;
+}
+
+.form-offset {
+  margin-top: 12px;
+}
+
+/* ===== 폼 스타일 ===== */
 .sg-pill {
   border-radius: 40px;
   overflow: hidden;
@@ -219,37 +215,55 @@ function onSubmit() {
 }
 
 .sg-shadow {
-  box-shadow: 0 10px 24px rgba(0, 0, 0, .10);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, .08);
 }
 
-/* 중복체크 칩: 오른쪽에 떠 있도록 */
-.sg-id-chip {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #fff;
-  border: 0;
-  padding: .5rem 1rem;
-  font-weight: 500;
-}
-
-/* CTA 버튼 색/그림자 */
-.sg-cta {
-  background: #4A62DD;
-  border-color: #4A62DD;
-}
-
-/* 폼 엘리먼트 배경 흰색 유지 */
 .input-group-text,
 .form-control {
   background: #fff;
 }
 
-/* 스크롤 콘텐츠가 웨이브/블랍 위로 오도록 */
-form,
-.sg-title {
+/* 중복체크 칩 */
+.id-chip {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%) scale(.96);
+  padding: .3rem .72rem;
+  background: #f5f6fb;
+  border: 1px solid rgba(0, 0, 0, .06);
+  color: #6b7280;
+  font-weight: 600;
+}
+
+/* 전화번호 아래 체크박스 밀착 */
+.guardian-row {
+  margin-top: 4px;
+  /* 전화번호와 간격 좁힘 */
+  margin-bottom: 8px;
+}
+
+/* 주소칸 삭제 스페이서(최소화) */
+.spacer-addr {
+  height: 28px;
+}
+
+/* 하단 텍스트(버튼 아님) – 오른쪽 유지, 더 위로 */
+.cta-text {
+  position: absolute;
+  right: 40px;
+  bottom: 210px;
+  /* 기존 165px → 위로 올림 */
+  font-size: 32px;
+  color: #262626;
+  text-shadow: 0 3px 6px rgba(0, 0, 0, .22);
+  z-index: 1;
+}
+
+/* 스크롤 여유 */
+form {
   position: relative;
   z-index: 1;
+  padding-bottom: 240px;
 }
 </style>
