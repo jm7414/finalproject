@@ -1,6 +1,6 @@
 <!-- src/components/AlertMarker.vue -->
 <template>
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="24" height="24" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="12" height="12" rx="6" fill="#A0A3B1" />
         <path
             d="M6.00002 9.75C6.46026 9.75 6.83335 9.3769 6.83335 8.91667C6.83335 8.45643 6.46026 8.08333 6.00002 8.08333C5.53978 8.08333 5.16669 8.45643 5.16669 8.91667C5.16669 9.3769 5.53978 9.75 6.00002 9.75Z"

@@ -1,6 +1,6 @@
 <!-- src/components/HappyMarker.vue -->
 <template>
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="24" height="24" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="12" height="12" rx="6" fill="#A0A3B1" />
         <g clip-path="url(#clip0_4043_6905)">
             <path
