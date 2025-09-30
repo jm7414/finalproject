@@ -2,14 +2,17 @@
 import { ref } from 'vue';
 
 import image1 from '@/assets/images/Event.jpg';
+import image2 from '@/assets/images/Event2.jpg';
+import image3 from '@/assets/images/Event3.jpg';
+import image4 from '@/assets/images/Event4.png';
 
 // '이벤트 목록'에 해당하는 데이터 예시입니다.
 // 각 이벤트는 고유 id, 이미지 경로(image), 대체 텍스트(alt)를 가집니다.
 const events = ref([
   { id: 1, image: image1, alt: '가을맞이 쇼핑 이벤트' },
-  { id: 3, image: image1, alt: '가을 하늘처럼 높은 할인율' },
-  { id: 4, image: image1, alt: '특별한 가을 쇼핑' },
-  { id: 5, image: image1, alt: '가을 선물 무료 할인' },
+  { id: 3, image: image2, alt: '가을 하늘처럼 높은 할인율' },
+  { id: 4, image: image3, alt: '특별한 가을 쇼핑' },
+  { id: 5, image: image4, alt: '가을 선물 무료 할인' },
 ]);
 </script>
 

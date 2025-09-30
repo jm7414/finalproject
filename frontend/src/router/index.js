@@ -3,6 +3,10 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import DP_main from '@/views/DP_main.vue'
 import GD_main from '@/views/GD_main.vue'
+import GeoFencingView from '@/views/GeoFencingView.vue'
+import SearchRouteView from '@/views/SearchRouteView.vue'
+import Signup from '@/views/SignUp.vue'
+import Login from '@/views/Login.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,6 +32,16 @@ const router = createRouter({
       component: GD_main,
     },
     {
+      path: '/SignUp',
+      name: 'SignUp',
+      component: Signup,
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: Login,
+    },
+    {
       path: '/CommunityView',
       name: 'CommunityView',
       component: () => import('../views/CommunityView.vue'),
@@ -51,7 +65,59 @@ const router = createRouter({
       path: '/CommunityEvent',
       name: 'CommunityEvent',
       component: () => import('../components/CommunityEvent.vue'),
+    },
+        {
+      path: '/geo-fencing',
+      name: 'geo-fencing',
+      component: GeoFencingView,
+    },
+    {
+      path: '/search-route',
+      name: 'search-route',
+      component: SearchRouteView,
     },        
+    // 주형 종합지원, 지원금안내페이지, 기록, 리포트 수정 시작
+    {
+      path: '/total-support',
+      name: 'totalSupport',
+      component: () => import('../views/TotalSupport.vue'),
+    },        
+    {
+      path: '/money-support',
+      name: 'moneySupport',
+      component: () => import('../views/MoneySupport.vue'),
+    },        
+    {
+      path: '/record',
+      name: 'record',
+      component: () => import('../views/Record.vue'),
+    },        
+    {
+      path: '/report',
+      name: 'report',
+      component: () => import('../views/Report.vue'),
+    },        
+    // 주형 종합지원, 지원금안내페이지 수정 끝
+        {
+      path: '/gdmypage',
+      name: 'gdmypage',
+      component: () => import('../views/GdMypageView.vue'),
+    },
+    {
+      path: '/dpmypage',
+      name: 'dpmypage',
+      component: () => import('../views/DpMypageView.vue'),
+    },
+    {
+      path: '/basicplan',
+      name: 'basicplan',
+      component: () => import('../views/Basicplan.vue'),
+    },
+    {
+      path: '/plusplan',
+      name: 'plusplan',
+      component: () => import('../views/Plusplan.vue'),
+    }
   ],
 })
 

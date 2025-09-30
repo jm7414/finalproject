@@ -37,6 +37,7 @@ public class SecurityConfig {
 	        .authorizeHttpRequests(authz -> authz
 		        .dispatcherTypeMatchers(DispatcherType.FORWARD,DispatcherType.INCLUDE,DispatcherType.ERROR).permitAll()
 		        .requestMatchers("/login").permitAll()
+		        .requestMatchers("/api/route/**").permitAll()
 		        .requestMatchers("/index.html", "/favicon.ico", "/assets/**").permitAll()
 		        .requestMatchers(HttpMethod.GET,"/login","/logout","/register-page","/notice-check-page","/menu/all").permitAll()
                 .requestMatchers(HttpMethod.GET,"/chat/{senderNo}/last-messages","/chat/{roomId}/messages","/user/me").authenticated()

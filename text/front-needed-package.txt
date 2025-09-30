@@ -3,6 +3,7 @@
 // 주형
 
 npm.cmd install axios // 서버에서 API불러올 때 사용함
+npm.cmd install vue3-kakao-maps
 
 // 정민
 
