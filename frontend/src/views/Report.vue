@@ -74,16 +74,20 @@ function updateWeekRange() {
 
     // 요일 인덱스 (0=일요일, 1=월요일…6=토요일)
     const dayOfWeek = date.getDay()
+    console.log(`dayOfWeek ${dayOfWeek}`)
     // 한국 기준 주간(월~일): 월요일을 주시작(1)으로 보면,
     // 월요일 = 1이니까 → 차이 = dayOfWeek - 1
     const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
 
+    // 그 주에 있는 월요일 찾기
     const mon = new Date(date)
     mon.setDate(date.getDate() + diffToMon)
 
+    // 그 주에 있는 일요일 찾기
     const sun = new Date(mon)
     sun.setDate(mon.getDate() + 6)
 
+    // 날짜 바꿔주는 format 적용하기 -> 위에 있는거랑 동일한 로직이긴 함
     const format = dt => {
         const Y = dt.getFullYear()
         const M = String(dt.getMonth() + 1).padStart(2, '0')

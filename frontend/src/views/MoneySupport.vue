@@ -8,10 +8,16 @@
     <img src="@/assets/support3.png"></img>
     <img src="@/assets/support4.png"></img>
   </div>
+  <button @click="goTotalSupport()">돌아가기</button>
   </template>
 
 <script setup>
+import {useRouter} from 'vue-router'
+const router = useRouter()
 
+function goTotalSupport() {
+  router.push('/total-support')
+}
 </script>
 
 <style scoped>

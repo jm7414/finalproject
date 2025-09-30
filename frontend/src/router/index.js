@@ -88,6 +88,11 @@ const router = createRouter({
       component: () => import('../views/MoneySupport.vue'),
     },        
     {
+      path: '/insurance',
+      name: 'insurance',
+      component: () => import('../views/Insurance.vue'),
+    },        
+    {
       path: '/record',
       name: 'record',
       component: () => import('../views/Record.vue'),

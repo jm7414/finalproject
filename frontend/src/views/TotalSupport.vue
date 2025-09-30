@@ -38,17 +38,17 @@
 
     <!-- 기능 카드 그리드 -->
     <div class="function-grid">
-      <div class="func-card">
+      <div class="func-card" >
         <MoneyMarker class="func-icon" />
         <div class="func-title">지원금</div>
         <div class="func-desc">정부 및 지자체 지원금 안내</div>
-        <button class="func-link">확인하기 →</button>
+        <button class="func-link" @click="goMoneySupportPage()">확인하기 →</button>
       </div>
       <div class="func-card">
         <BohumMarker class="func-icon" />
         <div class="func-title">보험금</div>
         <div class="func-desc">의료보험 및 생활보험 혜택</div>
-        <button class="func-link">확인하기 →</button>
+        <button class="func-link" @click="goInsurancePage()">확인하기 →</button>
       </div>
       <div class="func-card">
         <SangDamMarker class="func-icon" />
@@ -72,6 +72,19 @@ import BohumMarker from '@/components/BohumMarker.vue'
 import SangDamMarker from '@/components/SangDamMarker.vue' 
 import HospitalMarker from '@/components/HospitalMarker.vue'
 import ProfileMarker from '@/components/ProfileMarker.vue' 
+import { useRouter } from 'vue-router'
+const router = useRouter();
+
+
+function goMoneySupportPage() {
+  router.push('/money-support')
+}
+
+function goInsurancePage() {
+  router.push('/insurance')
+}
+
+
 </script>
 
 <style scoped>

@@ -107,12 +107,17 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import MealMarker from '@/components/MealMarker.vue' //
 import MediMarker from '@/components/MediMarker.vue' // 
 import ActivityMarker from '@/components/ActivityMarker.vue' //
 import HappyMarker from '@/components/HappyMarker.vue'
 import AlertMarker from '@/components/AlertMarker.vue' //
 
+const router = useRouter();
+function handleSubmit() {
+    router.push('/report')
+}
 
 const currentDate = ref('')
 let intervalId = null
