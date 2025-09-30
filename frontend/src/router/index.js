@@ -70,7 +70,7 @@ const router = createRouter({
       name: 'search-route',
       component: SearchRouteView,
     },        
-    // 주형 종합지원, 지원금안내페이지 수정 시작
+    // 주형 종합지원, 지원금안내페이지, 기록 수정 시작
     {
       path: '/total-support',
       name: 'totalSupport',
@@ -80,6 +80,11 @@ const router = createRouter({
       path: '/money-support',
       name: 'moneySupport',
       component: () => import('../views/MoneySupport.vue'),
+    },        
+    {
+      path: '/record',
+      name: 'record',
+      component: () => import('../views/Record.vue'),
     },        
     // 주형 종합지원, 지원금안내페이지 수정 끝
         {
