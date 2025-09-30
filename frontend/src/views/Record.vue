@@ -214,12 +214,13 @@ const specialSurvey = [
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding: 0;
 }
 
 .survey-section {
     background: white;
     border-radius: 12px;
-    padding: 10px;
+    padding: 15px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -321,17 +322,5 @@ const specialSurvey = [
     border-color: #0056b3;
 }
 
-@media (max-width: 768px) {
-    .container {
-        padding: 15px;
-    }
 
-    .survey-section {
-        padding: 18px;
-    }
-
-    .title-section h2 {
-        font-size: 20px;
-    }
-}
 </style>
