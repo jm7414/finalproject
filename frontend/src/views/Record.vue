@@ -2,7 +2,7 @@
     <div class="container">
         <div class="title-section">
             <h2>{{ currentDate }}</h2>
-            <h2>{{ userName }}홍길동님의 오늘의 기록</h2> 
+            <h2>{{ userName }}홍길동님의 오늘의 기록</h2>
             <!-- 이 부분에서 userName을 사용자의 아이디로 가져올 생각이라서 일단 반응형으로 넣어놓고 나중에 홍길동은 지우면 됩니다-->
             <!-- 저기서 보호자로 로그인했을 때 환자의 아이디를 가져오는 방법도 있는데 일단은 userName으로 남겨둘게요-->
         </div>
@@ -97,16 +97,16 @@
                     </div>
                 </div>
             </div>
-      <div class="btn-group">
-        <button class="btn-back" @click="goBack">돌아가기</button>
-        <button class="btn-submit" @click="handleSubmit">제출하기</button>
-      </div>
+            <div class="btn-group">
+                <button class="btn-back" @click="goBack">돌아가기</button>
+                <button class="btn-submit" @click="handleSubmit">제출하기</button>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted} from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import MealMarker from '@/components/MealMarker.vue' //
 import MediMarker from '@/components/MediMarker.vue' // 
 import ActivityMarker from '@/components/ActivityMarker.vue' //
@@ -118,32 +118,32 @@ const currentDate = ref('')
 let intervalId = null
 
 function updateDateTime() {
-  const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  currentDate.value = `${yyyy}년 ${mm}월 ${dd}일`
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    currentDate.value = `${yyyy}년 ${mm}월 ${dd}일`
 
 
 }
 onMounted(() => {
-  updateDateTime()
-  intervalId = setInterval(updateDateTime, 1000)
+    updateDateTime()
+    intervalId = setInterval(updateDateTime, 1000)
 })
 
 // 컴포넌트 언마운트 시 타이머 정리
 onUnmounted(() => {
-  clearInterval(intervalId)
+    clearInterval(intervalId)
 })
 
 
 
 const selectedAnswers = ref({
-    meal: {0:0, 1:0, 2:0},
-    medi: {0:0, 1:0},
-    activity: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-    feel: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
-    special: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+    meal: { 0: 0, 1: 0, 2: 0 },
+    medi: { 0: 0, 1: 0 },
+    activity: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    feel: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
+    special: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
 })
 
 function answerQuestion(category, qIdx, ansIdx) {
@@ -214,12 +214,13 @@ const specialSurvey = [
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding: 0;
 }
 
 .survey-section {
     background: white;
     border-radius: 12px;
-    padding: 10px;
+    padding: 15px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -278,57 +279,48 @@ const specialSurvey = [
     border-color: #7E88FF;
     color: #FFFF;
 }
+
 .btn-group {
-  display: flex;
-  justify-content: flex-end; /* 오른쪽 정렬 */
-  gap: 12px;
-  margin-top: 0;
-  padding-top: 12px;
-  border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    /* 오른쪽 정렬 */
+    gap: 12px;
+    margin-top: 0;
+    padding-top: 12px;
+    border-top: 1px solid #e9ecef;
 }
 
 /* 돌아가기 버튼 */
 .btn-back {
-  padding: 8px 16px;
-  background: white;
-  color: #666;
-  border: 2px solid #e9ecef;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
+    padding: 8px 16px;
+    background: white;
+    color: #666;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
+
 .btn-back:hover {
-  color: #333;
-  background-color: #999;
+    color: #333;
+    background-color: #999;
 }
 
 /* 제출하기 버튼 */
 .btn-submit {
-  padding: 8px 16px;
-  background: #007bff;
-  color: white;
-  border: 2px solid #007bff;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
+    padding: 8px 16px;
+    background: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
+
 .btn-submit:hover {
-  background: #0056b3;
-  border-color: #0056b3;
+    background: #0056b3;
+    border-color: #0056b3;
 }
 
-@media (max-width: 768px) {
-    .container {
-        padding: 15px;
-    }
-
-    .survey-section {
-        padding: 18px;
-    }
-
-    .title-section h2 {
-        font-size: 20px;
-    }
-}
 
 </style>
