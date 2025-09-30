@@ -247,13 +247,13 @@ function cancelSettings() {
 .page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
 }
 
 .map-box {
   width: 100%;
-  height: calc(100vh - 180px); /* 컨트롤 영역 높이만큼 제외 */
+  height: 800px; /* 지도 길이 조정 */
 }
 
 .controls {
@@ -261,7 +261,6 @@ function cancelSettings() {
   padding: 16px;
   border-top: 1px solid #e5e7eb;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-  height: 180px; /* 고정 높이 설정 */
   flex-shrink: 0; /* 축소 방지 */
 }
 
