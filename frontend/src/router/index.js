@@ -5,7 +5,7 @@ import DP_main from '@/views/DP_main.vue'
 import GD_main from '@/views/GD_main.vue'
 import GeoFencingView from '@/views/GeoFencingView.vue'
 import SearchRouteView from '@/views/SearchRouteView.vue'
-import Signup from '@/views/SignUp.vue'
+import Signup from '@/views/Signup.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -82,16 +82,6 @@ const router = createRouter({
       component: () => import('../views/MoneySupport.vue'),
     },        
     // 주형 종합지원, 지원금안내페이지 수정 끝
-        {
-      path: '/gdmypage',
-      name: 'gdmypage',
-      component: () => import('../views/GdMypageView.vue'),
-    },
-    {
-      path: '/dpmypage',
-      name: 'dpmypage',
-      component: () => import('../views/DpMypageView.vue'),
-    }
   ],
 })
 
