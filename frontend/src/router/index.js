@@ -7,6 +7,19 @@ import GeoFencingView from '@/views/GeoFencingView.vue'
 import SearchRouteView from '@/views/SearchRouteView.vue'
 import Signup from '@/views/SignUp.vue'
 import Login from '@/views/Login.vue'
+import CommunityView from '@/views/CommunityView.vue'
+import PredictLocation from '@/views/PredictLocation.vue'
+import CommunityMissing from '@/components/CommunityMissing.vue'
+import CommunityPost from '@/components/CommunityPost.vue'
+import CommunityEvent from '@/components/CommunityEvent.vue'
+import TotalSupport from '@/views/TotalSupport.vue'
+import MoneySupport from '@/views/MoneySupport.vue'
+import Record from '@/views/Record.vue'
+import Report from '@/views/Report.vue'
+import GdMypageView from '@/views/GdMypageView.vue'
+import DpMypageView from '@/views/DpMypageView.vue'
+import Basicplan from '@/views/Basicplan.vue'
+import Plusplan from '@/views/Plusplan.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,27 +57,27 @@ const router = createRouter({
     {
       path: '/CommunityView',
       name: 'CommunityView',
-      component: () => import('../views/CommunityView.vue'),
+      component: CommunityView,
     },
     {
       path: '/predict-location',
       name: 'predict-location',
-      component: () => import('../views/PredictLocation.vue'),
+      component: PredictLocation,
     },
     {
       path: '/CommunityMissing',
       name: 'CommunityMissing',
-      component: () => import('../components/CommunityMissing.vue'),
+      component: CommunityMissing,
     },
     {
       path: '/CommunityPost',
       name: 'CommunityPost',
-      component: () => import('../components/CommunityPost.vue'),
+      component: CommunityPost,
     },
     {
       path: '/CommunityEvent',
       name: 'CommunityEvent',
-      component: () => import('../components/CommunityEvent.vue'),
+      component: CommunityEvent,
     },
         {
       path: '/geo-fencing',
@@ -80,43 +93,43 @@ const router = createRouter({
     {
       path: '/total-support',
       name: 'totalSupport',
-      component: () => import('../views/TotalSupport.vue'),
+      component: TotalSupport,
     },        
     {
       path: '/money-support',
       name: 'moneySupport',
-      component: () => import('../views/MoneySupport.vue'),
+      component: MoneySupport,
     },        
     {
       path: '/record',
       name: 'record',
-      component: () => import('../views/Record.vue'),
+      component: Record,
     },        
     {
       path: '/report',
       name: 'report',
-      component: () => import('../views/Report.vue'),
+      component: Report,
     },        
     // 주형 종합지원, 지원금안내페이지 수정 끝
         {
       path: '/gdmypage',
       name: 'gdmypage',
-      component: () => import('../views/GdMypageView.vue'),
+      component: GdMypageView,
     },
     {
       path: '/dpmypage',
       name: 'dpmypage',
-      component: () => import('../views/DpMypageView.vue'),
+      component: DpMypageView,
     },
     {
       path: '/basicplan',
       name: 'basicplan',
-      component: () => import('../views/Basicplan.vue'),
+      component: Basicplan,
     },
     {
       path: '/plusplan',
       name: 'plusplan',
-      component: () => import('../views/Plusplan.vue'),
+      component: Plusplan,
     }
   ],
 })

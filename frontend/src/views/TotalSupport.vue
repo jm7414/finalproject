@@ -42,7 +42,7 @@
         <MoneyMarker class="func-icon" />
         <div class="func-title">지원금</div>
         <div class="func-desc">정부 및 지자체 지원금 안내</div>
-        <button class="func-link">확인하기 →</button>
+        <button class="func-link" @click="goToMoneySupport">확인하기 →</button>
       </div>
       <div class="func-card">
         <BohumMarker class="func-icon" />
@@ -67,11 +67,18 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import MoneyMarker from '@/components/MoneyMarker.vue' 
 import BohumMarker from '@/components/BohumMarker.vue' 
 import SangDamMarker from '@/components/SangDamMarker.vue' 
 import HospitalMarker from '@/components/HospitalMarker.vue'
 import ProfileMarker from '@/components/ProfileMarker.vue' 
+
+const router = useRouter()
+
+function goToMoneySupport() {
+  router.push('/money-support')
+}
 </script>
 
 <style scoped>

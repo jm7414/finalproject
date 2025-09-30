@@ -27,7 +27,6 @@
           </div>
         </div>
       </div>
-      <!-- 안내 문구 제거 -->
     </div>
 
     <div class="section-title">장소 결과</div>
@@ -135,7 +134,7 @@ function selectActive(place) {
 }
 
 function swapFromTo() {
-  // 쿼리와 선택 결과를 맞교환
+  // 쿼리와 선택 결과를 맞교환(ai가 방벙을 알려줬어요)
   const tq = startQuery.value; startQuery.value = destQuery.value; destQuery.value = tq
   const ts = selectedStart.value; selectedStart.value = selectedDest.value; selectedDest.value = ts
   // 결과 리스트는 활성 필드 기준 유지
