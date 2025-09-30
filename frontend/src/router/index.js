@@ -82,6 +82,16 @@ const router = createRouter({
       component: () => import('../views/MoneySupport.vue'),
     },        
     // 주형 종합지원, 지원금안내페이지 수정 끝
+        {
+      path: '/gdmypage',
+      name: 'gdmypage',
+      component: () => import('../views/GdMypageView.vue'),
+    },
+    {
+      path: '/dpmypage',
+      name: 'dpmypage',
+      component: () => import('../views/DpMypageView.vue'),
+    }
   ],
 })
 
