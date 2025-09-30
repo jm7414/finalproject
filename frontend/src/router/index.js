@@ -107,6 +107,16 @@ const router = createRouter({
       path: '/dpmypage',
       name: 'dpmypage',
       component: () => import('../views/DpMypageView.vue'),
+    },
+    {
+      path: '/basicplan',
+      name: 'basicplan',
+      component: () => import('../views/Basicplan.vue'),
+    },
+    {
+      path: '/plusplan',
+      name: 'plusplan',
+      component: () => import('../views/Plusplan.vue'),
     }
   ],
 })
