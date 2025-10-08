@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import AboutView from '@/views/AboutView.vue'
 import DP_main from '@/views/DP_main.vue'
 import GD_main from '@/views/GD_main.vue'
 import GeoFencingView from '@/views/GeoFencingView.vue'
@@ -17,7 +15,6 @@ import MoneySupport from '@/views/MoneySupport.vue'
 import Record from '@/views/Record.vue'
 import Report from '@/views/Report.vue'
 import GdMypageView from '@/views/GdMypageView.vue'
-import DpMypageView from '@/views/DpMypageView.vue'
 import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
 import Calender from '@/views/Calender.vue'
@@ -29,12 +26,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: AboutView,
+      redirect: '/login',
     },
     {
       path: '/DP',
@@ -117,11 +109,6 @@ const router = createRouter({
       path: '/gdmypage',
       name: 'gdmypage',
       component: GdMypageView,
-    },
-    {
-      path: '/dpmypage',
-      name: 'dpmypage',
-      component: DpMypageView,
     },
     {
       path: '/basicplan',

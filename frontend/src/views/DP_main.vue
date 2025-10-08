@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import heartIcon from '@/assets/images/DP2.svg';
+import DpMypageView from './DpMypageView.vue';
 
 // 상단 스케줄 데이터
 const scheduleItems = ref([
@@ -17,9 +18,14 @@ const menuItems = ref([
   { id: 'my-info', title: '내 정보', icon: null, path: '/my-info' },
 ]); 
 
-const handleMenuClick = (menuItem) => {
-  alert(`${menuItem.title} 버튼 클릭!`);
+const showMyInfo = ref(false);
 
+const handleMenuClick = (menuItem) => {
+  if (menuItem.id === 'my-info') {
+    showMyInfo.value = true;
+  } else {
+    alert(`${menuItem.title} 버튼 클릭!`);
+  }
 };
 
 </script>
@@ -150,6 +156,10 @@ const handleMenuClick = (menuItem) => {
         <span class="menu-title">{{ item.title }}</span>
       </button>
     </div>
+    <!-- 내 정보 모달 -->
+    <Teleport to="body">
+      <DpMypageView v-if="showMyInfo" @close="showMyInfo = false" />
+    </Teleport>
   </div>
 </template>
 

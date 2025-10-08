@@ -1,5 +1,6 @@
 <template>
-  <div class="info-page container px-3 py-3">
+  <div class="modal-backdrop" @click.self="$emit('close')">
+    <div class="modal-content info-page container px-3 py-3">
     <!-- 제목 -->
     <h2 class="text-center fw-semibold title mb-4">내정보</h2>
 
@@ -36,14 +37,51 @@
         <img :src="u('/figma/qr.svg')" alt="QR 코드" class="tile-icon" />
       </article>
     </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 const u = (p: string) => encodeURI(p)
+
+defineEmits(['close'])
 </script>
 
 <style scoped>
+/* ===== Modal Styles ===== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ===== Layout ===== */
 @media (min-width: 576px) {
   .info-page.container {

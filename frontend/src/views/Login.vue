@@ -3,14 +3,8 @@
   <div class="lg-wrap position-relative mx-auto bg-white" style="
       --topWaveH: 180px;    /* 상단 블랍 높이 */
       --topWaveX: 0px;      /* 상단 블랍 좌우 오프셋 */
-
-      /* 왼쪽 블랍: 통째로 보이게(지금 값 유지) */
       --leftBlobW: 230px;
-
-      /* 오른쪽 블랍: 아주 작게 포인트 */
       --rightBlobW: 48px;
-
-      /* 로그인 버튼/아이콘 크기 (필요시 여기만 조정) */
       --go-h: 48px;         /* 버튼 높이 */
       --go-minw: 64px;      /* 버튼 최소 너비 */
       --go-icon: 40px;      /* 화살표 크기 */
@@ -69,13 +63,14 @@
           </div>
         </div>
 
-        <p class="text-center text-secondary small mb-5">비밀번호가 기억나지 않으신가요?</p>
+        <p class="text-center text-secondary small mb-5">
+          <a href="#" class="text-decoration-none text-secondary" @click.prevent="goToForgotPassword">비밀번호가 기억나지 않으신가요?</a>
+        </p>
 
         <!-- CTA: 가운데 정렬 -->
         <div class="cta-row mb-4">
           <div class="cta-title">로그인</div>
           <button type="submit" class="lg-go shadow" aria-label="로그인">
-            <!-- 아이콘은 CSS로 크기 제어 -->
             <svg class="lg-go-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M8 12h8M13 7l5 5-5 5" stroke="#fff" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
@@ -83,7 +78,10 @@
           </button>
         </div>
 
-        <p class="text-center text-secondary">회원이 아니신가요?</p>
+        <p class="text-center text-secondary">
+          회원이 아니신가요? 
+          <router-link to="/SignUp" class="text-decoration-none text-primary">회원가입</router-link>
+        </p>
       </form>
     </div>
 
@@ -95,25 +93,70 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import topWave from '@/assets/images/qwe.svg'
 import leftBlob from '@/assets/images/asd.svg'
 import rightBlob from '@/assets/images/zxc.svg'
 
+const router = useRouter()
 const form = reactive({ username: '', password: '' })
 const showPw = ref(false)
 
-function onLogin() {
+async function onLogin() {
   if (!form.username || !form.password) {
     alert('아이디와 비밀번호를 입력하세요.')
     return
   }
-  console.log('login', { ...form })
-  alert('로그인 요청 전송(데모)')
+
+  try {
+    const response = await fetch('http://localhost:8080/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        username: form.username,
+        password: form.password,
+      }),
+      credentials: 'include',
+    })
+
+    if (response.ok) {
+      // 로그인 성공 시 사용자 정보 조회
+      const userResponse = await fetch('http://localhost:8080/api/user/me', {
+        credentials: 'include',
+      })
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json()
+        // 역할에 따라 다른 페이지로 이동
+        if (userData.roleNo === 1 || userData.roleNo === 3) {
+          // 보호자(1) 또는 구독자(3) -> GD 페이지
+          router.push('/GD')
+        } else if (userData.roleNo === 2) {
+          // 환자(2) -> DP 페이지
+          router.push('/DP')
+        } else {
+          // 기본값 (예외 처리)
+          router.push('/login')
+        }
+      }
+    } else {
+      alert('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.')
+    }
+  } catch (error) {
+    console.error('로그인 중 오류 발생:', error)
+    alert('로그인 처리 중 오류가 발생했습니다.')
+  }
+}
+
+function goToForgotPassword() {
+  alert('준비 중인 기능입니다.') // 비밀번호 찾기 기능은 아직 구현하지 않음
 }
 </script>
 
 <style scoped>
-/* 고정 캔버스(모바일 아트보드) */
+/* 기존 스타일 유지 */
 .lg-wrap {
   width: 414px;
   height: 896px;
@@ -122,7 +165,6 @@ function onLogin() {
   background: #fff;
 }
 
-/* 상단 블랍 */
 .deco-top-img {
   position: absolute;
   left: 0;
@@ -136,13 +178,11 @@ function onLogin() {
   pointer-events: none;
 }
 
-/* 콘텐츠는 항상 블랍 위로 */
 .lg-content {
   position: relative;
   z-index: 1;
 }
 
-/* 타이틀/서브 */
 .lg-title {
   margin-top: calc(var(--topWaveH, 180px) + 36px);
   margin-bottom: 8px;
@@ -155,7 +195,6 @@ function onLogin() {
   color: #6b7280;
 }
 
-/* 인풋 형태 */
 .lg-pill {
   border-radius: 40px;
   overflow: hidden;
@@ -178,7 +217,6 @@ function onLogin() {
   background: #fff;
 }
 
-/* CTA 행: 가운데 정렬 */
 .cta-row {
   display: flex;
   align-items: center;
@@ -194,7 +232,6 @@ function onLogin() {
   line-height: 1;
 }
 
-/* === 로그인 버튼(라운드 네모, 필 형태) === */
 .lg-go {
   height: var(--go-h);
   min-width: var(--go-minw);
@@ -219,14 +256,12 @@ function onLogin() {
   transform: translateY(0);
 }
 
-/* 아이콘 크기 확실히 키움 */
 .lg-go-icon {
   width: var(--go-icon);
   height: var(--go-icon);
   display: block;
 }
 
-/* ===== 하단 블랍들 ===== */
 .deco-blob-left-img {
   position: absolute;
   left: 24px;
