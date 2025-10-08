@@ -41,11 +41,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
                 // 회원가입, 로그인 페이지 접근 허용
-                .requestMatchers("/register", "/login", "/SignUp").permitAll()
+                .requestMatchers("/login", "/logout", "/register", "/SignUp").permitAll()
                 .requestMatchers("/api/user/check-duplicate").permitAll()
                 .requestMatchers("/api/route/**").permitAll()
                 .requestMatchers("/index.html", "/favicon.ico", "/assets/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
+                //.requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
                 // 보호자/구독자 전용 페이지 및 API
                 .requestMatchers("/GD", "/api/guardian/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
                 // 환자 전용 페이지 및 API

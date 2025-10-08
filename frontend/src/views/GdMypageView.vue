@@ -60,6 +60,18 @@
         <span class="flex-grow-1 menu-text">구독 및 결제 관리</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
       </div>
+
+      <!-- 로그아웃 -->
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 logout-item" @click="handleLogout" style="cursor: pointer;">
+        <span class="menu-icon" style="background:#FFE8E8">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </span>
+        <span class="flex-grow-1 menu-text logout-text">로그아웃</span>
+      </div>
     </div>
 
     <!-- 구독 카드 (디테일 업) -->
@@ -87,6 +99,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { logout } from '@/utils/auth'
 
 /** 공백/쉼표 포함 경로 안전 처리 */
 const u = (p: string) => encodeURI(p)
@@ -96,6 +109,18 @@ const router = useRouter()
 // 구독 및 결제 관리 페이지로 이동
 const goToBilling = () => {
   router.push('/basicplan')
+}
+
+// 로그아웃 처리
+const handleLogout = async () => {
+  const success = await logout()
+  
+  if (success) {
+    // 로그인 페이지로 이동
+    router.push('/login')
+  } else {
+    alert('로그아웃에 실패했습니다.')
+  }
 }
 </script>
 
@@ -253,6 +278,20 @@ const goToBilling = () => {
   object-fit: contain;
 }
 
+/* 로그아웃 메뉴 스타일 */
+.logout-item {
+  border-top: 2px solid #f0f0f0;
+  margin-top: 8px;
+}
+
+.logout-item:hover {
+  background: #FFF5F5 !important;
+}
+
+.logout-text {
+  color: #FF6B6B;
+  font-weight: 500;
+}
 
 </style>
 
