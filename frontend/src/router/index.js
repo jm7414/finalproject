@@ -20,6 +20,8 @@ import GdMypageView from '@/views/GdMypageView.vue'
 import DpMypageView from '@/views/DpMypageView.vue'
 import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
+import Calender from '@/views/Calender.vue'
+import AddSchedule from '@/views/AddSchedule.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -130,6 +132,16 @@ const router = createRouter({
       path: '/plusplan',
       name: 'plusplan',
       component: Plusplan,
+    },
+    {
+      path: '/calendar',
+      name: 'calendar',
+      component: Calender,
+    },
+    {
+      path: '/add-schedule',
+      name: 'add-schedule',
+      component: AddSchedule,
     }
   ],
 })

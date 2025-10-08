@@ -1,6 +1,6 @@
 <template>
   <div class="app-layout" :class="{ 'gd-main-layout': isGDMainPage }">
-    <AppHeader />
+    <AppHeader v-if="!shouldHideHeader" />
     <main class="main-content" :class="{ 'gd-main-page': isGDMainPage }">
       <RouterView /> </main>
     <AppFooter v-if="!isGDMainPage" />
@@ -21,6 +21,11 @@ const route = useRoute()
 // GD_main 페이지인지 확인하는 computed 속성
 const isGDMainPage = computed(() => {
   return route.name === 'GD'
+})
+
+// 헤더를 숨겨야 하는 페이지들 확인
+const shouldHideHeader = computed(() => {
+  return route.name === 'add-schedule'
 })
 </script>
 
@@ -44,7 +49,7 @@ const isGDMainPage = computed(() => {
 <style scoped>
 .main-content{
   padding-top: 30px;
-  padding-bottom: 100px;
+  padding-bottom: 85px;
 }
 
 /* GD_main 페이지에서는 padding 제거 */
