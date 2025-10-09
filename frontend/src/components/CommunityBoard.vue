@@ -1,38 +1,58 @@
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router'; // 1. 라우터 import
-import image1 from '@/assets/images/Post.jpg';
+import { ref, onMounted } from 'vue'; // onMounted 추가
+import { useRouter } from 'vue-router';
+import axios from 'axios'; // axios 추가
 
-const posts = ref([
-  { 
-    id: 1, 
-    author: '오일남',
-    title: '치매에 좋은 음식', 
-    stats: { comments: 1, likes: 0, views: 6 },
-    time: '1 시간 전' 
-  },
-  { 
-    id: 2, 
-    author: '오일남',
-    title: '꽃이 이쁘네요', 
-    image: image1,
-    stats: { comments: 2, likes: 7, views: 23 },
-    time: '3 시간 전'
-  },
-]);
+const posts = ref([]);
+const loading = ref(true);
+const error = ref(null);
+const router = useRouter();
 
-const router = useRouter(); // 2. 라우터 인스턴스 생성
+onMounted(() => {
+  fetchPosts();
+});
 
-// 3. 클릭 시 실행될 함수 정의
+async function fetchPosts() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await axios.get('http://localhost:8080/api/posts');
+    posts.value = response.data;
+  } catch (err) {
+    console.error("게시물 목록을 불러오는 데 실패했습니다:", err);
+    error.value = "데이터를 불러올 수 없습니다.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 시간을 계산하는 함수
+function formatTimeAgo(dateString) {
+  const now = new Date();
+  const postDate = new Date(dateString);
+  const seconds = Math.floor((now - postDate) / 1000);
+
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + "년 전";
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + "달 전";
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + "일 전";
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + "시간 전";
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + "분 전";
+  return "방금 전";
+}
+
+
 function goToPost(postId) {
-  // router.push(`/post/${postId}`);
-  router.push(`/CommunityPost`);
+  router.push(`/post/${postId}`);
 }
 
 function goToPostWrite() {
   router.push(`/CommunityPostWrite`);
 }
-
 </script>
 
 <template>
@@ -44,7 +64,13 @@ function goToPostWrite() {
       </select>
     </div>
 
+    <!-- 로딩 중일 때 보이는 메시지임 -->
+    <div v-if="loading">게시물 목록을 불러오는 중입니다...</div>
+    
+    <div v-else-if="error">{{ error }}</div>
+
     <div 
+      v-else
       v-for="post in posts" 
       :key="post.id" 
       class="post-card"
@@ -55,15 +81,18 @@ function goToPostWrite() {
         <span class="post-author">작성자 : {{ post.author }}</span>
       </div>
 
+      <!-- 이미지는 DB에 경로가 있을 때만 표시 -->
       <img v-if="post.image" :src="post.image" alt="게시물 이미지" class="post-image">
       
       <div class="card-footer">
         <div class="post-stats">
-          <span>💬 {{ post.stats.comments }}</span>
-          <span>❤️ {{ post.stats.likes }}</span>
-          <span>👁️ {{ post.stats.views }}</span>
+          
+          <span>💬 {{ post.comments }}</span>
+          <span>❤️ {{ post.likes }}</span>
+          <span>👁️ {{ post.views }}</span>
         </div>
-        <span class="post-time">{{ post.time }}</span>
+        
+        <span class="post-time">{{ formatTimeAgo(post.createdAt) }}</span>
       </div>
     </div>
     

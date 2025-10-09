@@ -38,6 +38,10 @@ public class SecurityConfig {
 		        .dispatcherTypeMatchers(DispatcherType.FORWARD,DispatcherType.INCLUDE,DispatcherType.ERROR).permitAll()
 		        .requestMatchers("/login").permitAll()
 		        .requestMatchers("/api/route/**").permitAll()
+                // 임시추가 나중에 지워야함 ↓↓↓
+                .requestMatchers("/api/posts/**").permitAll() 
+                .requestMatchers("/api/missing-posts/**").permitAll()
+                // 임시추가 나중에 지워야함 ↑↑↑ - 로그인 없는데 로그인안하면 안들여보내줌
 		        .requestMatchers("/index.html", "/favicon.ico", "/assets/**").permitAll()
 		        .requestMatchers(HttpMethod.GET,"/login","/logout","/register-page","/notice-check-page","/menu/all").permitAll()
                 .requestMatchers(HttpMethod.GET,"/chat/{senderNo}/last-messages","/chat/{roomId}/messages","/user/me").authenticated()

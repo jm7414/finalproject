@@ -1,36 +1,75 @@
 <script setup>
-import { ref, computed } from 'vue';
-import image1 from '@/assets/images/Missing.jpg';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
 
-// 입력된 제목, 내용을 저장하기 위한 ref 변수
+const route = useRoute();
+const router = useRouter();
+
+// URL에 id가 있으면 수정 모드, 없으면 생성 모드
+const isEditMode = computed(() => !!route.params.id);
+const postId = ref(route.params.id || null);
+
 const title = ref('');
 const content = ref('');
+const contentLength = computed(() => content.value.length);
 const attachedFile = ref(null);
 
-// 내용의 글자 수를 계산하는 computed 속성
-const contentLength = computed(() => content.value.length);
+// 컴포넌트가 마운트될 때 '수정 모드'인지 확인
+onMounted(() => {
+  if (isEditMode.value) {
+    // 수정 모드이면, 기존 게시물 데이터를 불러와서 폼에 채워넣습니다.
+    fetchPostForEdit();
+  }
+});
 
-// '사진 추가' 버튼을 클릭했을 때 실행될 함수
-function handleFileClick() {
-  alert('미완성 기능');
-  // 실제 구현 시에는 파일 입력(input type="file")을 트리거하는 코드가 들어갑니다.
+// 수정할 게시물 데이터를 불러오는 함수
+async function fetchPostForEdit() {
+  try {
+    const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`);
+    title.value = response.data.title;
+    content.value = response.data.content;
+  } catch (error) {
+    console.error('수정할 게시물 정보를 불러오는 데 실패했습니다:', error);
+    alert('게시물 정보를 불러올 수 없습니다.');
+    router.push('/community'); // 실패 시 목록으로
+  }
 }
 
-// '글 작성하기' 버튼을 클릭했을 때 실행될 함수
-function submitPost() {
-  if (!title.value || !content.value) {
+// '글 작성하기' 또는 '수정하기' 버튼 클릭 시 실행될 함수
+async function submitPost() {
+  if (!title.value.trim() || !content.value.trim()) {
     alert('제목과 내용을 모두 입력해주세요.');
     return;
   }
 
-  // 콘솔에 입력된 데이터를 객체 형태로 출력
-  console.log('--- 새로운 게시물 데이터 ---');
-  console.log({
-    title: title.value,
-    content: content.value,
-    // attachedFile: attachedFile.value // 실제 파일 데이터
-  });
-  alert('게시글이 작성되었습니다. (콘솔을 확인해보세요)');
+  try {
+    const postData = {
+      title: title.value,
+      content: content.value,
+    };
+
+    if (isEditMode.value) { // 이해필요
+      // 수정 모드일 경우: PUT 요청
+      await axios.put(`http://localhost:8080/api/posts/${postId.value}`, postData);
+      alert('게시글이 성공적으로 수정되었습니다!');
+      router.push(`/post/${postId.value}`); // 수정된 글로 이동
+    } else {
+      // 생성 모드일 경우: POST 요청
+      const response = await axios.post('http://localhost:8080/api/posts', postData);
+      const newPostId = response.data;
+      router.push(`/post/${newPostId}`); 
+    }
+
+  } catch (error) {
+    console.error('게시글 처리 중 오류가 발생했습니다:', error);
+    alert('작업에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+// 사진
+function handleFileClick() {
+  alert('미완성 기능');
 }
 </script>
 
@@ -47,16 +86,15 @@ function submitPost() {
       />
     </div>
 
-    
     <div class="form-group">
       <label for="content">내용 <span class="required">*</span></label>
       <div class="textarea-wrapper">
         <textarea 
-        id="content"
-        v-model="content" 
-        placeholder="내용을 입력해 주세요" 
-        class="form-textarea"
-        maxlength="500"
+          id="content"
+          v-model="content" 
+          placeholder="내용을 입력해 주세요" 
+          class="form-textarea"
+          maxlength="500"
         ></textarea>
         <span class="char-counter">{{ contentLength }}/500</span>
       </div>
@@ -68,12 +106,13 @@ function submitPost() {
         id="photo"
         @click="handleFileClick" 
         class="file-input-button"
-        image: image1
       >
       </button>
     </div>
 
-    <button @click="submitPost" class="submit-button">글 작성하기</button>
+    <button @click="submitPost" class="submit-button">
+      {{ isEditMode ? '수정하기' : '글 작성하기' }}
+    </button>
   </div>
 </template>
 
@@ -160,3 +199,4 @@ function submitPost() {
   transform: translateY(-2px);
 }
 </style>
+

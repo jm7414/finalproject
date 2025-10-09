@@ -10,6 +10,7 @@ import Login from '@/views/Login.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
+import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
 import CommunityPost from '@/components/CommunityPost.vue'
 import CommunityEvent from '@/components/CommunityEvent.vue'
 import TotalSupport from '@/views/TotalSupport.vue'
@@ -54,6 +55,8 @@ const router = createRouter({
       name: 'login',
       component: Login,
     },
+
+    // 병욱 게시판 시작
     {
       path: '/CommunityView',
       name: 'CommunityView',
@@ -70,16 +73,28 @@ const router = createRouter({
       component: CommunityMissing,
     },
     {
-      path: '/CommunityPost',
+      path: '/post/:id',
       name: 'CommunityPost',
       component: CommunityPost,
     },
+    {
+      path: '/CommunityPostWrite',
+      name: 'CommunityPostWrite',
+      component: CommunityPostWrite,
+    },    
     {
       path: '/CommunityEvent',
       name: 'CommunityEvent',
       component: CommunityEvent,
     },
-        {
+    {
+      path: '/post/edit/:id', // '/post/edit/1' 과 같은 개념
+      name: 'PostEdit',
+      component: CommunityPostWrite // PostWrite 재활용 가능
+    },    
+    // 병욱 게시판 끝
+
+    {
       path: '/geo-fencing',
       name: 'geo-fencing',
       component: GeoFencingView,
@@ -88,7 +103,8 @@ const router = createRouter({
       path: '/search-route',
       name: 'search-route',
       component: SearchRouteView,
-    },        
+    },     
+
     // 주형 종합지원, 지원금안내페이지, 기록, 리포트 수정 시작
     {
       path: '/total-support',
