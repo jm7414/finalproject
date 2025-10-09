@@ -21,6 +21,9 @@ import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
 import Calender from '@/views/Calender.vue'
 import AddSchedule from '@/views/AddSchedule.vue'
+import Connect from '@/views/GD_Connect.vue'
+import DP_Connect from '@/views/DP_Connect.vue'
+import GD_Connect from '@/views/GD_Connect.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,6 +32,16 @@ const router = createRouter({
       path: '/',
       name: 'home',
       redirect: '/login',
+    },
+    {
+      path: '/gdc',
+      name: 'gdc',
+      component: GD_Connect,
+    },
+     {
+      path: '/dpc',
+      name: 'dpc',
+      component: DP_Connect,
     },
     {
       path: '/DP',
