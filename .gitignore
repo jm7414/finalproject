@@ -32,3 +32,9 @@ node_modules/
 /build/
 npm-debug.log
 yarn-error.logpostgis_3_5_pg16.exe
+
+# Eclipse IDE
+.classpath
+.factorypath
+.project
+.settings/
