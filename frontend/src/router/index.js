@@ -7,6 +7,9 @@ import GeoFencingView from '@/views/GeoFencingView.vue'
 import SearchRouteView from '@/views/SearchRouteView.vue'
 import Signup from '@/views/SignUp.vue'
 import Login from '@/views/Login.vue'
+import Connect from '@/views/GD_Connect.vue'
+import DP_Connect from '@/views/DP_Connect.vue'
+import GD_Connect from '@/views/GD_Connect.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,6 +23,16 @@ const router = createRouter({
       path: '/about',
       name: 'about',
       component: AboutView,
+    },
+    {
+      path: '/gdc',
+      name: 'gdc',
+      component: GD_Connect,
+    },
+     {
+      path: '/dpc',
+      name: 'dpc',
+      component: DP_Connect,
     },
     {
       path: '/DP',
