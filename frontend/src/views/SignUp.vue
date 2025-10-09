@@ -1,4 +1,4 @@
-<!-- src/views/Signup.vue -->
+<!-- src/views/SignUp.vue -->
 <template>
   <div class="sg-wrap position-relative mx-auto bg-white">
     <!-- 상단 웨이브: 화면 폭 끝까지 -->
@@ -47,7 +47,7 @@
             </svg>
           </span>
           <input v-model.trim="form.username" type="text" class="form-control border-0 sg-pill-end" placeholder="아이디"
-            autocomplete="username" required />
+            autocomplete="username" @input="onUsernameChange" required />
         </div>
         <button type="button" class="btn rounded-pill id-chip shadow-sm" @click="checkDuplicate">
           중복체크
@@ -115,18 +115,23 @@
         <label class="form-check-label" for="isGuardian">보호자일 경우 체크</label>
       </div>
 
-      <!-- (주소칸 삭제로 인한 여백 최소화) -->
-      <div class="spacer-addr"></div>
-
-      <!-- 하단 텍스트(버튼 아님) -->
-      <div class="cta-text fw-bold">회원가입</div>
+      <!-- 하단 텍스트와 버튼 -->
+      <div class="mt-4 text-center">
+        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5">회원가입</button>
+        <p class="mt-3">
+          이미 계정이 있으신가요? 
+          <router-link to="/login" class="text-decoration-none text-primary">로그인</router-link>
+        </p>
+      </div>
     </form>
   </div>
 </template>
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const form = reactive({
   name: '',
   username: '',
@@ -137,24 +142,90 @@ const form = reactive({
 })
 
 const showPw = ref(false)
+const isIdChecked = ref(false)
+const isIdAvailable = ref(false)
 
-function checkDuplicate() {
-  if (!form.username) return alert('아이디를 입력하세요.')
-  alert(`'${form.username}' 중복 확인(데모)`)
+// 아이디 입력 시 중복 확인 상태 초기화
+function onUsernameChange() {
+  isIdChecked.value = false
+  isIdAvailable.value = false
 }
 
-function onSubmit() {
+async function checkDuplicate() {
+  if (!form.username) {
+    alert('아이디를 입력하세요.')
+    return
+  }
+
+  try {
+    const response = await fetch(`http://localhost:8080/api/user/check-duplicate?userId=${form.username}`, {
+      credentials: 'include'
+    })
+    const data = await response.json()
+
+    if (response.ok) {
+      isIdChecked.value = true
+      if (data.isDuplicate) {
+        isIdAvailable.value = false
+        alert('이미 사용 중인 아이디입니다.')
+      } else {
+        isIdAvailable.value = true
+        alert('사용 가능한 아이디입니다.')
+      }
+    } else {
+      alert('중복 확인 중 오류가 발생했습니다.')
+    }
+  } catch (error) {
+    console.error('중복 확인 중 오류 발생:', error)
+    alert('중복 확인 중 오류가 발생했습니다.')
+  }
+}
+
+async function onSubmit() {
   if (!form.name || !form.username || !form.password || !form.birth || !form.phone) {
     alert('필수 항목을 입력해주세요.')
     return
   }
-  console.log('submit', { ...form })
-  alert('회원가입 요청 전송(데모)')
+
+  // 중복 확인 필수
+  if (!isIdChecked.value || !isIdAvailable.value) {
+    alert('아이디 중복 확인을 해주세요.')
+    return
+  }
+
+  try {
+    const response = await fetch('http://localhost:8080/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: form.username,
+        userPw: form.password,
+        name: form.name,
+        birthDate: form.birth,
+        phoneNumber: form.phone,
+        roleNo: form.isGuardian ? 1 : 2, // 보호자: 1, 환자: 2
+      }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      alert('회원가입이 완료되었습니다.')
+      router.push('/login')
+    } else {
+      alert(data.message || '회원가입에 실패했습니다.')
+    }
+  } catch (error) {
+    console.error('회원가입 중 오류 발생:', error)
+    alert('회원가입 처리 중 오류가 발생했습니다.')
+  }
 }
 </script>
 
 <style scoped>
-/* 캔버스 */
+/* 기존 스타일 유지 */
 .sg-wrap {
   width: 414px;
   height: 896px;
@@ -164,7 +235,6 @@ function onSubmit() {
   --brand-blob: rgba(126, 136, 255, .9);
 }
 
-/* ===== 데코 ===== */
 .deco-top {
   position: absolute;
   left: 0;
@@ -187,7 +257,6 @@ function onSubmit() {
   pointer-events: none;
 }
 
-/* 타이틀/폼 */
 .sg-title {
   margin-top: 118px;
   margin-bottom: 24px;
@@ -200,7 +269,6 @@ function onSubmit() {
   margin-top: 12px;
 }
 
-/* ===== 폼 스타일 ===== */
 .sg-pill {
   border-radius: 40px;
   overflow: hidden;
@@ -223,7 +291,6 @@ function onSubmit() {
   background: #fff;
 }
 
-/* 중복체크 칩 */
 .id-chip {
   position: absolute;
   right: 18px;
@@ -234,36 +301,18 @@ function onSubmit() {
   border: 1px solid rgba(0, 0, 0, .06);
   color: #6b7280;
   font-weight: 600;
+  z-index: 10;
+  pointer-events: auto;
 }
 
-/* 전화번호 아래 체크박스 밀착 */
 .guardian-row {
   margin-top: 4px;
-  /* 전화번호와 간격 좁힘 */
   margin-bottom: 8px;
 }
 
-/* 주소칸 삭제 스페이서(최소화) */
-.spacer-addr {
-  height: 28px;
-}
-
-/* 하단 텍스트(버튼 아님) – 오른쪽 유지, 더 위로 */
-.cta-text {
-  position: absolute;
-  right: 40px;
-  bottom: 210px;
-  /* 기존 165px → 위로 올림 */
-  font-size: 32px;
-  color: #262626;
-  text-shadow: 0 3px 6px rgba(0, 0, 0, .22);
-  z-index: 1;
-}
-
-/* 스크롤 여유 */
 form {
   position: relative;
   z-index: 1;
-  padding-bottom: 240px;
+  padding-bottom: 40px;
 }
 </style>

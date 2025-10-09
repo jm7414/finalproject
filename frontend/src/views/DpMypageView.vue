@@ -1,5 +1,6 @@
 <template>
-  <div class="info-page container px-3 py-3">
+  <div class="modal-backdrop" @click.self="$emit('close')">
+    <div class="modal-content info-page container px-3 py-3">
     <!-- 제목 -->
     <h2 class="text-center fw-semibold title mb-4">내정보</h2>
 
@@ -36,14 +37,76 @@
         <img :src="u('/figma/qr.svg')" alt="QR 코드" class="tile-icon" />
       </article>
     </section>
+
+    <!-- 로그아웃 버튼 -->
+    <section class="logout-section mt-4">
+      <button @click="handleLogout" class="btn-logout w-100">
+        로그아웃
+      </button>
+    </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { logout } from '@/utils/auth'
+
 const u = (p: string) => encodeURI(p)
+const router = useRouter()
+
+const emit = defineEmits(['close'])
+
+const handleLogout = async () => {
+  const success = await logout()
+  
+  if (success) {
+    // 모달 닫기
+    emit('close')
+    
+    // 로그인 페이지로 이동
+    router.push('/login')
+  } else {
+    alert('로그아웃에 실패했습니다.')
+  }
+}
 </script>
 
 <style scoped>
+/* ===== Modal Styles ===== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ===== Layout ===== */
 @media (min-width: 576px) {
   .info-page.container {
@@ -163,5 +226,34 @@ const u = (p: string) => encodeURI(p)
 
 .bg-blue3 {
   background: #4A62DD;
+}
+
+/* ===== Logout Button ===== */
+.logout-section {
+  margin-top: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.btn-logout {
+  background: #FF6B6B;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-logout:hover {
+  background: #FF5252;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.btn-logout:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.2);
 }
 </style>
