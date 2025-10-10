@@ -8,7 +8,7 @@
             <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <h1 class="page-title">일정 추가</h1>
+        <h1 class="page-title">{{ isEditMode ? '일정 수정' : '일정 추가' }}</h1>
       </div>
       <div class="header-right">
         <button class="profile-btn" @click="goToMypage">
@@ -89,7 +89,8 @@
 
       <!-- 일정 위치 추가 -->
       <div class="form-group">
-        <div class="location-input" @click="goToSearchRoute">
+        <!-- 위치가 설정되지 않은 경우 -->
+        <div v-if="!hasLocationData" class="location-input" @click="goToSearchRoute">
           <div class="location-content">
             <svg class="location-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -101,6 +102,40 @@
             <span class="location-text">일정 위치 추가</span>
           </div>
         </div>
+        
+        <!-- 위치가 설정된 경우 -->
+        <div v-else class="location-display">
+          <div class="location-header">
+            <svg class="location-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="location-title">일정 경로</span>
+            <button class="edit-location-btn" @click="goToSearchRoute">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="location-route">
+            <div v-for="(location, index) in locationData" :key="index" class="location-item">
+              <div class="location-step">
+                <div class="step-number">{{ index + 1 }}</div>
+                <div class="step-content">
+                  <div class="step-name">{{ location.name }}</div>
+                  <div class="step-address">{{ formatCoordinates(location.latitude, location.longitude) }}</div>
+                </div>
+              </div>
+              <div v-if="index < locationData.length - 1" class="route-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div class="location-hint">
           # 해당 위치를 기반으로 안심존이 활성화 됩니다.
         </div>
@@ -110,7 +145,7 @@
     <!-- 액션 버튼 -->
     <div class="action-buttons">
       <button class="save-btn" @click="saveSchedule" :disabled="!isFormValid">
-        저장
+        {{ isEditMode ? '수정 완료' : '저장' }}
       </button>
       <button class="cancel-btn" @click="cancelSchedule">
         취소
@@ -179,6 +214,10 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+// 수정 모드 여부
+const isEditMode = ref(false)
+const editScheduleNo = ref(null)
+
 // 폼 데이터
 const scheduleForm = ref({
   title: '',
@@ -205,12 +244,19 @@ const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 const displayStartTime = computed(() => scheduleForm.value.startTime || '')
 const displayEndTime = computed(() => scheduleForm.value.endTime || '')
 
+// 위치 데이터 관리
+const locationData = ref([])
+
+// 위치 데이터가 있는지 확인
+const hasLocationData = computed(() => locationData.value.length > 0)
+
 // 폼 유효성 검사
 const isFormValid = computed(() => {
   return scheduleForm.value.title.trim() !== '' &&
          scheduleForm.value.date !== '' &&
          scheduleForm.value.startTime !== '' &&
-         scheduleForm.value.endTime !== ''
+         scheduleForm.value.endTime !== '' &&
+         hasLocationData.value
 })
 
 // 뒤로 가기
@@ -262,6 +308,11 @@ function confirmTime() {
   closeTimePicker()
 }
 
+// 좌표를 주소 형식으로 포맷팅
+function formatCoordinates(latitude, longitude) {
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+}
+
 // 경로 검색 페이지로 이동
 function goToSearchRoute() {
   sessionStorage.setItem('scheduleFormData', JSON.stringify(scheduleForm.value))
@@ -269,14 +320,78 @@ function goToSearchRoute() {
 }
 
 // 일정 저장
-function saveSchedule() {
+async function saveSchedule() {
   if (!isFormValid.value) {
     alert('필수 항목을 모두 입력해주세요.')
     return
   }
 
-  console.log('일정 저장:', scheduleForm.value)
-  router.push({ name: 'calendar' })
+  try {
+    // sessionStorage에서 경로 및 버퍼 정보 가져오기
+    const routeCoordinates = sessionStorage.getItem('routeCoordinates')
+    const bufferCoordinates = sessionStorage.getItem('bufferCoordinates')
+    const scheduleLocations = sessionStorage.getItem('scheduleLocations')
+
+    // 필수 데이터가 없으면 경고
+    if (!routeCoordinates || !bufferCoordinates || !scheduleLocations) {
+      alert('경로 및 안심존 설정이 필요합니다. "일정 위치 추가" 버튼을 눌러 설정해주세요.')
+      return
+    }
+
+    // 일정 저장 요청 데이터 구성
+    const requestData = {
+      title: scheduleForm.value.title,
+      content: scheduleForm.value.content,
+      date: scheduleForm.value.date,
+      startTime: scheduleForm.value.startTime,
+      endTime: scheduleForm.value.endTime,
+      locations: JSON.parse(scheduleLocations),
+      routeCoordinates: JSON.parse(routeCoordinates),
+      bufferCoordinates: JSON.parse(bufferCoordinates)
+    }
+
+    // 수정 모드인지 추가 모드인지에 따라 API 호출
+    const url = isEditMode.value 
+      ? `http://localhost:8080/api/schedule/update/${editScheduleNo.value}`
+      : 'http://localhost:8080/api/schedule/create'
+    
+    const successMessage = isEditMode.value ? '일정이 성공적으로 수정되었습니다.' : '일정이 성공적으로 저장되었습니다.'
+
+    console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 요청:`, requestData)
+
+    // 백엔드 API 호출
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include', // 세션 쿠키 포함
+      body: JSON.stringify(requestData)
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || `일정 ${isEditMode.value ? '수정' : '저장'}에 실패했습니다.`)
+    }
+
+    const result = await response.json()
+    console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 성공:`, result)
+
+    // sessionStorage 정리
+    sessionStorage.removeItem('routeCoordinates')
+    sessionStorage.removeItem('bufferCoordinates')
+    sessionStorage.removeItem('scheduleLocations')
+    sessionStorage.removeItem('routeBufferPolygon')
+    sessionStorage.removeItem('scheduleFormData')
+    sessionStorage.removeItem('editScheduleNo')
+
+    alert(successMessage)
+    router.push({ name: 'calendar' })
+
+  } catch (error) {
+    console.error(`일정 ${isEditMode.value ? '수정' : '저장'} 오류:`, error)
+    alert(error.message || `일정 ${isEditMode.value ? '수정' : '저장'} 중 오류가 발생했습니다.`)
+  }
 }
 
 // 일정 취소
@@ -286,7 +401,95 @@ function cancelSchedule() {
   }
 }
 
-onMounted(() => {
+// 시간을 "오전/오후 HH:MM" 형식으로 변환
+function formatTimeForDisplay(timeString) {
+  if (!timeString) return ''
+  
+  const [hour, minute] = timeString.split(':')
+  const hourNum = parseInt(hour)
+  
+  if (hourNum === 0) {
+    return `오전 12:${minute}`
+  } else if (hourNum < 12) {
+    return `오전 ${String(hourNum).padStart(2, '0')}:${minute}`
+  } else if (hourNum === 12) {
+    return `오후 12:${minute}`
+  } else {
+    return `오후 ${String(hourNum - 12).padStart(2, '0')}:${minute}`
+  }
+}
+
+// 수정할 일정 데이터 불러오기
+async function loadScheduleForEdit(scheduleNo) {
+  try {
+    // 일정 기본 정보 가져오기
+    const scheduleResponse = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!scheduleResponse.ok) {
+      throw new Error('일정 정보를 불러올 수 없습니다.')
+    }
+    
+    const schedule = await scheduleResponse.json()
+    
+    // 폼에 데이터 채우기
+    scheduleForm.value.title = schedule.scheduleTitle
+    scheduleForm.value.content = schedule.content || ''
+    scheduleForm.value.date = schedule.scheduleDate
+    scheduleForm.value.startTime = formatTimeForDisplay(schedule.startTime)
+    scheduleForm.value.endTime = formatTimeForDisplay(schedule.endTime)
+    
+    // 위치 정보 가져오기
+    const locationsResponse = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}/locations`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (locationsResponse.ok) {
+      const locations = await locationsResponse.json()
+      locationData.value = locations.map((loc, index) => ({
+        name: loc.locationName,
+        latitude: parseFloat(loc.latitude),
+        longitude: parseFloat(loc.longitude),
+        sequenceOrder: loc.sequenceOrder || index
+      }))
+      
+      // sessionStorage에도 저장 (경로 검색 페이지에서 사용)
+      sessionStorage.setItem('scheduleLocations', JSON.stringify(locationData.value))
+    }
+    
+    // 경로 정보 가져오기
+    const routeResponse = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}/route`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (routeResponse.ok) {
+      const route = await routeResponse.json()
+      // sessionStorage에 저장
+      sessionStorage.setItem('routeCoordinates', route.routeCoordinates)
+      sessionStorage.setItem('bufferCoordinates', route.bufferCoordinates)
+    }
+    
+  } catch (error) {
+    console.error('일정 불러오기 오류:', error)
+    alert(error.message || '일정을 불러오는 중 오류가 발생했습니다.')
+    router.push({ name: 'calendar' })
+  }
+}
+
+onMounted(async () => {
+  // 수정 모드 확인
+  const editScheduleNoFromStorage = sessionStorage.getItem('editScheduleNo')
+  if (editScheduleNoFromStorage) {
+    isEditMode.value = true
+    editScheduleNo.value = parseInt(editScheduleNoFromStorage)
+    await loadScheduleForEdit(editScheduleNo.value)
+    return
+  }
+  
   // 캘린더에서 선택된 날짜가 있는지 확인
   const selectedDate = sessionStorage.getItem('selectedDate')
   if (selectedDate) {
@@ -308,6 +511,17 @@ onMounted(() => {
     const parsedData = JSON.parse(savedFormData)
     scheduleForm.value = { ...scheduleForm.value, ...parsedData }
     sessionStorage.removeItem('scheduleFormData')
+  }
+  
+  // 위치 데이터 로드 (GeoFencingView에서 돌아온 경우)
+  const scheduleLocations = sessionStorage.getItem('scheduleLocations')
+  if (scheduleLocations) {
+    try {
+      locationData.value = JSON.parse(scheduleLocations)
+    } catch (error) {
+      console.error('위치 데이터 파싱 오류:', error)
+      locationData.value = []
+    }
   }
 })
 </script>
@@ -587,6 +801,101 @@ onMounted(() => {
   color: #9ca3af;
   margin-top: 4px;
   padding: 0 16px;
+}
+
+/* 위치 표시 스타일 */
+.location-display {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.location-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f5f7ff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.location-title {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 600;
+  flex: 1;
+}
+
+.edit-location-btn {
+  background: none;
+  border: none;
+  color: #6366f1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.edit-location-btn:hover {
+  background: #e0e7ff;
+}
+
+.location-route {
+  padding: 16px;
+}
+
+.location-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.location-item:last-child {
+  margin-bottom: 0;
+}
+
+.location-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  background: #6366f1;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-name {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.step-address {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.route-arrow {
+  color: #9ca3af;
+  margin: 0 8px;
+  flex-shrink: 0;
 }
 
 /* 액션 버튼 */

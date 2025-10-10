@@ -23,8 +23,10 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { lineString, buffer, simplify } from '@turf/turf'
 
+const router = useRouter()
 const mapContainer = ref(null)
 const bufferLevel = ref('1')
 let mapInstance = null
@@ -386,19 +388,45 @@ function updateBuffer() {
 }
 
 /**
- * 설정 저장
+ * 설정 저장 - AddSchedule.vue로 돌아가기
  */
 function saveSettings() {
   console.log('설정 저장:', { bufferLevel: bufferLevel.value })
-  // 여기에 실제 설정 저장 로직 추가
+  
+  // 버퍼 좌표를 sessionStorage에서 가져와서 형식 변환
+  const bufferCoordsRaw = sessionStorage.getItem('routeBufferPolygon')
+  if (bufferCoordsRaw) {
+    try {
+      // Turf.js 형식: [[lng, lat], ...] → { latitude, longitude } 형식으로 변환
+      const bufferArray = JSON.parse(bufferCoordsRaw)
+      const convertedBuffer = bufferArray.map(coord => ({
+        latitude: coord[1],   // 배열의 두 번째 값이 latitude
+        longitude: coord[0]   // 배열의 첫 번째 값이 longitude
+      }))
+      sessionStorage.setItem('bufferCoordinates', JSON.stringify(convertedBuffer))
+    } catch (error) {
+      console.error('버퍼 좌표 변환 중 오류:', error)
+    }
+  }
+  
+  // AddSchedule.vue로 돌아가기
+  router.push({ name: 'add-schedule' })
 }
 
 /**
- * 설정 취소
+ * 설정 취소 - SearchRouteView로 돌아가기
  */
 function cancelSettings() {
   console.log('설정 취소')
-  // 여기에 취소 로직 추가
+  
+  // sessionStorage 정리 (필요한 경우)
+  sessionStorage.removeItem('routeCoordinates')
+  sessionStorage.removeItem('routeBufferPolygon')
+  sessionStorage.removeItem('bufferCoordinates')
+  sessionStorage.removeItem('scheduleLocations')
+  
+  // SearchRouteView로 돌아가기
+  router.push({ name: 'search-route' })
 }
 </script>
 

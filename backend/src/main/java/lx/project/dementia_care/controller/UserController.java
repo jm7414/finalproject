@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import lx.project.dementia_care.dao.GuardianPatientConnectionDAO;
 import lx.project.dementia_care.dao.UserDAO;
 import lx.project.dementia_care.vo.UserVO;
 
@@ -23,6 +24,9 @@ public class UserController {
 
     @Autowired
     private UserDAO userDAO;
+    
+    @Autowired
+    private GuardianPatientConnectionDAO guardianPatientConnectionDAO;
     
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -89,6 +93,43 @@ public class UserController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "사용자 정보 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * 보호자가 관리하는 환자 정보 조회
+     * GET /api/user/my-patient
+     */
+    @GetMapping("/api/user/my-patient")
+    public ResponseEntity<?> getMyPatient() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "로그인이 필요합니다."));
+            }
+            
+            UserVO currentGuardian = (UserVO) auth.getPrincipal();
+            
+            // 보호자만 접근 가능
+            if (currentGuardian.getRoleNo() != 1 && currentGuardian.getRoleNo() != 3) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "보호자만 접근할 수 있습니다."));
+            }
+            
+            // 보호자가 관리하는 환자 조회
+            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(currentGuardian.getUserNo());
+            
+            if (patient == null) {
+                return ResponseEntity.ok(Map.of("message", "관리하는 환자가 없습니다."));
+            }
+            
+            return ResponseEntity.ok(patient);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "환자 정보 조회 중 오류가 발생했습니다."));
         }
     }
 }
