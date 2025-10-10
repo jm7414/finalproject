@@ -1,6 +1,8 @@
 package lx.project.dementia_care.dao;
 
 import lx.project.dementia_care.vo.ConnectVO;
+import lx.project.dementia_care.vo.UserVO;
+
 import org.apache.ibatis.session.SqlSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,4 +33,8 @@ public class ConnectDAO {
 	public int deleteByPatientNo(int patientNo) throws Exception {
 		return session.delete("mapper-connect.deleteByPatientNo", patientNo);
 	}
+	
+	 public UserVO findPatientByInvitationCode(String code) throws Exception {
+	        return session.selectOne("mapper-connect.findPatientByInvitationCode", code);
+	    }
 }

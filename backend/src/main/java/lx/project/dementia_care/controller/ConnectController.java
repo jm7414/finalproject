@@ -2,7 +2,11 @@ package lx.project.dementia_care.controller;
 
 import lx.project.dementia_care.dao.ConnectDAO;
 import lx.project.dementia_care.vo.ConnectVO;
+import lx.project.dementia_care.vo.UserVO;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -50,4 +54,25 @@ public class ConnectController {
 		res.put("message", n > 0 ? "삭제 완료" : "삭제할 연결 없음");
 		return res;
 	}
+	
+	@GetMapping("/api/connect/resolve-invite")
+	public ResponseEntity<?> resolveInvite(@RequestParam("code") String code) {
+	    try {
+	        UserVO patient = connectDAO.findPatientByInvitationCode(code);
+	        if (patient == null) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                .body(Map.of("message", "유효하지 않은 초대코드입니다."));
+	        }
+	        return ResponseEntity.ok(Map.of(
+	            "patientNo", patient.getUserNo(),
+	            "patientName", patient.getName(),
+	            "invitationCode", patient.getInvitationCode()
+	        ));
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	            .body(Map.of("message", "초대코드 확인 중 오류가 발생했습니다."));
+	    }
+	}
+	
 }
