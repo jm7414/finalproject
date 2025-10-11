@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mapper-user">
+
+    <insert id="insertUser" parameterType="lx.project.dementia_care.vo.UserVO">
+        INSERT INTO users (
+            user_id, user_pw, name, birth_date,
+            phone_number, invitation_code, role_no
+        ) VALUES (
+            #{userId}, #{userPw}, #{name}, #{birthDate},
+            #{phoneNumber}, #{invitationCode}, #{roleNo}
+        )
+    </insert>
+
+    <select id="findById" parameterType="string" resultType="lx.project.dementia_care.vo.UserVO">
+        SELECT
+            user_no AS userNo,
+            user_id AS userId,
+            user_pw AS userPw,
+            name,
+            birth_date AS birthDate,
+            phone_number AS phoneNumber,
+            invitation_code AS invitationCode,
+            subscription_status AS subscriptionStatus,
+            user_status AS userStatus,
+            profile_photo AS profilePhoto,
+            role_no AS roleNo
+        FROM users
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findByUserNo" parameterType="int" resultType="lx.project.dementia_care.vo.UserVO">
+        SELECT
+            user_no AS userNo,
+            user_id AS userId,
+            user_pw AS userPw,
+            name,
+            birth_date AS birthDate,
+            phone_number AS phoneNumber,
+            invitation_code AS invitationCode,
+            subscription_status AS subscriptionStatus,
+            user_status AS userStatus,
+            profile_photo AS profilePhoto,
+            role_no AS roleNo
+        FROM users
+        WHERE user_no = #{userNo}
+    </select>
+
+    <update id="updateById" parameterType="lx.project.dementia_care.vo.UserVO">
+        UPDATE users
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="userPw != null">user_pw = #{userPw},</if>
+            <if test="birthDate != null">birth_date = #{birthDate},</if>
+            <if test="phoneNumber != null">phone_number = #{phoneNumber},</if>
+            <if test="invitationCode != null">invitation_code = #{invitationCode},</if>
+            <if test="subscriptionStatus != null">subscription_status = #{subscriptionStatus},</if>
+            <if test="userStatus != null">user_status = #{userStatus},</if>
+            <if test="profilePhoto != null">profile_photo = #{profilePhoto},</if>
+            <if test="roleNo != null">role_no = #{roleNo},</if>
+        </set>
+        WHERE user_no = #{userNo}
+    </update>
+
+    <delete id="deleteById" parameterType="int">
+        DELETE FROM users
+        WHERE user_no = #{userNo}
+    </delete>
+
+</mapper>

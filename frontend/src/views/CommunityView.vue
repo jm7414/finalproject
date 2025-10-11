@@ -3,7 +3,7 @@ import { ref } from 'vue';
 
 // 3개의 '부품' 컴포넌트를 모두 불러옵니다. (경로는 실제 파일 위치에 맞게 조정하세요)
 import CommunityMissing from '@/components/CommunityMissing.vue';
-import CommunityPost from '@/components/CommunityPost.vue';
+import CommunityPost from '@/components/CommunityBoard.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
 // 기본으로 보여줄 탭을 'Missing'으로 설정합니다.
@@ -45,7 +45,7 @@ function changeTab(tabName) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px;
+  padding-top: 50px;
   gap: 20px;
   width: 100%;
   max-width: 500px; /* 최대 너비는 자유롭게 조절하세요 */

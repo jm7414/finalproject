@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mapper-connect">
+
+	<!-- 생성: 연결 한 건 추가 -->
+	<insert id="insertConnection" parameterType="lx.project.dementia_care.vo.ConnectVO">
+		INSERT INTO guardian_patient_connection (
+		patient_no, guardian1_no, guardian2_no, guardian3_no
+		) VALUES (
+		#{patientNo}, #{guardian1No}, #{guardian2No}, #{guardian3No}
+		)
+	</insert>
+
+	<!-- 교체: guardian1 슬롯만 간단 교체 -->
+	<update id="replaceGuardian1" parameterType="map">
+		UPDATE guardian_patient_connection
+		SET guardian1_no = #{guardianNo}
+		WHERE patient_no = #{patientNo}
+	</update>
+
+	<!-- 삭제: 환자번호 기준 연결 삭제 -->
+	<delete id="deleteByPatientNo" parameterType="int">
+		DELETE FROM guardian_patient_connection
+		WHERE patient_no = #{patientNo}
+	</delete>
+
+</mapper>
