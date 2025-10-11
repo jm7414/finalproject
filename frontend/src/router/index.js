@@ -21,7 +21,6 @@ import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
 import Calender from '@/views/Calender.vue'
 import AddSchedule from '@/views/AddSchedule.vue'
-import Connect from '@/views/GD_Connect.vue'
 import DP_Connect from '@/views/DP_Connect.vue'
 import GD_Connect from '@/views/GD_Connect.vue'
 

@@ -48,6 +48,10 @@ public class SecurityConfig {
                 //.requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
                 // 보호자/구독자 전용 페이지 및 API
                 .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+                // 일정 관리 API (보호자/구독자 전용)
+                .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+                // 보호자가 관리하는 환자 조회 API
+                .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "SUBSCRIBER")
                 // 환자 전용 페이지 및 API
                 .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
                 // 공통 페이지들 (로그인한 사용자만 접근 가능)

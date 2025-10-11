@@ -188,6 +188,24 @@ async function requestRoute() {
 
     // GeoFencingView에서 사용할 좌표를 세션 스토리지로 전달
     sessionStorage.setItem('routeCoordinates', JSON.stringify(data.coordinates))
+    
+    // 출발지/목적지 정보도 세션 스토리지에 저장 (일정 저장 시 사용)
+    const locationData = [
+      {
+        name: s.place_name,
+        latitude: Number(s.y),
+        longitude: Number(s.x),
+        sequenceOrder: 1
+      },
+      {
+        name: d.place_name,
+        latitude: Number(d.y),
+        longitude: Number(d.x),
+        sequenceOrder: 2
+      }
+    ]
+    sessionStorage.setItem('scheduleLocations', JSON.stringify(locationData))
+    
     router.push({ name: 'geo-fencing' })
   } catch (e) {
     console.error('요청 오류:', e)
