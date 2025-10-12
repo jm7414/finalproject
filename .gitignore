@@ -38,3 +38,13 @@ yarn-error.log
 .factorypath
 .project
 .settings/
+
+# 지겸
+## VScode
+.vscode/
+
+## maven
+.mvn\wrapper
+
+## 개인폴더
+personal_ji
