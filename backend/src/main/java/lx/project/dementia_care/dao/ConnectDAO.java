@@ -7,7 +7,9 @@ import org.apache.ibatis.session.SqlSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class ConnectDAO {
@@ -32,6 +34,12 @@ public class ConnectDAO {
     public int deleteByPatientNo(int patientNo) throws Exception {
         return session.delete("mapper-connect.deleteByPatientNo", patientNo);
     }
+
+	/** guardian1_no 기준으로 보호자가 관리하는 환자 1명 반환 */
+	public Integer findPatientNoByGuardian1No(int guardianNo) throws Exception {
+		return session.selectOne("mapper-connect.findPatientNoByGuardian1No", guardianNo);
+	}
+
 
     /** 초대코드로 환자 찾기 */
     public UserVO findPatientByInvitationCode(String code) throws Exception {

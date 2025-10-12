@@ -28,6 +28,16 @@
 		WHERE patient_no = #{patientNo}
 	</delete>
 
+
+	<!-- 조회: guardian1_no 기준으로 보호자가 관리하는 환자 1명만 반환 -->
+	<select id="findPatientNoByGuardian1No" parameterType="int" resultType="int">
+		SELECT patient_no
+		FROM guardian_patient_connection
+		WHERE guardian1_no = #{guardianNo}
+		ORDER BY connection_no ASC
+		LIMIT 1
+	</select>
+
 	<!-- 보호자 user_no로 관리하는 환자 정보 조회 -->
 	<select id="getPatientByGuardianNo" parameterType="int" resultType="lx.project.dementia_care.vo.UserVO">
 		SELECT 
