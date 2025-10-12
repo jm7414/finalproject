@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.dao.PredictionDAO">
+	
+	<!-- 예상위치에 들어오면 예측 모델로 보내기위해 28일간의 데이터를 불러옴  -->
+	<select id="getLocationData" parameterType="lx.project.dementia_care.vo.LocationDataVO">
+		SELECT user_no as userNo,
+			latitude,
+			longitude,
+			timestamp as time
+		FROM patient_location
+		WHERE <!-- {{ < == &lt; }} -->
+		 user_no = #{userNo} and missing_time &lt; #{missingTime}
+		ORDER BY timestamp DESC
+		LIMIT 8064
+	</select>
+
+	<insert id="insertPredictedLocation"
+		parameterType="lx.project.dementia_care.dto.PredictionResponseDTO">
+		INSERT INTO pred_location (user_no, zone_level_1, zone_level_2, zone_level_3)
+		VALUES (#{userNo},#{zone_level_1},#{zone_level_2},#{zone_level_3})
+	</insert>
+
+	<select id="readPredictedLocationFromUserNo" parameterType="int">
+		SELECT user_no as userNo,
+		zone_level_1 as 30m,
+		zone_level_2 as 60m,
+		zone_level_3 as 90m
+		FROM pred_location
+		WHERE user_no = #{userNo}
+	</select>
+</mapper>
+
