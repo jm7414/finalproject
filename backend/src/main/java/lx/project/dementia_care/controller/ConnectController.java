@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.*;
-import java.util.Objects;
 
 @RestController
 public class ConnectController {
