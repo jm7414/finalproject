@@ -21,7 +21,9 @@ async function fetchPost() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`);
+    const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`, {
+      withCredentials: true // 입장권 챙겨주기
+    });
     post.value = response.data;
   } catch (err) {
     console.error('게시물 데이터를 불러오는 데 실패했습니다:', err);
@@ -43,9 +45,11 @@ function editPost() {
 async function deletePost() {
   if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
     try {
-      await axios.delete(`http://localhost:8080/api/posts/${postId.value}`);
+      await axios.delete(`http://localhost:8080/api/posts/${postId.value}`, {
+        withCredentials: true // 삭제할 때도 당연히 입장권 필요
+      });
       alert('게시물이 삭제되었습니다.');
-      router.push('/community'); 
+      router.push('/CommunityView');
     } catch (err) {
       console.error('게시물 삭제 중 오류 발생:', err);
       alert('게시물 삭제에 실패했습니다.');

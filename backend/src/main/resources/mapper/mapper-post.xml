@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.mapper.PostMapper">
+
+    <!-- 아래의 resultMap은 쿼리문 내에서 컬럼들의 순서가 바뀌어도 상관없이 이어주는 것이라고 함. 추후 수정 할 예정임-->
+    <resultMap id="PostListResultMap" type="lx.project.dementia_care.dto.PostListDto">
+        <id property="postId" column="post_id"/>
+        <result property="title" column="title"/>
+        <result property="author" column="author"/>
+        <result property="comments" column="comments"/>
+        <result property="likes" column="likes"/>
+        <result property="views" column="view_count"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="PostResponseResultMap" type="lx.project.dementia_care.dto.PostResponseDto">
+        <id property="postId" column="post_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="author" column="author"/>
+        <result property="comments" column="comments"/>
+        <result property="likes" column="likes"/>
+        <result property="views" column="view_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="image" column="image_path"/>
+    </resultMap>
+
+    <select id="findAllPosts" resultMap="PostListResultMap">
+        SELECT
+            p.post_id,
+            p.title,
+            u.name AS author,
+            p.view_count,
+            p.created_at,
+            0 AS likes,
+            0 AS comments
+        FROM
+            post p
+        JOIN
+            users u ON p.user_id = u.user_no
+        ORDER BY
+            p.post_id DESC
+    </select>
+
+    <select id="findPostById" parameterType="int" resultMap="PostResponseResultMap">
+        SELECT
+            p.post_id,
+            p.title,
+            p.content,
+            u.name AS author,
+            p.view_count,
+            p.created_at,
+            p.image_path,
+            0 AS likes,
+            0 AS comments
+        FROM
+            post p
+        JOIN
+            users u ON p.user_id = u.user_no
+        WHERE
+            p.post_id = #{postId}
+    </select>
+
+    <insert id="createPost" parameterType="lx.project.dementia_care.dto.PostRequestDto">
+        <selectKey keyProperty="postId" resultType="int" order="AFTER">
+            SELECT CURRVAL('post_post_id_seq')
+        </selectKey>
+        INSERT INTO post (title, content, user_id, image_path)
+        VALUES (#{title}, #{content}, #{userId}, #{image})
+    </insert>
+
+    <update id="updatePost">
+        UPDATE post
+        SET
+            title = #{dto.title},
+            content = #{dto.content}
+        WHERE
+            post_id = #{postId}
+    </update>
+
+    <delete id="deletePost" parameterType="int">
+        DELETE FROM post WHERE post_id = #{postId}
+    </delete>
+
+    <update id="incrementViewCount" parameterType="int">
+        UPDATE post
+        SET view_count = view_count + 1
+        WHERE post_id = #{postId}
+    </update>
+
+</mapper>

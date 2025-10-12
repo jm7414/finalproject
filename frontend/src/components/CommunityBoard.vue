@@ -16,7 +16,9 @@ async function fetchPosts() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get('http://localhost:8080/api/posts');
+    const response = await axios.get('http://localhost:8080/api/posts', {
+      withCredentials: true // 여기에 입장권(쿠키)을 챙겨달라는 옵션 추가. 없으면 프론트 - 백 연결 불가. 시큐리티와 인덱스에서 롤 설정으로 막혀있는듯
+    });
     posts.value = response.data;
   } catch (err) {
     console.error("게시물 목록을 불러오는 데 실패했습니다:", err);
@@ -72,10 +74,9 @@ function goToPostWrite() {
     <div 
       v-else
       v-for="post in posts" 
-      :key="post.id" 
-      class="post-card"
-      @click="goToPost(post.id)"
-    >
+      :key="post.postId" class="post-card"
+      @click="goToPost(post.postId)" >
+      
       <div class="card-header">
         <h3 class="post-title">{{ post.title }}</h3>
         <span class="post-author">작성자 : {{ post.author }}</span>

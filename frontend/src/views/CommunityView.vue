@@ -6,8 +6,8 @@ import CommunityMissing from '@/components/CommunityMissing.vue';
 import CommunityPost from '@/components/CommunityBoard.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
-// 기본으로 보여줄 탭을 'Missing'으로 설정합니다.
-const activeTab = ref('Missing'); 
+// 기본으로 보여줄 탭을 'Missing'에서 'post'로 변경
+const activeTab = ref('Post'); 
 
 // 탭을 변경하는 함수입니다.
 function changeTab(tabName) {

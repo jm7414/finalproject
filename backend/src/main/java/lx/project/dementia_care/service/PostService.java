@@ -7,91 +7,82 @@ import org.springframework.transaction.annotation.Transactional;
 import lx.project.dementia_care.dto.PostResponseDto;
 import lx.project.dementia_care.dto.PostListDto;
 import lx.project.dementia_care.dto.PostRequestDto;
-import lx.project.dementia_care.entity.Post;
-import lx.project.dementia_care.repository.PostRepository;
 
 
-import java.util.List;                         
-import java.util.stream.Collectors;             
-
-import java.util.Collections; // 임시 댓글 목록용
+import java.util.List;
+import lx.project.dementia_care.dao.PostDAO; // DAO를 import 합니다.
 
 @Service
 public class PostService {
 
-    private final PostRepository postRepository;
+    // PostMapper 대신 PostDAO를 주입받습니다.
+    private final PostDAO postDAO;
 
     @Autowired
-    public PostService(PostRepository postRepository) {
-        this.postRepository = postRepository;
+    public PostService(PostDAO postDAO) {
+        this.postDAO = postDAO;
     }
 
-    // post를 가져옴
-    @Transactional(readOnly = true)
+    /**
+     * 게시물 상세 조회 (+ 조회수 증가)
+     */
+    @Transactional
     public PostResponseDto findPostById(Integer postId) {
-        Post postEntity = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId));
-        String authorName = "김병욱";
-        String authorProfileImage = "/images/Missing1.jpg";
-        return PostResponseDto.builder()
-                .id(postEntity.getPostId())
-                .author(authorName)
-                .authorProfileImage(authorProfileImage)
-                .date(postEntity.getCreatedAt())
-                .title(postEntity.getTitle())
-                .content(postEntity.getContent())
-                .image(postEntity.getImage())
-                // .likes(postEntity.getLikes())    미구현
-                .views(postEntity.getViews())
-                .comments(Collections.emptyList()) // 댓글보이게 해야 함
-                .build();
-    }
+        // 1. 조회수를 1 증가시킵니다.
+        postDAO.incrementViewCount(postId);
 
-    // board를 가져옴
-    @Transactional(readOnly = true)
-    public List<PostListDto> findAllPosts() {
-        List<Post> posts = postRepository.findAll();
-        return posts.stream()
-                .map(post -> PostListDto.builder()
-                        .id(post.getPostId())
-                        .title(post.getTitle())
-                        .views(post.getViews() != null ? post.getViews() : 0) // DB에 조회수가 null일 경우 0으로 처리 이것도 일단 임시
-                        .createdAt(post.getCreatedAt())
-                        .author("김병욱 (PostService)")
-                        .comments(0)          
-                        .likes(0)             
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    // write 하는 함수
-    @Transactional
-        public Integer createPost(PostRequestDto requestDto) {
-            Post newPost = new Post();
-            newPost.setTitle(requestDto.getTitle());
-            newPost.setContent(requestDto.getContent());
-
-            // 로그인한 사용자의 ID 설정 나중에 로그인 기능 넣기
-            newPost.setUserId(1);
-
-            Post savedPost = postRepository.save(newPost);
-            return savedPost.getPostId();
-        }
-
-    // 수정 함수
-    @Transactional
-    public void updatePost(Integer postId, PostRequestDto requestDto) {
-        Post postToUpdate = postRepository.findById(postId).orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId));
-        postToUpdate.setTitle(requestDto.getTitle());
-        postToUpdate.setContent(requestDto.getContent());
-    }
-
-    // 삭제 함수
-    @Transactional
-    public void deletePost(Integer postId) {
-        if (!postRepository.existsById(postId)) {
+        // 2. 증가된 조회수가 반영된 게시물 정보를 가져옵니다.
+        PostResponseDto post = postDAO.findPostById(postId);
+        if (post == null) {
             throw new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId);
         }
-        postRepository.deleteById(postId);
-    }        
+        return post;
+    }
+
+    /**
+     * 게시물 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<PostListDto> findAllPosts() {
+        // 변경점 3: 엔터티를 DTO로 변환하는 스트림 로직이 사라지고, Mapper가 처음부터 DTO 목록을 반환합니다.
+        return postDAO.findAllPosts();
+    }
+
+    /**
+     * 게시물 생성
+     */
+    @Transactional
+    public Integer createPost(PostRequestDto requestDto) {
+        // 변경점 4: DTO를 직접 Mapper에 전달하여 DB에 삽입합니다.
+        // (실제 사용자 ID는 로그인 세션에서 가져와 설정해야 합니다)
+        // 예시: requestDto.setUserId(SecurityUtil.getCurrentUserId());
+        requestDto.setUserId(1); // 임시 사용자 ID
+        
+        postDAO.createPost(requestDto);
+        return requestDto.getPostId(); // Mapper에서 생성된 postId를 DTO에 다시 담아 반환
+    }
+
+    /**
+     * 게시물 수정
+     */
+    @Transactional
+    public void updatePost(Integer postId, PostRequestDto requestDto) {
+        // 수정 전, 해당 게시물이 존재하는지 확인하는 로직을 추가하면 더 안정적입니다.
+        if (postDAO.findPostById(postId) == null) {
+            throw new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId);
+        }
+        postDAO.updatePost(postId, requestDto);
+    }
+
+    /**
+     * 게시물 삭제
+     */
+    @Transactional
+    public void deletePost(Integer postId) {
+        // 삭제 전, 해당 게시물이 존재하는지 확인하는 로직
+        if (postDAO.findPostById(postId) == null) {
+            throw new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId);
+        }
+        postDAO.deletePost(postId);
+    }
 }
