@@ -4,35 +4,31 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="mapper-connect">
 
-	<!-- 생성: 연결 한 건 추가 -->
+	<!-- 연결 생성: patient_no UNIQUE — 중복이면 무시 -->
 	<insert id="insertConnection"
 		parameterType="lx.project.dementia_care.vo.ConnectVO">
 		INSERT INTO guardian_patient_connection (
-		patient_no,
-		guardian1_no, guardian2_no, guardian3_no
+		patient_no, guardian1_no, guardian2_no, guardian3_no
 		) VALUES (
-		#{patientNo},
-		#{guardian1No}, #{guardian2No}, #{guardian3No}
+		#{patientNo}, #{guardian1No}, #{guardian2No}, #{guardian3No}
 		)
+		ON CONFLICT (patient_no) DO NOTHING
 	</insert>
 
-	<!-- 교체: guardian1 슬롯만 간단 교체 -->
+	<!-- guardian1 교체 -->
 	<update id="replaceGuardian1" parameterType="map">
-		UPDATE
-		guardian_patient_connection
+		UPDATE guardian_patient_connection
 		SET guardian1_no = #{guardianNo}
-		WHERE
-		patient_no = #{patientNo}
+		WHERE patient_no = #{patientNo}
 	</update>
 
-	<!-- 삭제: 환자번호 기준 연결 삭제 -->
+	<!-- 환자 기준 연결 행 삭제 -->
 	<delete id="deleteByPatientNo" parameterType="int">
-		DELETE FROM
-		guardian_patient_connection
+		DELETE FROM guardian_patient_connection
 		WHERE patient_no = #{patientNo}
 	</delete>
 
-	<!-- 연결 -->
+	<!-- 초대코드 → 환자 -->
 	<select id="findPatientByInvitationCode" parameterType="string"
 		resultType="lx.project.dementia_care.vo.UserVO">
 		SELECT
@@ -46,5 +42,120 @@
 		WHERE invitation_code = #{value}
 	</select>
 
+	<!-- 다음 빈 슬롯 채우기 (이미 포함이면 변화 없음) -->
+	<update id="updateFillNextSlot" parameterType="map">
+		UPDATE guardian_patient_connection c
+		SET
+		guardian1_no = CASE
+		WHEN c.guardian1_no IS NULL THEN #{guardianNo}
+		ELSE c.guardian1_no
+		END,
+		guardian2_no = CASE
+		WHEN c.guardian1_no IS NOT NULL AND c.guardian2_no IS NULL THEN
+		#{guardianNo}
+		ELSE c.guardian2_no
+		END,
+		guardian3_no = CASE
+		WHEN c.guardian1_no IS NOT NULL AND c.guardian2_no IS NOT NULL AND
+		c.guardian3_no IS NULL THEN #{guardianNo}
+		ELSE c.guardian3_no
+		END
+		WHERE c.patient_no = #{patientNo}
+		AND NOT EXISTS (
+		SELECT 1 FROM guardian_patient_connection x
+		WHERE x.patient_no = c.patient_no
+		AND (x.guardian1_no = #{guardianNo} OR x.guardian2_no = #{guardianNo} OR
+		x.guardian3_no = #{guardianNo})
+		)
+	</update>
+
+	<!-- 환자 기본 정보 (parameterType=int 로 통일) -->
+	<select id="selectPatientBasic" parameterType="int"
+		resultType="map">
+		SELECT
+		u.user_no AS "userNo",
+		u.name AS "name",
+		NULL AS "email", -- 스키마에 이메일 없음 → NULL
+		u.birth_date AS "birth",
+		u.phone_number AS "phoneNumber"
+		FROM users u
+		WHERE u.user_no = #{value}
+	</select>
+
+	<!-- 환자에 연결된 보호자 목록 (parameterType=int) -->
+	<select id="selectGuardiansByPatientNo" parameterType="int"
+		resultType="map">
+		SELECT
+		g.user_no AS "guardianId",
+		g.name AS "name",
+		NULL AS "email",
+		'보호자' AS "relation"
+		FROM guardian_patient_connection c
+		JOIN LATERAL (
+		VALUES (c.guardian1_no, 1),
+		(c.guardian2_no, 2),
+		(c.guardian3_no, 3)
+		) s(guardian_no, idx) ON s.guardian_no IS NOT NULL
+		JOIN users g ON g.user_no = s.guardian_no
+		WHERE c.patient_no = #{value}
+		ORDER BY s.idx
+	</select>
+
+	<!-- 슬롯에서 해당 guardianNo 제거 (안전한 좌측정렬의 전단) -->
+	<update id="unsetGuardianSlot" parameterType="map">
+		UPDATE guardian_patient_connection
+		SET
+		-- guardian1이 대상이면: 2가 있으면 2→1, 2 없고 3 있으면 3→1, 둘 다 없으면 1 유지 (행 삭제는
+		컨트롤러에서)
+		guardian1_no = CASE
+		WHEN guardian1_no = #{guardianNo} AND guardian2_no IS NOT NULL THEN
+		guardian2_no
+		WHEN guardian1_no = #{guardianNo} AND guardian2_no IS NULL AND
+		guardian3_no IS NOT NULL THEN guardian3_no
+		ELSE guardian1_no
+		END,
+		-- guardian2가 대상이면 NULL
+		guardian2_no = CASE
+		WHEN guardian2_no = #{guardianNo} THEN NULL
+		ELSE guardian2_no
+		END,
+		-- 위에서 3→1로 올린 경우 3을 비워야 하므로 보정 / 또는 3이 대상이면 NULL
+		guardian3_no = CASE
+		WHEN guardian1_no = #{guardianNo} AND guardian2_no IS NULL AND
+		guardian3_no IS NOT NULL THEN NULL
+		WHEN guardian3_no = #{guardianNo} THEN NULL
+		ELSE guardian3_no
+		END
+		WHERE patient_no = #{patientNo}
+	</update>
+
+	<!-- 비어 있는 앞 슬롯으로 한 칸씩 당기기 (1단계: 2→1) -->
+	<update id="compactStep1" parameterType="int">
+		UPDATE guardian_patient_connection
+		SET guardian1_no = guardian2_no,
+		guardian2_no = NULL
+		WHERE patient_no = #{value}
+		AND guardian1_no IS NULL
+		AND guardian2_no IS NOT NULL
+	</update>
+
+	<!-- 비어 있는 앞 슬롯으로 한 칸씩 당기기 (2단계: 3→2) -->
+	<update id="compactStep2" parameterType="int">
+		UPDATE guardian_patient_connection
+		SET guardian2_no = guardian3_no,
+		guardian3_no = NULL
+		WHERE patient_no = #{value}
+		AND guardian2_no IS NULL
+		AND guardian3_no IS NOT NULL
+	</update>
+
+	<!-- 세 슬롯이 모두 NULL이면 행 삭제 -->
+	<delete id="deleteIfEmpty" parameterType="int">
+		DELETE FROM guardian_patient_connection
+		WHERE patient_no = #{value}
+		AND guardian1_no IS NULL
+		AND guardian2_no IS NULL
+		AND guardian3_no IS NULL
+	</delete>
 
 </mapper>
