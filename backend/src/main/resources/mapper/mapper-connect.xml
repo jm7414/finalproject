@@ -26,4 +26,27 @@
 		WHERE patient_no = #{patientNo}
 	</delete>
 
+	<!-- 보호자 user_no로 관리하는 환자 정보 조회 -->
+	<select id="getPatientByGuardianNo" parameterType="int" resultType="lx.project.dementia_care.vo.UserVO">
+		SELECT 
+			u.user_no as userNo,
+			u.user_id as userId,
+			u.user_pw as userPw,
+			u.name,
+			u.birth_date as birthDate,
+			u.phone_number as phoneNumber,
+			u.invitation_code as invitationCode,
+			u.subscription_status as subscriptionStatus,
+			u.user_status as userStatus,
+			u.profile_photo as profilePhoto,
+			u.role_no as roleNo
+		FROM users u
+		INNER JOIN guardian_patient_connection gpc 
+			ON u.user_no = gpc.patient_no
+		WHERE gpc.guardian1_no = #{guardianNo} 
+		   OR gpc.guardian2_no = #{guardianNo} 
+		   OR gpc.guardian3_no = #{guardianNo}
+		LIMIT 1
+	</select>
+
 </mapper>

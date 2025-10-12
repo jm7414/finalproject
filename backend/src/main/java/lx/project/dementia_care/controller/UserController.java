@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import lx.project.dementia_care.dao.GuardianPatientConnectionDAO;
+import lx.project.dementia_care.dao.ConnectDAO;
 import lx.project.dementia_care.dao.UserDAO;
 import lx.project.dementia_care.vo.UserVO;
 
@@ -26,7 +26,7 @@ public class UserController {
     private UserDAO userDAO;
     
     @Autowired
-    private GuardianPatientConnectionDAO guardianPatientConnectionDAO;
+    private ConnectDAO connectDAO;
     
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -118,7 +118,7 @@ public class UserController {
             }
             
             // 보호자가 관리하는 환자 조회
-            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(currentGuardian.getUserNo());
+            UserVO patient = connectDAO.getPatientByGuardianNo(currentGuardian.getUserNo());
             
             if (patient == null) {
                 return ResponseEntity.ok(Map.of("message", "관리하는 환자가 없습니다."));

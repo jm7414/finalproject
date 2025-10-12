@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import lx.project.dementia_care.dao.GuardianPatientConnectionDAO;
+import lx.project.dementia_care.dao.ConnectDAO;
 import lx.project.dementia_care.dto.ScheduleRequest;
 import lx.project.dementia_care.service.ScheduleService;
 import lx.project.dementia_care.vo.RouteVO;
@@ -32,7 +32,7 @@ public class ScheduleController {
     private ScheduleService scheduleService;
 
     @Autowired
-    private GuardianPatientConnectionDAO guardianPatientConnectionDAO;
+    private ConnectDAO connectDAO;
 
     /**
      * 일정 저장 API
@@ -54,7 +54,7 @@ public class ScheduleController {
             int guardianUserNo = currentGuardian.getUserNo();
 
             // 보호자가 관리하는 환자 조회
-            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(guardianUserNo);
+            UserVO patient = connectDAO.getPatientByGuardianNo(guardianUserNo);
             if (patient == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "관리하는 환자가 없습니다."));
@@ -178,7 +178,7 @@ public class ScheduleController {
             int guardianUserNo = currentGuardian.getUserNo();
 
             // 보호자가 관리하는 환자 조회
-            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(guardianUserNo);
+            UserVO patient = connectDAO.getPatientByGuardianNo(guardianUserNo);
             if (patient == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "관리하는 환자가 없습니다."));
@@ -258,7 +258,7 @@ public class ScheduleController {
             int guardianUserNo = currentGuardian.getUserNo();
 
             // 보호자가 관리하는 환자 조회
-            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(guardianUserNo);
+            UserVO patient = connectDAO.getPatientByGuardianNo(guardianUserNo);
             if (patient == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "관리하는 환자가 없습니다."));
@@ -310,7 +310,7 @@ public class ScheduleController {
             int guardianUserNo = currentGuardian.getUserNo();
 
             // 보호자가 관리하는 환자 조회
-            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(guardianUserNo);
+            UserVO patient = connectDAO.getPatientByGuardianNo(guardianUserNo);
             if (patient == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "관리하는 환자가 없습니다."));
