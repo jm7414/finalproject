@@ -22,8 +22,7 @@ import lx.project.dementia_care.vo.UserVO;
 
 @RestController
 public class UserController {
-	@Autowired
-	private lx.project.dementia_care.dao.ConnectDAO connectDAO;
+	
 
 
     @Autowired
