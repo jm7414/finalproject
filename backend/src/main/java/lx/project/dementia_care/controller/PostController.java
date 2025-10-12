@@ -6,6 +6,7 @@ import lx.project.dementia_care.dto.PostRequestDto;
 import lx.project.dementia_care.dto.PostResponseDto;
 import lx.project.dementia_care.service.PostService;
 
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,23 +47,53 @@ public class PostController {
 
     // 게시판 - 생성
     @PostMapping
-    public ResponseEntity<Integer> createPost(@RequestBody PostRequestDto requestDto) {
-        Integer newPostId = postService.createPost(requestDto);
+    public ResponseEntity<Integer> createPost(@RequestBody PostRequestDto requestDto, Authentication authentication) {
+        // 로그인하지 않은 사용자 요청을 거부
+        if (authentication == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // 401 에러
+        }
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        Integer userId = userVO.getUserNo();
+        Integer newPostId = postService.createPost(requestDto, userId);
         return new ResponseEntity<>(newPostId, HttpStatus.CREATED);
     }
 
     // 게시판 - 수정
     @PutMapping("/{id}")
-    public ResponseEntity<Void> updatePost(@PathVariable Integer id, @RequestBody PostRequestDto requestDto) {
-        postService.updatePost(id, requestDto);
-        return ResponseEntity.ok().build(); // 200
+    // 추가: Authentication 파라미터
+    public ResponseEntity<Void> updatePost(@PathVariable Integer id, @RequestBody PostRequestDto requestDto, Authentication authentication) throws AccessDeniedException {
+        // 추가: 현재 로그인한 사용자의 userNo를 알아냅니다.
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        Integer currentUserId = userVO.getUserNo();
+        
+        // 수정: 서비스에 현재 사용자 ID를 함께 전달합니다.
+        postService.updatePost(id, requestDto, currentUserId);
+        return ResponseEntity.ok().build();
     }
 
     // 게시판 - 삭제
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePost(@PathVariable Integer id) {
-        postService.deletePost(id);
-        return ResponseEntity.noContent().build();  // 204
-    }    
+    // 추가: Authentication 파라미터
+    public ResponseEntity<Void> deletePost(@PathVariable Integer id, Authentication authentication) throws AccessDeniedException {
+        // 추가: 현재 로그인한 사용자의 userNo를 알아냅니다.
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        Integer currentUserId = userVO.getUserNo();
 
-}
+        // 수정: 서비스에 현재 사용자 ID를 함께 전달합니다.
+        postService.deletePost(id, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 현재 로그인한 사용자의 정보를 반환
+    @GetMapping("/api/user/me")
+    public ResponseEntity<UserVO> getCurrentUser(Authentication authentication) {
+        // 로그인 안 한 상태면 null을 반환하거나 에러
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // 신분증에서 UserVO를 꺼내서 그대로 반환
+        UserVO currentUser = (UserVO) authentication.getPrincipal();
+        return ResponseEntity.ok(currentUser);
+    }
+}   

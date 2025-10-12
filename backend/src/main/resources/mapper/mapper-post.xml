@@ -53,7 +53,8 @@
             p.created_at,
             p.image_path,
             0 AS likes,
-            0 AS comments
+            0 AS comments,
+            p.user_id AS "userId"
         FROM
             post p
         JOIN

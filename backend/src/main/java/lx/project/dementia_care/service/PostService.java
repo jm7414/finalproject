@@ -8,7 +8,7 @@ import lx.project.dementia_care.dto.PostResponseDto;
 import lx.project.dementia_care.dto.PostListDto;
 import lx.project.dementia_care.dto.PostRequestDto;
 
-
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 import lx.project.dementia_care.dao.PostDAO; // DAO를 import 합니다.
 
@@ -52,25 +52,35 @@ public class PostService {
      * 게시물 생성
      */
     @Transactional
-    public Integer createPost(PostRequestDto requestDto) {
-        // 변경점 4: DTO를 직접 Mapper에 전달하여 DB에 삽입합니다.
-        // (실제 사용자 ID는 로그인 세션에서 가져와 설정해야 합니다)
-        // 예시: requestDto.setUserId(SecurityUtil.getCurrentUserId());
-        requestDto.setUserId(1); // 임시 사용자 ID
+    // 수정: 컨트롤러로부터 userId를 직접 받도록 파라미터를 추가합니다.
+    public Integer createPost(PostRequestDto requestDto, Integer userId) {
+        // 추가: DTO에 전달받은 userId를 설정합니다.
+        requestDto.setUserId(userId);
         
         postDAO.createPost(requestDto);
-        return requestDto.getPostId(); // Mapper에서 생성된 postId를 DTO에 다시 담아 반환
+        return requestDto.getPostId();
     }
 
     /**
      * 게시물 수정
      */
     @Transactional
-    public void updatePost(Integer postId, PostRequestDto requestDto) {
-        // 수정 전, 해당 게시물이 존재하는지 확인하는 로직을 추가하면 더 안정적입니다.
-        if (postDAO.findPostById(postId) == null) {
+    // 수정: currentUserId 파라미터 추가
+    public void updatePost(Integer postId, PostRequestDto requestDto, Integer currentUserId) throws AccessDeniedException {
+        // 1. 수정하려는 게시물의 정보를 가져옵니다.
+        PostResponseDto post = postDAO.findPostById(postId);
+        if (post == null) {
             throw new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId);
         }
+
+        // 2. ✨✨✨ 핵심 권한 체크 ✨✨✨
+        // 만약 (현재 사용자가 글쓴이가 아니고) AND (현재 사용자가 운영자(1번)도 아니라면)
+        if (!post.getUserId().equals(currentUserId) && currentUserId != 1) {
+            // 예외를 발생시켜 수정을 막습니다.
+            throw new AccessDeniedException("수정할 권한이 없습니다.");
+        }
+
+        // 3. 권한이 있다면 수정을 진행합니다.
         postDAO.updatePost(postId, requestDto);
     }
 
@@ -78,11 +88,23 @@ public class PostService {
      * 게시물 삭제
      */
     @Transactional
-    public void deletePost(Integer postId) {
-        // 삭제 전, 해당 게시물이 존재하는지 확인하는 로직
-        if (postDAO.findPostById(postId) == null) {
+    // 수정: currentUserId 파라미터 추가
+    public void deletePost(Integer postId, Integer currentUserId) throws AccessDeniedException {
+        // 1. 삭제하려는 게시물의 정보를 가져옵니다.
+        PostResponseDto post = postDAO.findPostById(postId);
+        if (post == null) {
             throw new IllegalArgumentException("해당 게시글이 없습니다. id=" + postId);
         }
+
+        // 2. ✨✨✨ 핵심 권한 체크 ✨✨✨
+        // 만약 (현재 사용자가 글쓴이가 아니고) AND (현재 사용자가 운영자(1번)도 아니라면)
+        if (!post.getUserId().equals(currentUserId) && currentUserId != 1) {
+            // 예외를 발생시켜 삭제를 막습니다.
+            throw new AccessDeniedException("삭제할 권한이 없습니다.");
+        }
+        
+        // 3. 권한이 있다면 삭제를 진행합니다.
         postDAO.deletePost(postId);
     }
+
 }

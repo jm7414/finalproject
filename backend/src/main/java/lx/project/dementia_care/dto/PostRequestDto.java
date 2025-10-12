@@ -19,7 +19,6 @@ public class PostRequestDto {
     private String image;
 
     // 어떤 유저가 작성했는지 식별하기 위한 ID
-    // (실제로는 세션이나 토큰에서 추출하여 Service에서 설정하는 경우가 많습니다)
     private Integer userId;
 
     // postId, createdAt, views 등은 서버에서 생성하므로 요청 DTO에는 포함하지 않습니다.

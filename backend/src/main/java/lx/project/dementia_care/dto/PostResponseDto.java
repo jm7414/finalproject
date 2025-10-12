@@ -35,4 +35,7 @@ public class PostResponseDto {
 
     // 이미지 경로
     private String image;
+
+    // 게시물 쓴 사람
+    private Integer userId;
 }

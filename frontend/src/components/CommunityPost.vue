@@ -1,28 +1,44 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router'; // useRouter 추가
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
 const route = useRoute();
-const router = useRouter(); // 라우터 인스턴스
+const router = useRouter();
 const postId = ref(route.params.id || 1);
 const post = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-// '더보기' 메뉴의 보임/숨김 상태를 관리할 ref
 const isOptionsMenuVisible = ref(false);
+const currentUser = ref(null);
 
 onMounted(() => {
+  fetchCurrentUser();
   fetchPost();
 });
+
+// 본인 확인 함수
+async function fetchCurrentUser() {
+  try {
+    const response = await axios.get('http://localhost:8080/api/user/me', {
+      withCredentials: true // 로그인 인증
+    });
+    // 자신의 계정정보를 currentUser에 저장
+    currentUser.value = response.data;
+  } catch (error) {
+    console.error("현재 사용자 정보를 가져오는데 실패했습니다.", error);
+    // 로그인 안한 상태라면
+    currentUser.value = null;
+  }
+}
 
 async function fetchPost() {
   loading.value = true;
   error.value = null;
   try {
     const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`, {
-      withCredentials: true // 입장권 챙겨주기
+      withCredentials: true
     });
     post.value = response.data;
   } catch (err) {
@@ -33,7 +49,6 @@ async function fetchPost() {
   }
 }
 
-// 더보기 메뉴를 토글하는 함수
 function toggleOptionsMenu() {
   isOptionsMenuVisible.value = !isOptionsMenuVisible.value;
 }
@@ -46,7 +61,7 @@ async function deletePost() {
   if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
     try {
       await axios.delete(`http://localhost:8080/api/posts/${postId.value}`, {
-        withCredentials: true // 삭제할 때도 당연히 입장권 필요
+        withCredentials: true
       });
       alert('게시물이 삭제되었습니다.');
       router.push('/CommunityView');
@@ -62,7 +77,6 @@ function sharePost() {
   isOptionsMenuVisible.value = false;
 }
 
-// 좋아요, 댓글 관련 함수 (기능 구현 시 사용)
 function toggleLike() { alert('좋아요 API 연동 필요'); }
 function addComment() { alert('댓글 작성 API 연동 필요'); }
 function likeComment() { alert('댓글 좋아요!'); }
@@ -83,17 +97,34 @@ function likeComment() { alert('댓글 좋아요!'); }
         <img :src="post.authorProfileImage" alt="작성자 프로필" class="author-profile-img">
         <div>
           <span class="author-name">{{ post.author }}</span>
-          <span class="post-date">{{ new Date(post.date).toLocaleDateString('ko-KR') }}</span>
+          <span class="post-date">{{ new Date(post.createdAt).toLocaleDateString('ko-KR') }}</span>
         </div>
       </div>
 
-      <!-- '더보기' 메뉴 컨테이너 -->
-      <div class="options-container">
-        <button @click="toggleOptionsMenu" class="options-button">⋮</button>
-        <div v-if="isOptionsMenuVisible" class="options-menu">
-          <div @click="editPost" class="options-item">수정</div>
-          <div @click="deletePost" class="options-item">삭제</div>
-          <div @click="sharePost" class="options-item">공유</div>
+      <div class="post-header-top">
+        <div class="author-info">
+          </div>
+
+        <div class="post-actions-container">
+
+          <button @click="sharePost" class="action-button share-button" title="공유하기">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+          </button>
+
+          <div v-if="post && currentUser && (post.userId === currentUser.userNo || currentUser.userNo === 1)" class="more-options-group">
+            <button @click="toggleOptionsMenu" class="action-button options-button" title="더보기">⋮</button>
+            <div v-if="isOptionsMenuVisible" class="options-menu">
+              <div @click="editPost" class="options-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>수정</span>
+              </div>
+              <div @click="deletePost" class="options-item delete">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                <span>삭제</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -111,7 +142,6 @@ function likeComment() { alert('댓글 좋아요!'); }
       <span>👁️ {{ post.views }}</span>
     </div>
 
-    <!-- 댓글 -->
     <div class="comments-section">
     </div>
   </div>
@@ -121,98 +151,125 @@ function likeComment() { alert('댓글 좋아요!'); }
 .post-detail-container {
   padding: 24px;
   width: 100%;
-  max-width: 500px; /* 전체 너비 제한 */
+  max-width: 500px;
   margin: 0 auto;
   background-color: #FFFFFF;
 }
-
 .loading-container, .error-container {
   text-align: center;
   padding: 50px;
   font-size: 1.2em;
   color: #555;
 }
-
-/* 게시물 헤더 */
 .post-header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
-
 .author-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
 .author-profile-img {
   width: 56px;
   height: 56px;
-  border-radius: 50%; /* 원형 프로필 이미지 */
+  border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
-
 .author-name {
   display: block;
   font-weight: 700;
   font-size: 18px;
   color: #3F414E;
 }
-
 .post-date {
   display: block;
   font-size: 14px;
   color: #555;
 }
-
-/* '더보기' 메뉴 관련 스타일 */
-.options-container {
-  position: relative; /* 드롭다운 메뉴의 위치 기준점 */
+.post-actions-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-.options-button {
-  background: none;
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  font-size: 28px;
-  font-weight: bold;
-  color: #888;
-  cursor: pointer;
-  padding: 0 8px;
-}
-
-.options-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background-color: white;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  z-index: 10;
-  width: 120px;
-  overflow: hidden;
-}
-
-.options-item {
-  padding: 12px 16px;
-  font-size: 16px;
+  background-color: #f0f2f5;
+  color: #555;
   cursor: pointer;
   transition: background-color 0.2s;
 }
-
+.action-button:hover {
+  background-color: #e4e6eb;
+}
+.action-button svg {
+  stroke: #3F414E;
+}
+.options-button {
+  font-size: 24px;
+  font-weight: bold;
+  padding-bottom: 4px;
+  background-color: transparent;
+}
+.options-button:hover {
+  background-color: #f0f2f5;
+}
+.more-options-group {
+  position: relative;
+}
+.options-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  z-index: 10;
+  width: 130px;
+  overflow: hidden;
+  padding: 6px;
+  border: 1px solid #eee;
+}
+.options-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #3F414E;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 8px;
+}
 .options-item:hover {
   background-color: #f5f5f5;
 }
+.options-item svg {
+  stroke: #555;
+}
+.options-item.delete {
+  color: #e53e3e;
+}
+.options-item.delete:hover {
+  background-color: #fed7d7;
+}
+.options-item.delete svg {
+  stroke: #e53e3e;
+}
 
-
-/* 게시물 본문 */
 .post-content {
   margin-bottom: 20px;
 }
-
 .post-title {
   font-weight: 700;
   font-size: 28px;
@@ -220,7 +277,6 @@ function likeComment() { alert('댓글 좋아요!'); }
   margin-bottom: 12px;
   color: #3F414E;
 }
-
 .post-text {
   font-weight: 500;
   font-size: 18px;
@@ -229,7 +285,6 @@ function likeComment() { alert('댓글 좋아요!'); }
   white-space: pre-wrap;
   margin-bottom: 20px;
 }
-
 .post-main-image {
   width: 100%;
   height: auto;
@@ -237,8 +292,6 @@ function likeComment() { alert('댓글 좋아요!'); }
   object-fit: cover;
   margin-top: 10px;
 }
-
-/* 게시물 푸터 (좋아요, 조회수) */
 .post-footer-stats {
   display: flex;
   gap: 20px;
@@ -249,7 +302,6 @@ function likeComment() { alert('댓글 좋아요!'); }
   font-size: 16px;
   color: #555;
 }
-
 .like-button {
   display: flex;
   align-items: center;
@@ -257,4 +309,3 @@ function likeComment() { alert('댓글 좋아요!'); }
   cursor: pointer;
 }
 </style>
-
