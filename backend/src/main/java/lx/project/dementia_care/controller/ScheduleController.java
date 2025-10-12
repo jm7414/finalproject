@@ -142,6 +142,66 @@ public class ScheduleController {
     }
 
     /**
+     * 기본형 안심존 조회
+     * GET /api/schedule/basic-safe-zone/{userNo}
+     */
+    @GetMapping("/basic-safe-zone/{userNo}")
+    public ResponseEntity<?> getBasicSafeZone(@PathVariable int userNo) {
+        try {
+            SafeZoneVO basicSafeZone = scheduleService.getBasicSafeZoneByUserNo(userNo);
+            if (basicSafeZone == null) {
+                return ResponseEntity.ok(Map.of("message", "기본 안심존이 설정되지 않았습니다."));
+            }
+            return ResponseEntity.ok(basicSafeZone);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "기본 안심존 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * 기본형 안심존 저장/수정
+     * POST /api/schedule/basic-safe-zone
+     */
+    @PostMapping("/basic-safe-zone")
+    public ResponseEntity<?> saveBasicSafeZone(@RequestBody Map<String, Object> request) {
+        try {
+            // 현재 로그인한 보호자 정보 가져오기
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "로그인이 필요합니다."));
+            }
+
+            UserVO currentGuardian = (UserVO) auth.getPrincipal();
+            int guardianUserNo = currentGuardian.getUserNo();
+
+            // 보호자가 관리하는 환자 조회
+            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(guardianUserNo);
+            if (patient == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "관리하는 환자가 없습니다."));
+            }
+
+            int patientUserNo = patient.getUserNo();
+
+            // 기본 안심존 저장/수정
+            scheduleService.saveOrUpdateBasicSafeZone(patientUserNo, request.get("boundaryCoordinates").toString());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "기본 안심존이 성공적으로 저장되었습니다.",
+                    "patientName", patient.getName()
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "기본 안심존 저장 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
      * 현재 시간에 해당하는 일정 조회
      * GET /api/schedule/current/{userNo}
      */

@@ -44,11 +44,11 @@
       </div>
 
       <!-- 안심존 설정 -->
-      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" @click="goToBasicSafeZone" style="cursor: pointer;">
         <span class="menu-icon" style="background:#EDF6FF">
           <img :src="u('/figma/Bold Duotone/Security/Shield Star-1.svg')" alt="안심존 설정" class="icon-img" />
         </span>
-        <span class="flex-grow-1 menu-text">안심존 설정</span>
+        <span class="flex-grow-1 menu-text">기본 안심존 설정</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
       </div>
 
@@ -109,6 +109,11 @@ const router = useRouter()
 // 구독 및 결제 관리 페이지로 이동
 const goToBilling = () => {
   router.push('/basicplan')
+}
+
+// 기본 안심존 설정 페이지로 이동
+const goToBasicSafeZone = () => {
+  router.push({ name: 'basic-safe-zone-location' })
 }
 
 // 로그아웃 처리

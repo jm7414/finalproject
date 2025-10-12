@@ -159,5 +159,12 @@
         WHERE user_no = #{userNo} AND zone_type = '경로형'
     </delete>
 
+    <!-- 안심존 수정 -->
+    <update id="updateSafeZone" parameterType="lx.project.dementia_care.vo.SafeZoneVO">
+        UPDATE safe_zone
+        SET boundary_coordinates = #{boundaryCoordinates}::json
+        WHERE safe_zone_no = #{safeZoneNo}
+    </update>
+
 </mapper>
 

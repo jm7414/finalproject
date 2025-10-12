@@ -143,6 +143,37 @@ public class ScheduleService {
     }
 
     /**
+     * 기본형 안심존 조회 (사용자당 1개만 존재)
+     */
+    public SafeZoneVO getBasicSafeZoneByUserNo(int userNo) throws Exception {
+        List<SafeZoneVO> basicZones = scheduleDAO.getSafeZonesByUserNoAndType(userNo, "기본형");
+        return basicZones.isEmpty() ? null : basicZones.get(0);
+    }
+
+    /**
+     * 기본형 안심존 저장/수정 (트랜잭션)
+     * 기존 기본형이 있으면 수정, 없으면 생성
+     */
+    @Transactional
+    public void saveOrUpdateBasicSafeZone(int userNo, String boundaryCoordinates) throws Exception {
+        // 기존 기본형 안심존 조회
+        SafeZoneVO existingZone = getBasicSafeZoneByUserNo(userNo);
+        
+        if (existingZone != null) {
+            // 기존 기본형 안심존 수정
+            existingZone.setBoundaryCoordinates(boundaryCoordinates);
+            scheduleDAO.updateSafeZone(existingZone);
+        } else {
+            // 새로운 기본형 안심존 생성
+            SafeZoneVO newZone = new SafeZoneVO();
+            newZone.setZoneType("기본형");
+            newZone.setBoundaryCoordinates(boundaryCoordinates);
+            newZone.setUserNo(userNo);
+            scheduleDAO.insertSafeZone(newZone);
+        }
+    }
+
+    /**
      * 현재 시간에 해당하는 일정 조회
      */
     public ScheduleVO getCurrentSchedule(int userNo) throws Exception {
