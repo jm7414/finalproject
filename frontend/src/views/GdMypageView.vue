@@ -25,12 +25,12 @@
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight`.svg')" alt="" class="chev-img" />
       </div>
 
-      <!-- 환자 QR 연결 -->
-      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+      <!-- 환자 초대코드 -->
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" @click="goToGdc" style="cursor: pointer;">
         <span class="menu-icon" style="background:#EAF3FF">
-          <img :src="u('/figma/qr.svg')" alt="환자 QR 연결" class="icon-img" />
+          <img :src="u('/figma/qr.svg')" alt="환자 초대코드" class="icon-img" />
         </span>
-        <span class="flex-grow-1 menu-text">환자 QR 연결</span>
+        <span class="flex-grow-1 menu-text">환자 초대코드</span>
         <img :src="u('/figma/Phosphor Icons Regular/CaretRight.svg')" alt="" class="chev-img" />
       </div>
 
@@ -53,7 +53,8 @@
       </div>
 
       <!-- 구독 및 결제 관리 -->
-      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" @click="goToBilling" style="cursor: pointer;">
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" @click="goToBilling"
+        style="cursor: pointer;">
         <span class="menu-icon" style="background:#EFF9EF">
           <img :src="u('/figma/Bold Duotone/Settings, Fine Tuning/Settings.svg')" alt="구독 및 결제 관리" class="icon-img" />
         </span>
@@ -62,9 +63,11 @@
       </div>
 
       <!-- 로그아웃 -->
-      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 logout-item" @click="handleLogout" style="cursor: pointer;">
+      <div class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 logout-item"
+        @click="handleLogout" style="cursor: pointer;">
         <span class="menu-icon" style="background:#FFE8E8">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="#FF6B6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -101,6 +104,11 @@
 import { useRouter } from 'vue-router'
 import { logout } from '@/utils/auth'
 
+/** 연결 */
+const goToGdc = () => {
+  router.push('/gdc')
+}
+
 /** 공백/쉼표 포함 경로 안전 처리 */
 const u = (p: string) => encodeURI(p)
 
@@ -119,7 +127,7 @@ const goToBasicSafeZone = () => {
 // 로그아웃 처리
 const handleLogout = async () => {
   const success = await logout()
-  
+
   if (success) {
     // 로그인 페이지로 이동
     router.push('/login')
@@ -133,12 +141,14 @@ const handleLogout = async () => {
 /* 화면을 한 뷰에 담기 위한 콤팩트 설정 */
 @media (min-width: 576px) {
   .mypage.container {
-    max-width: 480px; /* 필요시 460~500 사이로 조정 */
+    max-width: 480px;
+    /* 필요시 460~500 사이로 조정 */
   }
 }
 
 .title {
-  font-size: 1.6rem; /* 헤더(App.vue에서 추가될 예정이라 약간 작게 */
+  font-size: 1.6rem;
+  /* 헤더(App.vue에서 추가될 예정이라 약간 작게 */
   line-height: 1.2;
   margin-top: .25rem;
   margin-bottom: .5rem;
@@ -158,9 +168,11 @@ const handleLogout = async () => {
   border-bottom: 1px solid rgba(0, 0, 0, .06);
   background: #fff;
 }
+
 .list-group-item:last-child {
   border-bottom: none;
 }
+
 .list-group-item:active {
   background: #f8f9fa;
 }
@@ -174,6 +186,7 @@ const handleLogout = async () => {
   align-items: center;
   justify-content: center;
 }
+
 .menu-text {
   font-size: 1.05rem;
   color: #333;
@@ -191,6 +204,7 @@ const handleLogout = async () => {
   align-items: center;
   justify-content: center;
 }
+
 .avatar-ring img {
   border-radius: 50%;
   object-fit: cover;
@@ -200,7 +214,8 @@ const handleLogout = async () => {
 
 /* 구독 카드 */
 :root {
-  --sub-card-bg: #F2EAFB; /* 연보라 (피그마 근접) */
+  --sub-card-bg: #F2EAFB;
+  /* 연보라 (피그마 근접) */
   --sub-card-bd: #E3D8F4;
 }
 
@@ -221,12 +236,14 @@ const handleLogout = async () => {
   width: 32px;
   height: 32px;
   border-radius: 9999px;
-  background: var(--sub-card-bg); /* 카드와 동일 배경으로 통일 */
+  background: var(--sub-card-bg);
+  /* 카드와 동일 배경으로 통일 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-right: 0.5rem;
 }
+
 .sub-icon {
   width: 18px;
   height: 18px;
@@ -238,6 +255,7 @@ const handleLogout = async () => {
   color: #212529;
   font-weight: 600;
 }
+
 .sub-date {
   font-size: .9rem;
   color: #61646A !important;
@@ -250,13 +268,16 @@ const handleLogout = async () => {
   font-weight: 700;
   border-radius: 9999px;
 }
+
 .btn-upgrade:hover {
   background: #3b2c6a;
 }
+
 /* ✨ 카드 배경이 흰색으로 돌아가는 문제 방지 */
-.sub-card{
+.sub-card {
   /* 이 카드 안에서만 쓰는 전용 변수 */
-  --sub-card-bg: #F2EAFB;   /* 연보라 */
+  --sub-card-bg: #F2EAFB;
+  /* 연보라 */
   --sub-card-bd: #E3D8F4;
 
   /* Bootstrap이 읽는 카드 배경 변수도 같이 세팅 */
@@ -269,13 +290,21 @@ const handleLogout = async () => {
 }
 
 /* 아이콘 칩 배경도 카드와 동일 톤으로 */
-.sub-icon-wrap{
-  width: 32px; height: 32px; border-radius: 9999px;
+.sub-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
   background-color: var(--sub-card-bg) !important;
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.sub-icon{ width: 18px; height: 18px; display: block; }
+.sub-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
 
 .icon-img {
   width: 24px;
@@ -297,6 +326,4 @@ const handleLogout = async () => {
   color: #FF6B6B;
   font-weight: 500;
 }
-
 </style>
-
