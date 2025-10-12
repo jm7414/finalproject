@@ -4,29 +4,24 @@
     <div class="topbar">
       <div class="left">
         <strong>보호자-환자 연결</strong>
-        <!-- 연결이 성립되어 있을 때만 작은 상태 배지 노출 -->
         <span class="muted" v-if="stage === 'connected'">연결 유지 중</span>
       </div>
-      <!-- (요청 반영) 우측 상단 '다른 환자 연결' 링크 제거 -->
     </div>
 
-    <!-- 연결 폼 (최초에는 보이고, 연결 상태에서는 사용자가 열었을 때만 보임) -->
-    <div v-show="stage === 'form' || miniFormOpen" class="card">
+    <!-- 연결 폼: 연결 전만 노출 -->
+    <div v-if="stage === 'form'" class="card">
       <h2 class="title">초대코드로 연결</h2>
 
-      <!-- 서버의 /api/user/me 결과에서 받은 내 보호자 번호(guardianNo) 표시용(수정 불가) -->
       <div class="field">
         <label class="label">내 보호자 번호</label>
         <input class="input" :value="guardianNo ?? ''" disabled />
       </div>
 
-      <!-- 사용자가 환자의 초대코드를 입력 -->
       <div class="field">
         <label class="label" for="invite">환자 초대코드</label>
         <input id="invite" class="input" type="text" v-model.trim="inviteCode" placeholder="예: 8자리 코드" />
       </div>
 
-      <!-- 코드 확인(preview) 성공 시 미리보기 정보 노출 -->
       <div class="field" v-if="resolvedPreview">
         <label class="label">확인된 환자</label>
         <div class="kv-inline">
@@ -36,7 +31,6 @@
         </div>
       </div>
 
-      <!-- 코드 확인 버튼(프리뷰) / 연결 실행 버튼 -->
       <div class="row">
         <button class="btn ghost" :disabled="busy || !inviteCode" @click="previewInvite">
           {{ busy && previewing ? '확인 중...' : '코드 확인' }}
@@ -46,26 +40,22 @@
         </button>
       </div>
 
-      <!-- 사용자 메시지 -->
       <p v-if="msg" class="msg ok">{{ msg }}</p>
       <p v-if="err" class="msg err">{{ err }}</p>
     </div>
 
     <!-- 연결 이후 보여줄 요약 카드 -->
-    <div v-if="stage === 'connected'" class="card">
+    <div v-else-if="stage === 'connected'" class="card">
       <div class="flex-row">
         <h2 class="title">연결된 환자</h2>
         <div class="gap8">
-          <!-- (유지) 카드 내부 버튼으로 새 연결 시도 -->
-          <button class="btn ghost" @click="startNewByCode">다른 환자 연결</button>
-          <!-- 현재 로그인 보호자와의 연결만 해제 -->
+          <!-- 다환자 금지: 새 연결 버튼 제거 -->
           <button class="btn danger" :disabled="busy" @click="disconnect">
             {{ busy ? '해제 중...' : '연결 해제' }}
           </button>
         </div>
       </div>
 
-      <!-- 환자 요약 정보 -->
       <section class="section">
         <h3 class="section-title">환자 정보</h3>
         <div class="kv">
@@ -86,7 +76,6 @@
         </div>
       </section>
 
-      <!-- 보호자 목록 -->
       <section class="section">
         <div class="flex-row">
           <h3 class="section-title">연결된 보호자</h3>
@@ -108,7 +97,6 @@
         </ul>
       </section>
 
-      <!-- 사용자 메시지 -->
       <p v-if="msg" class="msg ok">{{ msg }}</p>
       <p v-if="err" class="msg err">{{ err }}</p>
     </div>
@@ -117,11 +105,8 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const stage = ref('form')
-const miniFormOpen = ref(false) // 연결 상태에서 폼을 열어두는 토글
 
 // 핵심 상태
 const guardianNo = ref(null)
@@ -147,17 +132,15 @@ const LS_KEY = 'gdc:lastConnection'
 // 공통 fetch
 async function request(url, options = {}) {
   const res = await fetch(url, { credentials: 'include', ...options })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(text || `${res.status}`)
-  }
-  try { return await res.json() } catch { return {} }
+  const isJson = (res.headers.get('content-type') || '').includes('application/json')
+  const body = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '')
+  if (!res.ok) throw new Error(typeof body === 'string' ? body : (body.message || `${res.status}`))
+  return body
 }
 
 // API
 async function fetchMe() {
-  const me = await request('/api/user/me')
-  return me
+  return await request('/api/user/me')
 }
 
 async function apiResolveInvite(code) {
@@ -178,8 +161,10 @@ async function apiCreateConnection({ patientNo, guardianNo }) {
 async function apiCancelConnection({ patientNo, guardianNo }) {
   const url = `/api/connect/connections?patientNo=${encodeURIComponent(patientNo)}&guardianNo=${encodeURIComponent(guardianNo)}`
   const res = await fetch(url, { method: 'DELETE', credentials: 'include' })
-  if (!res.ok) throw new Error(await res.text().catch(() => `해제 실패 (${res.status})`))
-  try { return await res.json() } catch { return {} }
+  const isJson = (res.headers.get('content-type') || '').includes('application/json')
+  const body = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '')
+  if (!res.ok) throw new Error(typeof body === 'string' ? body : (body.message || `해제 실패 (${res.status})`))
+  return body
 }
 
 // 로컬 저장
@@ -213,11 +198,9 @@ onMounted(async () => {
       stage.value = 'connected'
       patient.value = last.patient || { userNo: last.patientNo }
       guardians.value = Array.isArray(last.guardians) ? last.guardians : []
-      miniFormOpen.value = false
       msg.value = '저장된 연결을 불러왔습니다.'
     } else {
       stage.value = 'form'
-      miniFormOpen.value = true
     }
   } catch {
     err.value = '내 정보 조회 실패. 다시 로그인 해주세요.'
@@ -243,6 +226,10 @@ async function previewInvite() {
 
 // 실제 연결
 async function handleConnect() {
+  if (stage.value === 'connected') {
+    err.value = '이미 다른 보호자와 연결되어 있습니다. 구독해주세요.!'
+    return
+  }
   msg.value = ''
   err.value = ''
   busy.value = true
@@ -251,8 +238,12 @@ async function handleConnect() {
     const pno = info.patientNo
     const res = await apiCreateConnection({ patientNo: pno, guardianNo: guardianNo.value })
 
+    // 서버가 ok=false로 보낼 수도 있으므로 확인
+    if (res && res.ok === false) {
+      throw new Error(res.message || '연결 실패')
+    }
+
     stage.value = 'connected'
-    miniFormOpen.value = false
     patient.value = res.patient || { userNo: pno, name: info.name || info.patientName }
     guardians.value = Array.isArray(res.guardians) ? res.guardians : []
     msg.value = '연결이 완료되었습니다.'
@@ -268,8 +259,13 @@ async function handleConnect() {
     resolvedPreview.value = null
   } catch (e) {
     const t = String(e.message || e)
-    if (t.includes('필수')) err.value = '연결 실패: 필수 값 누락'
-    else err.value = '연결 처리 중 오류가 발생했습니다.'
+    if (t.includes('이미 다른 환자에 연결된 보호자')) {
+      err.value = '이미 다른 환자에 연결된 보호자입니다. 기존 연결을 해제한 뒤 다시 시도하세요.'
+    } else if (t.includes('필수')) {
+      err.value = '연결 실패: 필수 값 누락'
+    } else {
+      err.value = '연결 처리 중 오류가 발생했습니다.'
+    }
   } finally {
     busy.value = false
   }
@@ -292,7 +288,6 @@ async function disconnect() {
     if (!guardians.value || guardians.value.length === 0) {
       clearLastConnection()
       stage.value = 'form'
-      miniFormOpen.value = true
       msg.value = '연결이 해제되었습니다.'
     } else {
       saveLastConnection({
@@ -309,15 +304,9 @@ async function disconnect() {
     busy.value = false
   }
 }
-
-// 연결 상태에서 새 초대코드로 또 연결을 시도할 때 폼만 열기
-function startNewByCode() {
-  miniFormOpen.value = true
-}
 </script>
 
 <style scoped>
-/* CSS 설명 생략 요청에 따라 스타일만 유지 */
 .gdc-wrap {
   min-height: 100dvh;
   display: flex;
@@ -339,12 +328,6 @@ function startNewByCode() {
   gap: 8px;
 }
 
-/* .right, .link 제거 가능하나 보존해도 무방 — 현재 템플릿에서는 미사용 */
-/*
-.right { display: flex; gap: 8px; }
-.link  { background: transparent; border: none; color: #4f46e5; cursor: pointer; font-weight: 700; }
-*/
-
 .card {
   width: 100%;
   max-width: 720px;
@@ -361,7 +344,9 @@ function startNewByCode() {
   font-weight: 800;
 }
 
-.field { margin-bottom: 12px; }
+.field {
+  margin-bottom: 12px;
+}
 
 .label {
   display: block;
@@ -379,9 +364,14 @@ function startNewByCode() {
   outline: none;
 }
 
-.input:focus { border-color: #4f46e5; }
+.input:focus {
+  border-color: #4f46e5;
+}
 
-.row { display: flex; gap: 8px; }
+.row {
+  display: flex;
+  gap: 8px;
+}
 
 .btn {
   height: 40px;
@@ -394,16 +384,43 @@ function startNewByCode() {
   cursor: pointer;
 }
 
-.btn.ghost { background: #eef2ff; color: #4f46e5; }
-.btn.danger { background: #ef4444; }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.ghost {
+  background: #eef2ff;
+  color: #4f46e5;
+}
 
-.msg { margin-top: 10px; font-size: 14px; white-space: pre-wrap; }
-.ok { color: #16a34a; }
-.err { color: #dc2626; }
+.btn.danger {
+  background: #ef4444;
+}
 
-.section { margin-top: 8px; padding-top: 8px; }
-.section-title { font-weight: 700; margin: 10px 0; }
+.btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.msg {
+  margin-top: 10px;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.ok {
+  color: #16a34a;
+}
+
+.err {
+  color: #dc2626;
+}
+
+.section {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.section-title {
+  font-weight: 700;
+  margin: 10px 0;
+}
 
 .kv {
   display: grid;
@@ -413,13 +430,34 @@ function startNewByCode() {
   border-bottom: 1px dashed #eee;
 }
 
-.k { color: #666; }
-.v { font-weight: 600; }
+.k {
+  color: #666;
+}
 
-.kv-inline { display: inline-flex; gap: 8px; align-items: center; }
-.dot { width: 4px; height: 4px; background: #999; border-radius: 50%; display: inline-block; }
+.v {
+  font-weight: 600;
+}
 
-.list { margin-top: 8px; display: grid; gap: 10px; }
+.kv-inline {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  background: #999;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.list {
+  margin-top: 8px;
+  display: grid;
+  gap: 10px;
+}
+
 .item {
   display: flex;
   align-items: center;
@@ -428,8 +466,17 @@ function startNewByCode() {
   border-radius: 12px;
   padding: 12px;
 }
-.item-title { font-weight: 700; }
-.item-sub { margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+
+.item-title {
+  font-weight: 700;
+}
+
+.item-sub {
+  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
 .chip {
   font-size: 12px;
@@ -438,10 +485,26 @@ function startNewByCode() {
   padding: 2px 8px;
   border-radius: 999px;
 }
-.code { font-size: 12px; color: #666; }
 
-.muted { color: #6b7280; font-size: 13px; }
+.code {
+  font-size: 12px;
+  color: #666;
+}
 
-.flex-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.gap8 { display: flex; gap: 8px; }
+.muted {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gap8 {
+  display: flex;
+  gap: 8px;
+}
 </style>

@@ -128,8 +128,7 @@
 	<update id="unsetGuardianSlot" parameterType="map">
 		UPDATE guardian_patient_connection
 		SET
-		-- guardian1이 대상이면: 2가 있으면 2→1, 2 없고 3 있으면 3→1, 둘 다 없으면 1 유지 (행 삭제는
-		컨트롤러에서)
+		-- guardian1이 대상이면: 2가 있으면 2→1, 2 없고 3 있으면 3→1, 둘 다 없으면 1 유지 (행 삭제는 컨트롤러에서)
 		guardian1_no = CASE
 		WHEN guardian1_no = #{guardianNo} AND guardian2_no IS NOT NULL THEN
 		guardian2_no
@@ -180,5 +179,104 @@
 		AND guardian2_no IS NULL
 		AND guardian3_no IS NULL
 	</delete>
+
+	<!-- 추가 -->
+     <select id="isGuardianBusy" parameterType="int" resultType="boolean">
+    SELECT EXISTS (
+      SELECT 1
+      FROM guardian_patient_connection
+      WHERE guardian1_no = #{value}
+         OR guardian2_no = #{value}
+         OR guardian3_no = #{value}
+    )
+  </select>
+
+  <update id="updateFillNextSlotSafe" parameterType="map">
+    UPDATE guardian_patient_connection c
+    SET
+      guardian1_no = CASE
+        WHEN c.guardian1_no IS NULL THEN #{guardianNo}
+        ELSE c.guardian1_no
+      END,
+      guardian2_no = CASE
+        WHEN c.guardian1_no IS NOT NULL AND c.guardian2_no IS NULL THEN #{guardianNo}
+        ELSE c.guardian2_no
+      END,
+      guardian3_no = CASE
+        WHEN c.guardian1_no IS NOT NULL AND c.guardian2_no IS NOT NULL AND c.guardian3_no IS NULL THEN #{guardianNo}
+        ELSE c.guardian3_no
+      END
+    WHERE c.patient_no = #{patientNo}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM guardian_patient_connection x
+        WHERE x.patient_no = c.patient_no
+          AND (x.guardian1_no = #{guardianNo}
+            OR x.guardian2_no = #{guardianNo}
+            OR x.guardian3_no = #{guardianNo})
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM guardian_patient_connection y
+        WHERE (y.guardian1_no = #{guardianNo}
+            OR y.guardian2_no = #{guardianNo}
+            OR y.guardian3_no = #{guardianNo})
+          AND y.patient_no != c.patient_no
+      )
+  </update>
+
+  <update id="replaceGuardian1Safe" parameterType="map">
+    UPDATE guardian_patient_connection c
+    SET guardian1_no = #{guardianNo}
+    WHERE c.patient_no = #{patientNo}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM guardian_patient_connection y
+        WHERE (y.guardian1_no = #{guardianNo}
+            OR y.guardian2_no = #{guardianNo}
+            OR y.guardian3_no = #{guardianNo})
+          AND y.patient_no != c.patient_no
+      )
+  </update>
+
+  <update id="expireExtraSlots">
+    UPDATE guardian_patient_connection
+    SET guardian2_no = NULL,
+        guardian3_no = NULL
+    WHERE subscribe_endtime IS NOT NULL
+      AND NOT (subscribe_endtime > NOW())
+      AND (guardian2_no IS NOT NULL OR guardian3_no IS NOT NULL)
+  </update>
+
+<!-- (추가) 해당 환자에 현재 연결된 보호자 수 -->
+<select id="countGuardians" parameterType="int" resultType="int">
+  SELECT
+    COALESCE((CASE WHEN guardian1_no IS NOT NULL THEN 1 ELSE 0 END),0)
+  + COALESCE((CASE WHEN guardian2_no IS NOT NULL THEN 1 ELSE 0 END),0)
+  + COALESCE((CASE WHEN guardian3_no IS NOT NULL THEN 1 ELSE 0 END),0)
+  FROM guardian_patient_connection
+  WHERE patient_no = #{value}
+</select>
+
+<!-- (추가) 환자가 role_no = 3(구독자 환자)인지 -->
+<select id="isPatientRole3" parameterType="int" resultType="boolean">
+  SELECT CASE WHEN EXISTS (
+    SELECT 1 FROM users WHERE user_no = #{value} AND role_no = 3
+  ) THEN TRUE ELSE FALSE END
+</select>
+
+<!-- (추가) 이 환자-보호자 조합이 이미 연결돼 있는지(멱등 허용 판단 용) -->
+<select id="isGuardianLinkedToPatient" parameterType="map" resultType="boolean">
+  SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM guardian_patient_connection
+    WHERE patient_no = #{patientNo}
+      AND (
+        guardian1_no = #{guardianNo}
+        OR guardian2_no = #{guardianNo}
+        OR guardian3_no = #{guardianNo}
+      )
+  ) THEN TRUE ELSE FALSE END
+</select>
 
 </mapper>
