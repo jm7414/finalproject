@@ -44,7 +44,7 @@ yarn-error.log
 .vscode/
 
 ## maven
-.mvn\wrapper
+.mvn/
 
 ## 개인폴더
-personal_ji
+personal_ji/
