@@ -57,7 +57,7 @@ build/
 # 지겸
 
 ## maven
-.mvn/
+.mvn\wrapper
 
 ## 개인폴더
-personal_ji/
+personal_ji
