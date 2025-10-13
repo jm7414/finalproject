@@ -1,5 +1,6 @@
 package lx.project.dementia_care.controller;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,18 +16,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import lx.project.dementia_care.dao.GuardianPatientConnectionDAO;
+import lx.project.dementia_care.dao.ConnectDAO;
 import lx.project.dementia_care.dao.UserDAO;
 import lx.project.dementia_care.vo.UserVO;
 
 @RestController
 public class UserController {
+	
+
 
     @Autowired
     private UserDAO userDAO;
     
     @Autowired
-    private GuardianPatientConnectionDAO guardianPatientConnectionDAO;
+    private ConnectDAO connectDAO;
     
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -118,7 +121,7 @@ public class UserController {
             }
             
             // 보호자가 관리하는 환자 조회
-            UserVO patient = guardianPatientConnectionDAO.getPatientByGuardianNo(currentGuardian.getUserNo());
+            UserVO patient = connectDAO.getPatientByGuardianNo(currentGuardian.getUserNo());
             
             if (patient == null) {
                 return ResponseEntity.ok(Map.of("message", "관리하는 환자가 없습니다."));
@@ -132,4 +135,66 @@ public class UserController {
                     .body(Map.of("message", "환자 정보 조회 중 오류가 발생했습니다."));
         }
     }
+
+	@PostMapping(value = "/api/payments/confirm", consumes = "application/json", produces = "application/json")
+	public ResponseEntity<?> confirmPayment(@RequestBody Map<String, Object> req) {
+		try {
+			boolean agreed = "true".equalsIgnoreCase(String.valueOf(req.get("agreeTerm")))
+					&& "true".equalsIgnoreCase(String.valueOf(req.get("agreePrivacy")));
+			if (!agreed) {
+				Map<String, Object> body = new HashMap<>();
+				body.put("status", "FAILED");
+				body.put("message", "약관/개인정보 동의가 필요합니다.");
+				return ResponseEntity.badRequest().body(body);
+			}
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			if (auth == null || !auth.isAuthenticated()) {
+				Map<String, Object> body = new HashMap<>();
+				body.put("status", "FAILED");
+				body.put("message", "로그인이 필요합니다.");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+			}
+			String username = auth.getName(); // 현재 로그인 user_id
+			lx.project.dementia_care.vo.UserVO me = userDAO.findById(username);
+			if (me == null) {
+				Map<String, Object> body = new HashMap<>();
+				body.put("status", "FAILED");
+				body.put("message", "사용자 조회 실패");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+			}
+			// 1) 보호자: role_no 유지, subscription_status=1
+			lx.project.dementia_care.vo.UserVO g = new lx.project.dementia_care.vo.UserVO();
+			g.setUserNo(me.getUserNo());
+			g.setSubscriptionStatus(1);
+			int updatedGuardian = userDAO.updateById(g);
+			// 2) 환자: guardian1_no 기준 1명 → role_no=3, subscription_status=1
+			Integer patientNo = connectDAO.findPatientNoByGuardian1No(me.getUserNo());
+			int updatedPatients = 0;
+			if (patientNo != null) {
+				lx.project.dementia_care.vo.UserVO p = new lx.project.dementia_care.vo.UserVO();
+				p.setUserNo(patientNo);
+				p.setRoleNo(3);
+				p.setSubscriptionStatus(1);
+				updatedPatients = userDAO.updateById(p);
+			}
+			if (updatedGuardian <= 0) {
+				Map<String, Object> body = new HashMap<>();
+				body.put("status", "FAILED");
+				body.put("message", "보호자 구독 상태 업데이트 실패");
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+			}
+			Map<String, Object> ok = new HashMap<>();
+			ok.put("status", "PAID");
+			ok.put("updatedGuardian", updatedGuardian);
+			ok.put("updatedPatients", updatedPatients);
+			return ResponseEntity.ok(ok);
+		} catch (Exception e) {
+			e.printStackTrace();
+			Map<String, Object> body = new HashMap<>();
+			body.put("status", "FAILED");
+			body.put("message", "결제 처리 중 오류가 발생했습니다.");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+		}
+	}
+
 }

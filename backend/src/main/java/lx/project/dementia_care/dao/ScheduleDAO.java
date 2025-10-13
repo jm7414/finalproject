@@ -101,5 +101,10 @@ public class ScheduleDAO {
     public int deleteSafeZoneByUserNo(int userNo) throws Exception {
         return session.delete("lx.project.dementia_care.dao.ScheduleDAO.deleteSafeZoneByUserNo", userNo);
     }
+
+    // 안심존 수정
+    public int updateSafeZone(SafeZoneVO safeZone) throws Exception {
+        return session.update("lx.project.dementia_care.dao.ScheduleDAO.updateSafeZone", safeZone);
+    }
 }
 

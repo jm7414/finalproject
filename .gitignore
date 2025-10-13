@@ -1,4 +1,4 @@
-/.metadata/
+
 ### Java ###
 *.class
 *.log
@@ -39,9 +39,22 @@ yarn-error.log
 .project
 .settings/
 
-# 지겸
-## VScode
+# Eclipse workspace metadata
+.metadata/
+backend/.metadata/
+
+# IntelliJ IDEA settings
+.idea/
+
+# VSCode settings
 .vscode/
+
+# 빌드 결과물
+bin/
+target/
+build/
+
+# 지겸
 
 ## maven
 .mvn/
