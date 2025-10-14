@@ -70,7 +70,7 @@ watch(bufferLevel, () => {
 })
 
 /**
- * 안전존 범위에 따른 폴리곤 생성 및 그리기
+ * 안전존 범위에 따른 폴리곤 생성 및 그리기 (Turf.js 사용)
  */
 function updateSafetyZone() {
   if (!mapInstance || !currentPolyline) return
@@ -80,29 +80,42 @@ function updateSafetyZone() {
     currentSafetyZone.setMap(null)
   }
 
-  // 안전존 범위 설정 (미터 단위)
-  const rangeSettings = {
-    '1': 30,   // 30m
-    '2': 60,   // 60m  
-    '3': 100   // 100m
-  }
-
-  const bufferDistance = rangeSettings[bufferLevel.value] || 30
-  
-  // 폴리라인 경로 가져오기
+  // 폴리라인 경로를 좌표 배열로 변환
   const path = currentPolyline.getPath()
   if (path.length < 2) return
 
-  // 경로를 따라 버퍼 폴리곤 생성
-  const bufferPolygon = createBufferPolygon(path, bufferDistance)
-  
-  if (bufferPolygon && bufferPolygon.length > 0) {
-    // 카카오맵 폴리곤으로 변환
-    const kakaoPath = bufferPolygon.map(coord => 
-      new window.kakao.maps.LatLng(coord.lat, coord.lng)
+  const coords = path.map(latLng => ({
+    latitude: latLng.getLat(),
+    longitude: latLng.getLng()
+  }))
+
+  // Turf.js를 사용한 정교한 버퍼 생성
+  try {
+    // 1) 좌표를 Turf 형식으로 변환 [lng, lat]
+    const turfCoords = coords.map(c => [c.longitude, c.latitude])
+    
+    // 2) LineString 생성
+    const line = lineString(turfCoords)
+    
+    // 3) 단계별 버퍼 크기 설정 (미터 단위)
+    const bufferSizes = {
+      '1': 30,   // 30m
+      '2': 60,   // 60m  
+      '3': 100   // 100m
+    }
+    
+    const bufferSize = bufferSizes[bufferLevel.value] || 30
+    
+    // 4) 버퍼 생성
+    const buffered = buffer(line, bufferSize, { units: 'meters' })
+    
+    // 5) GeoJSON Polygon을 카카오맵 폴리곤으로 변환
+    const coordinates = buffered.geometry.coordinates[0] // 외곽 링
+    const kakaoPath = coordinates.map(coord => 
+      new window.kakao.maps.LatLng(coord[1], coord[0]) // [lng, lat] -> (lat, lng)
     )
     
-    // 폴리곤 생성 및 지도에 표시
+    // 6) 카카오맵 폴리곤 생성
     currentSafetyZone = new window.kakao.maps.Polygon({
       path: kakaoPath,
       strokeWeight: 2,
@@ -112,105 +125,20 @@ function updateSafetyZone() {
       fillOpacity: 0.2
     })
     
+    // 7) 지도에 표시
     currentSafetyZone.setMap(mapInstance)
     
-    // 전체 영역이 보이도록 지도 범위 조정
+    // 8) 전체 영역이 보이도록 지도 범위 조정
     const bounds = new window.kakao.maps.LatLngBounds()
     kakaoPath.forEach(latLng => bounds.extend(latLng))
     mapInstance.setBounds(bounds)
+    
+    console.log(`안전존 생성 완료: ${bufferSize}m (${bufferLevel.value}단계)`)
+    
+  } catch (error) {
+    console.error('안전존 생성 중 오류:', error)
   }
 }
-
-/**
- * 경로를 따라 버퍼 폴리곤 생성 (경로 모양을 정확히 따라가는 알고리즘)
- */
-function createBufferPolygon(path, bufferDistance) {
-  if (path.length < 2) return []
-  
-  const leftPoints = []
-  const rightPoints = []
-  const metersPerDegree = 111320 // 대략적인 미터당 경도 변환
-  
-  // 각 점에 대해 양쪽 버퍼 점 생성
-  for (let i = 0; i < path.length; i++) {
-    const point = path[i]
-    const lat = point.getLat()
-    const lng = point.getLng()
-    
-    // 이전/다음 점과의 방향 계산
-    let perpX = 0, perpY = 0
-    
-    if (i === 0) {
-      // 첫 번째 점: 다음 점 방향 사용
-      const next = path[i + 1]
-      const dx = next.getLng() - lng
-      const dy = next.getLat() - lat
-      const length = Math.sqrt(dx * dx + dy * dy)
-      if (length > 0) {
-        perpX = -dy / length
-        perpY = dx / length
-      }
-    } else if (i === path.length - 1) {
-      // 마지막 점: 이전 점 방향 사용
-      const prev = path[i - 1]
-      const dx = lng - prev.getLng()
-      const dy = lat - prev.getLat()
-      const length = Math.sqrt(dx * dx + dy * dy)
-      if (length > 0) {
-        perpX = -dy / length
-        perpY = dx / length
-      }
-    } else {
-      // 중간 점: 이전과 다음 점의 평균 방향 사용
-      const prev = path[i - 1]
-      const next = path[i + 1]
-      
-      const dx1 = lng - prev.getLng()
-      const dy1 = lat - prev.getLat()
-      const dx2 = next.getLng() - lng
-      const dy2 = next.getLat() - lat
-      
-      const dx = dx1 + dx2
-      const dy = dy1 + dy2
-      const length = Math.sqrt(dx * dx + dy * dy)
-      
-      if (length > 0) {
-        perpX = -dy / length
-        perpY = dx / length
-      }
-    }
-    
-    // 버퍼 거리를 경도/위도 단위로 변환
-    const latOffset = bufferDistance / metersPerDegree
-    const lngOffset = bufferDistance / (metersPerDegree * Math.cos(lat * Math.PI / 180))
-    
-    // 양쪽 버퍼 점 생성
-    const leftLat = lat + perpY * latOffset
-    const leftLng = lng + perpX * lngOffset
-    const rightLat = lat - perpY * latOffset
-    const rightLng = lng - perpX * lngOffset
-    
-    leftPoints.push({ lat: leftLat, lng: leftLng })
-    rightPoints.push({ lat: rightLat, lng: rightLng })
-  }
-  
-  // 왼쪽과 오른쪽 점들을 연결하여 폴리곤 생성
-  const polygonPoints = []
-  
-  // 왼쪽 점들을 순서대로 추가
-  for (let i = 0; i < leftPoints.length; i++) {
-    polygonPoints.push(leftPoints[i])
-  }
-  
-  // 오른쪽 점들을 역순으로 추가
-  for (let i = rightPoints.length - 1; i >= 0; i--) {
-    polygonPoints.push(rightPoints[i])
-  }
-  
-  return polygonPoints
-}
-
-
 
 /**
  * Kakao 지도에 좌표 배열로 Polyline(경로)을 그려주는 함수
