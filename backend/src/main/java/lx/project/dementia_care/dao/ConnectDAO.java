@@ -152,5 +152,24 @@ public class ConnectDAO {
         Boolean b = session.selectOne("mapper-connect.isGuardianLinkedToPatient", p);
         return Boolean.TRUE.equals(b);
     }
+    // 구독 추가
+    public Integer findPatientNoByGuardian(int guardianNo) throws Exception {
+        return session.selectOne("mapper-connect.findPatientNoByGuardian", guardianNo);
+    }
+    
+ // ConnectDAO
+    public int setSubscription(int guardianNo, java.time.OffsetDateTime start, java.time.OffsetDateTime end) throws Exception {
+        Map<String, Object> p = new HashMap<>();
+        p.put("guardianNo", guardianNo);
+        p.put("startTs", java.sql.Timestamp.from(start.toInstant()));
+        p.put("endTs",   java.sql.Timestamp.from(end.toInstant()));
+        return session.update("mapper-connect.setSubscription", p);
+    }
+
+    public Map<String, Object> selectSubscriptionByGuardian(int guardianNo) throws Exception {
+        return session.selectOne("mapper-connect.selectSubscriptionByGuardian", guardianNo);
+    }
+    
+    
     
 }

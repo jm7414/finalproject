@@ -1,6 +1,5 @@
 <template>
   <div class="plus-page container px-3 py-3" data-bs-theme="light">
-    <!-- 기존 코드 그대로 유지 -->
     <!-- 인사 카드 -->
     <section class="greet-card shadow-sm rounded-4 d-flex align-items-center gap-3 p-3 mb-4">
       <div class="profile-circle d-flex align-items-center justify-content-center rounded-circle flex-shrink-0">
@@ -78,7 +77,7 @@
 
             <div class="modal-content">
               <form class="pay-form" @submit.prevent="handlePayment">
-                <!-- 플랜 선택 추가 -->
+                <!-- 플랜 선택 -->
                 <div class="form-group">
                   <label>구독 플랜 선택*</label>
                   <div class="plan-selector">
@@ -154,8 +153,10 @@
                 </div>
 
                 <div class="button-group">
-                  <button type="submit" class="pay-btn">결제하기</button>
-                  <button type="button" class="cancel-btn" @click="closePayment">취소</button>
+                  <button type="submit" class="pay-btn" :disabled="paying">
+                    {{ paying ? '결제 중...' : '결제하기' }}
+                  </button>
+                  <button type="button" class="cancel-btn" @click="closePayment" :disabled="paying">취소</button>
                 </div>
               </form>
             </div>
@@ -169,24 +170,22 @@
       <div v-if="termsOpen" class="modal-backdrop" @click.self="closeTerms">
         <div class="terms-container">
           <div class="terms-box">
-            <!-- 헤더: 체크 아이콘 + 제목 + 닫기 버튼 -->
             <div class="terms-header">
               <div class="check-icon">✓</div>
               <h5 class="terms-title">약관 정보</h5>
               <button class="close-btn" @click="closeTerms">×</button>
             </div>
 
-            <!-- 약관 내용 -->
             <div class="terms-content">
-              <!-- 서비스 이용약관 섹션 -->
               <div class="terms-section">
                 <h6 class="section-title">*서비스 이용약관*</h6>
                 <div class="section-text-box">
                   <p class="section-text">
-                    본 서비스는 회원가입 후 제공되며, 유료 구독 시 자동 결제가 진행됩니다. 사용자는 서비스 이용 중 발생하는 콘텐츠, 기능, 요금제 변경 등에 대해 안내를 받을 수 있으며, 서비스 이용은 약관에 동의한 것으로 간주됩니다.
+                    본 서비스는 회원가입 후 제공되며, 유료 구독 시 자동 결제가 진행됩니다. 사용자는 서비스 이용 중 발생하는 콘텐츠, 기능, 요금제 변경 등에 대해 안내를 받을 수 있으며, 서비스
+                    이용은 약관에 동의한 것으로 간주됩니다.
                   </p>
                 </div>
-                
+
                 <div class="option-label">서비스 이용약관 동의*</div>
                 <div class="radio-options">
                   <label class="radio-item">
@@ -200,15 +199,15 @@
                 </div>
               </div>
 
-              <!-- 개인정보 처리방침 섹션 -->
               <div class="terms-section">
                 <h6 class="section-title">*개인정보 처리방침*</h6>
                 <div class="section-text-box">
                   <p class="section-text">
-                    입력하신 개인정보는 회원 관리, 결제 처리, 고객 지원을 위해 수집되며, 관련 법령에 따라 안전하게 보호됩니다. 제3자 제공 또는 마케팅 활용 시 별도 동의를 받습니다. 언제든지 열람, 수정, 삭제를 요청할 수 있습니다.
+                    입력하신 개인정보는 회원 관리, 결제 처리, 고객 지원을 위해 수집되며, 관련 법령에 따라 안전하게 보호됩니다. 제3자 제공 또는 마케팅 활용 시 별도 동의를 받습니다. 언제든지
+                    열람, 수정, 삭제를 요청할 수 있습니다.
                   </p>
                 </div>
-                
+
                 <div class="option-label">개인정보 처리방침 동의*</div>
                 <div class="radio-options">
                   <label class="radio-item">
@@ -223,7 +222,6 @@
               </div>
             </div>
 
-            <!-- 하단 완료 버튼 -->
             <div class="terms-footer">
               <button class="complete-btn" @click="completeTerms">완료</button>
             </div>
@@ -231,7 +229,6 @@
         </div>
       </div>
     </teleport>
-
   </div>
 </template>
 
@@ -239,23 +236,41 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 
-const props = defineProps<{
-  userName?: string
-}>()
-
+const props = defineProps<{ userName?: string }>()
 const userName = props.userName ?? 'User'
 const u = (p: string) => encodeURI(p)
 const router = useRouter()
 
-// 모달 관련 로직
+// 내 보호자 번호 (세션 또는 로컬 저장소)
+const guardianNo = ref<number | null>(null)
+const paying = ref(false)
+
+// 세션이 있으면 서버에서 가져오기 (없으면 localStorage fallback)
+async function fetchMe() {
+  try {
+    const res = await fetch('/api/user/me', { credentials: 'include' })
+    const me = await res.json().catch(() => ({} as any))
+    guardianNo.value = Number(me.userNo ?? me.userId ?? me.id ?? 0) || null
+  } catch {
+    guardianNo.value = null
+  } finally {
+    if (!guardianNo.value) {
+      // 데모/테스트용: 미리 localStorage.setItem('guardianNo','1') 해두면 그 값 사용
+      guardianNo.value = Number(localStorage.getItem('guardianNo') || 0) || null
+    }
+  }
+}
+fetchMe().catch(() => { })
+
+// 모달 제어
 const paymentOpen = ref(false)
 const termsOpen = ref(false)
-const openPayment = () => paymentOpen.value = true
-const closePayment = () => paymentOpen.value = false
-const openTerms = () => termsOpen.value = true
-const closeTerms = () => termsOpen.value = false
+const openPayment = () => (paymentOpen.value = true)
+const closePayment = () => (paymentOpen.value = false)
+const openTerms = () => (termsOpen.value = true)
+const closeTerms = () => (termsOpen.value = false)
 
-// 폼 데이터
+// 결제 폼
 const form = reactive({
   selectedPlan: '12month' as '12month' | '1month',
   cardNumber: '',
@@ -266,51 +281,87 @@ const form = reactive({
   agreePrivacy: null as boolean | null
 })
 
-// 약관 폼 데이터
+// 약관 팝업 폼
 const termsForm = reactive({
   agreeTerm: null as boolean | null,
   agreePrivacy: null as boolean | null
 })
 
-// 플랜 선택 함수
+// 플랜 선택
 const selectPlan = (plan: '12month' | '1month') => {
   form.selectedPlan = plan
   openPayment()
 }
 
-// 약관 완료 처리 함수
+// 약관 완료 → 메인 폼에 반영
 const completeTerms = () => {
-  // 약관 동의 상태를 메인 폼에 반영
-  if (termsForm.agreeTerm !== null) {
-    form.agreeTerm = termsForm.agreeTerm
-  }
-  if (termsForm.agreePrivacy !== null) {
-    form.agreePrivacy = termsForm.agreePrivacy
-  }
+  if (termsForm.agreeTerm !== null) form.agreeTerm = termsForm.agreeTerm
+  if (termsForm.agreePrivacy !== null) form.agreePrivacy = termsForm.agreePrivacy
   closeTerms()
 }
 
-// 결제 처리 함수
-const handlePayment = () => {
-  // 약관 동의 확인
+// 결제 처리 (백엔드 호출)
+const handlePayment = async () => {
   if (!form.agreeTerm || !form.agreePrivacy) {
     alert('서비스 이용약관과 개인정보 처리방침에 동의해주세요.')
     return
   }
+  if (!guardianNo.value) {
+    alert('보호자 정보를 찾을 수 없습니다. (로그인 또는 guardianNo 설정 필요)')
+    return
+  }
 
-  console.log('결제 정보:', form)
-  
-  // 결제 완료 알림
-  alert('결제가 완료되었습니다!')
-  
-  // plusplan.vue 페이지로 이동
-  closePayment()
-  router.push('/plusplan')
+  try {
+    paying.value = true
+    const res = await fetch('/api/payments/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 백엔드가 우선적으로 읽는 헤더(컨트롤러에서 먼저 확인): X-Mock-User
+        'X-Mock-User': String(guardianNo.value)
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        selectedPlan: form.selectedPlan,
+        agreeTerm: form.agreeTerm,
+        agreePrivacy: form.agreePrivacy,
+        // 데모 결제 정보(서버에서는 무시 가능)
+        cardNumber: form.cardNumber,
+        expiry: form.expiry,
+        cvc: form.cvc,
+        owner: form.owner,
+        // 바디에도 백업으로 guardianNo 포함
+        guardianNo: guardianNo.value
+      })
+    })
+
+    const data = await res.json().catch(() => ({} as any))
+    if (!res.ok) {
+      alert(data?.message || `결제 실패 (${res.status})`)
+      return
+    }
+
+    if (data?.status === 'PAID') {
+      const start = data?.subscription?.start
+      const end = data?.subscription?.end
+      const startKST = start ? new Date(start).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'
+      const endKST = end ? new Date(end).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'
+      alert(`결제가 완료되었습니다!\n시작: ${startKST}\n만료: ${endKST}`)
+      closePayment()
+      router.push('/plusplan')
+    } else {
+      alert(data?.message || '결제 처리 결과를 확인할 수 없습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('결제 처리 중 오류가 발생했습니다.')
+  } finally {
+    paying.value = false
+  }
 }
 </script>
 
 <style scoped>
-/* 기존 스타일 그대로 유지 */
 @media (min-width: 576px) {
   .plus-page.container {
     max-width: 480px;
@@ -409,7 +460,6 @@ const handlePayment = () => {
   filter: brightness(0.96);
 }
 
-/* 모바일 최적화된 모달 스타일 */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -432,7 +482,6 @@ const handlePayment = () => {
   max-height: 90vh;
   max-height: 90dvh;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .modal-box {
@@ -516,7 +565,6 @@ const handlePayment = () => {
   box-shadow: 0 0 0 2px rgba(125, 136, 255, 0.1);
 }
 
-/* 플랜 선택 스타일 */
 .plan-selector {
   display: flex;
   flex-direction: column;
@@ -663,6 +711,11 @@ const handlePayment = () => {
   cursor: pointer;
 }
 
+.pay-btn[disabled] {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 .pay-btn:hover {
   background: #6b7aff;
 }
@@ -683,7 +736,6 @@ const handlePayment = () => {
   background: #eeeeee;
 }
 
-/* 약관 팝업 전용 스타일 */
 .terms-container {
   width: 100%;
   max-width: 440px;
@@ -739,7 +791,6 @@ const handlePayment = () => {
   padding: 24px;
   max-height: 65vh;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .terms-section {
@@ -829,11 +880,9 @@ const handlePayment = () => {
   background: #4A56B9;
 }
 
-/* 모바일 세로 화면 최적화 */
 @media (max-height: 700px) and (orientation: portrait) {
   .modal-container {
     max-height: 95vh;
-    max-height: 95dvh;
   }
 
   .modal-content {
@@ -853,7 +902,6 @@ const handlePayment = () => {
   }
 }
 
-/* 모바일 가로 화면 최적화 */
 @media (max-height: 500px) and (orientation: landscape) {
   .modal-backdrop {
     padding: 10px;
@@ -861,7 +909,6 @@ const handlePayment = () => {
 
   .modal-container {
     max-height: 98vh;
-    max-height: 98dvh;
   }
 
   .terms-content {
