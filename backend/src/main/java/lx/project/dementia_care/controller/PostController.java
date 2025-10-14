@@ -62,24 +62,20 @@ public class PostController {
     @PutMapping("/{id}")
     // 추가: Authentication 파라미터
     public ResponseEntity<Void> updatePost(@PathVariable Integer id, @RequestBody PostRequestDto requestDto, Authentication authentication) throws AccessDeniedException {
-        // 추가: 현재 로그인한 사용자의 userNo를 알아냅니다.
+        // 사용자 검증 - 게시판 더보기 기능
         UserVO userVO = (UserVO) authentication.getPrincipal();
         Integer currentUserId = userVO.getUserNo();
         
-        // 수정: 서비스에 현재 사용자 ID를 함께 전달합니다.
+        // 사용자 검증 - 게시판 더보기 기능
         postService.updatePost(id, requestDto, currentUserId);
         return ResponseEntity.ok().build();
     }
 
     // 게시판 - 삭제
     @DeleteMapping("/{id}")
-    // 추가: Authentication 파라미터
     public ResponseEntity<Void> deletePost(@PathVariable Integer id, Authentication authentication) throws AccessDeniedException {
-        // 추가: 현재 로그인한 사용자의 userNo를 알아냅니다.
         UserVO userVO = (UserVO) authentication.getPrincipal();
         Integer currentUserId = userVO.getUserNo();
-
-        // 수정: 서비스에 현재 사용자 ID를 함께 전달합니다.
         postService.deletePost(id, currentUserId);
         return ResponseEntity.noContent().build();
     }
@@ -87,13 +83,31 @@ public class PostController {
     // 현재 로그인한 사용자의 정보를 반환
     @GetMapping("/api/user/me")
     public ResponseEntity<UserVO> getCurrentUser(Authentication authentication) {
-        // 로그인 안 한 상태면 null을 반환하거나 에러
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        
-        // 신분증에서 UserVO를 꺼내서 그대로 반환
         UserVO currentUser = (UserVO) authentication.getPrincipal();
         return ResponseEntity.ok(currentUser);
+    }
+
+    /**
+     * 특정 게시물의 좋아요를 토글(추가/취소)합니다.
+     */
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<Integer> toggleLike(@PathVariable Integer postId, Authentication authentication) {
+        // 1. 로그인하지 않은 사용자는 거부
+        if (authentication == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        // 2. 현재 로그인한 사용자의 ID 확인
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        Integer currentUserId = userVO.getUserNo();
+
+        // 3. 최종 좋아요 개수를 확인
+        int finalLikeCount = postService.toggleLike(postId, currentUserId);
+
+        // 4. 프론트엔드에 최종 좋아요 개수 전송
+        return ResponseEntity.ok(finalLikeCount);
     }
 }   

@@ -1,9 +1,8 @@
 package lx.project.dementia_care.dto;
 
 import java.time.OffsetDateTime;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;         // ◀ Setter 추가
+import lombok.Setter;
 
 @Getter
 @Setter

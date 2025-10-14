@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.mapper.CommentMapper">
+
+    <resultMap id="CommentResultMap" type="lx.project.dementia_care.dto.CommentDto">
+        <id property="commentId" column="comment_id"/>
+        <result property="postId" column="post_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="author" column="author"/>
+        <result property="content" column="content"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    
+    <select id="findCommentsByPostId" parameterType="int" resultMap="CommentResultMap">
+        SELECT
+            c.comment_id,
+            c.post_id,
+            c.user_id,
+            c.content,
+            c.created_at,
+            u.name AS author,
+            u.profile_photo
+        FROM
+            post_comments c
+        JOIN
+            users u ON c.user_id = u.user_no
+        WHERE
+            c.post_id = #{postId}
+        ORDER BY
+            c.comment_id ASC -- 오래된 댓글부터 순서
+    </select>
+    
+    <insert id="createComment" parameterType="lx.project.dementia_care.dto.CommentDto">
+        <selectKey keyProperty="commentId" resultType="int" order="AFTER">
+            SELECT CURRVAL('post_comments_comment_id_seq')
+        </selectKey>
+        INSERT INTO post_comments (post_id, user_id, content)
+        VALUES (#{postId}, #{userId}, #{content})
+    </insert>
+
+    <select id="findCommentById" parameterType="int" resultMap="CommentResultMap">
+        SELECT * FROM post_comments WHERE comment_id = #{commentId}
+    </select>
+
+    <delete id="deleteComment" parameterType="int">
+        DELETE FROM post_comments WHERE comment_id = #{commentId}
+    </delete>
+
+</mapper>

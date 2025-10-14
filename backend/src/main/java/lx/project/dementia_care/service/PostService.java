@@ -15,7 +15,6 @@ import lx.project.dementia_care.dao.PostDAO; // DAO를 import 합니다.
 @Service
 public class PostService {
 
-    // PostMapper 대신 PostDAO를 주입받습니다.
     private final PostDAO postDAO;
 
     @Autowired
@@ -107,4 +106,26 @@ public class PostService {
         postDAO.deletePost(postId);
     }
 
+    /**
+     * 사용자가 특정 게시물의 좋아요를 토글합니다.
+     * @return 작업 후의 최종 좋아요 개수
+     */
+    @Transactional
+    public int toggleLike(Integer postId, Integer currentUserId) {
+        // 1. 먼저 이 사용자가 이미 좋아요를 눌렀는지 확인합니다.
+        int likeCount = postDAO.checkLike(postId, currentUserId);
+
+        if (likeCount > 0) {
+            // 2-1. 이미 좋아요를 눌렀다면(likeCount가 1), 좋아요를 취소합니다.
+            postDAO.removeLike(postId, currentUserId);
+        } else {
+            // 2-2. 아직 좋아요를 안 눌렀다면(likeCount가 0), 좋아요를 추가합니다.
+            postDAO.addLike(postId, currentUserId);
+        }
+
+        // 3. 작업이 끝난 후, 해당 게시물의 최종 좋아요 개수를 다시 조회해서 반환합니다.
+        //    이렇게 하면 프론트엔드에서 화면을 바로 업데이트할 수 있습니다.
+        PostResponseDto updatedPost = postDAO.findPostById(postId);
+        return updatedPost.getLikes();
+    }
 }
