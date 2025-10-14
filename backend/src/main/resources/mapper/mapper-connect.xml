@@ -289,4 +289,15 @@
   ) THEN TRUE ELSE FALSE END
 </select>
 
+<!-- 구독관련 -->
+<select id="findPatientNoByGuardian" parameterType="int" resultType="int">
+  SELECT patient_no
+  FROM guardian_patient_connection
+  WHERE guardian1_no = #{value}
+     OR guardian2_no = #{value}
+     OR guardian3_no = #{value}
+  LIMIT 1
+</select>
+
+
 </mapper>

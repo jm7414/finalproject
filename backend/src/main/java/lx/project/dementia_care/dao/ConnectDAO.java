@@ -152,5 +152,11 @@ public class ConnectDAO {
         Boolean b = session.selectOne("mapper-connect.isGuardianLinkedToPatient", p);
         return Boolean.TRUE.equals(b);
     }
+    // 구독 추가
+    public Integer findPatientNoByGuardian(int guardianNo) throws Exception {
+        return session.selectOne("mapper-connect.findPatientNoByGuardian", guardianNo);
+    }
+    
+    
     
 }

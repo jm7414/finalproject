@@ -1,6 +1,5 @@
 <template>
   <div class="plus-page container px-3 py-3" data-bs-theme="light">
-    <!-- 기존 코드 그대로 유지 -->
     <!-- 인사 카드 -->
     <section class="greet-card shadow-sm rounded-4 d-flex align-items-center gap-3 p-3 mb-4">
       <div class="profile-circle d-flex align-items-center justify-content-center rounded-circle flex-shrink-0">
@@ -78,7 +77,7 @@
 
             <div class="modal-content">
               <form class="pay-form" @submit.prevent="handlePayment">
-                <!-- 플랜 선택 추가 -->
+                <!-- 플랜 선택 -->
                 <div class="form-group">
                   <label>구독 플랜 선택*</label>
                   <div class="plan-selector">
@@ -169,24 +168,22 @@
       <div v-if="termsOpen" class="modal-backdrop" @click.self="closeTerms">
         <div class="terms-container">
           <div class="terms-box">
-            <!-- 헤더: 체크 아이콘 + 제목 + 닫기 버튼 -->
             <div class="terms-header">
               <div class="check-icon">✓</div>
               <h5 class="terms-title">약관 정보</h5>
               <button class="close-btn" @click="closeTerms">×</button>
             </div>
 
-            <!-- 약관 내용 -->
             <div class="terms-content">
-              <!-- 서비스 이용약관 섹션 -->
               <div class="terms-section">
                 <h6 class="section-title">*서비스 이용약관*</h6>
                 <div class="section-text-box">
                   <p class="section-text">
-                    본 서비스는 회원가입 후 제공되며, 유료 구독 시 자동 결제가 진행됩니다. 사용자는 서비스 이용 중 발생하는 콘텐츠, 기능, 요금제 변경 등에 대해 안내를 받을 수 있으며, 서비스 이용은 약관에 동의한 것으로 간주됩니다.
+                    본 서비스는 회원가입 후 제공되며, 유료 구독 시 자동 결제가 진행됩니다. 사용자는 서비스 이용 중 발생하는 콘텐츠, 기능, 요금제 변경 등에 대해 안내를 받을 수 있으며, 서비스
+                    이용은 약관에 동의한 것으로 간주됩니다.
                   </p>
                 </div>
-                
+
                 <div class="option-label">서비스 이용약관 동의*</div>
                 <div class="radio-options">
                   <label class="radio-item">
@@ -200,15 +197,15 @@
                 </div>
               </div>
 
-              <!-- 개인정보 처리방침 섹션 -->
               <div class="terms-section">
                 <h6 class="section-title">*개인정보 처리방침*</h6>
                 <div class="section-text-box">
                   <p class="section-text">
-                    입력하신 개인정보는 회원 관리, 결제 처리, 고객 지원을 위해 수집되며, 관련 법령에 따라 안전하게 보호됩니다. 제3자 제공 또는 마케팅 활용 시 별도 동의를 받습니다. 언제든지 열람, 수정, 삭제를 요청할 수 있습니다.
+                    입력하신 개인정보는 회원 관리, 결제 처리, 고객 지원을 위해 수집되며, 관련 법령에 따라 안전하게 보호됩니다. 제3자 제공 또는 마케팅 활용 시 별도 동의를 받습니다. 언제든지
+                    열람, 수정, 삭제를 요청할 수 있습니다.
                   </p>
                 </div>
-                
+
                 <div class="option-label">개인정보 처리방침 동의*</div>
                 <div class="radio-options">
                   <label class="radio-item">
@@ -223,7 +220,6 @@
               </div>
             </div>
 
-            <!-- 하단 완료 버튼 -->
             <div class="terms-footer">
               <button class="complete-btn" @click="completeTerms">완료</button>
             </div>
@@ -247,7 +243,7 @@ const userName = props.userName ?? 'User'
 const u = (p: string) => encodeURI(p)
 const router = useRouter()
 
-// 모달 관련 로직
+// 모달 제어
 const paymentOpen = ref(false)
 const termsOpen = ref(false)
 const openPayment = () => paymentOpen.value = true
@@ -255,7 +251,7 @@ const closePayment = () => paymentOpen.value = false
 const openTerms = () => termsOpen.value = true
 const closeTerms = () => termsOpen.value = false
 
-// 폼 데이터
+// 결제 폼
 const form = reactive({
   selectedPlan: '12month' as '12month' | '1month',
   cardNumber: '',
@@ -266,51 +262,71 @@ const form = reactive({
   agreePrivacy: null as boolean | null
 })
 
-// 약관 폼 데이터
+// 약관 팝업 폼
 const termsForm = reactive({
   agreeTerm: null as boolean | null,
   agreePrivacy: null as boolean | null
 })
 
-// 플랜 선택 함수
+// 플랜 선택
 const selectPlan = (plan: '12month' | '1month') => {
   form.selectedPlan = plan
   openPayment()
 }
 
-// 약관 완료 처리 함수
+// 약관 완료 → 메인 폼에 반영
 const completeTerms = () => {
-  // 약관 동의 상태를 메인 폼에 반영
-  if (termsForm.agreeTerm !== null) {
-    form.agreeTerm = termsForm.agreeTerm
-  }
-  if (termsForm.agreePrivacy !== null) {
-    form.agreePrivacy = termsForm.agreePrivacy
-  }
+  if (termsForm.agreeTerm !== null) form.agreeTerm = termsForm.agreeTerm
+  if (termsForm.agreePrivacy !== null) form.agreePrivacy = termsForm.agreePrivacy
   closeTerms()
 }
 
-// 결제 처리 함수
-const handlePayment = () => {
-  // 약관 동의 확인
+// 결제 처리 (백엔드 호출)
+const handlePayment = async () => {
   if (!form.agreeTerm || !form.agreePrivacy) {
     alert('서비스 이용약관과 개인정보 처리방침에 동의해주세요.')
     return
   }
 
-  console.log('결제 정보:', form)
-  
-  // 결제 완료 알림
-  alert('결제가 완료되었습니다!')
-  
-  // plusplan.vue 페이지로 이동
-  closePayment()
-  router.push('/plusplan')
+  try {
+    const res = await fetch('/api/payments/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',                      // 로그인 세션 포함
+      body: JSON.stringify({
+        selectedPlan: form.selectedPlan,
+        agreeTerm: form.agreeTerm,
+        agreePrivacy: form.agreePrivacy,
+        // 필요시 카드정보도 전달(실결제 없으면 서버에서 무시)
+        cardNumber: form.cardNumber,
+        expiry: form.expiry,
+        cvc: form.cvc,
+        owner: form.owner
+      })
+    })
+
+    const data = await res.json().catch(() => ({} as any))
+    if (!res.ok) {
+      alert(data?.message || `결제 실패 (${res.status})`)
+      return
+    }
+
+    // 성공
+    if (data?.status === 'PAID') {
+      alert('결제가 완료되었습니다!')
+      closePayment()
+      router.push('/plusplan')
+    } else {
+      alert(data?.message || '결제 처리 결과를 확인할 수 없습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('결제 처리 중 오류가 발생했습니다.')
+  }
 }
 </script>
 
 <style scoped>
-/* 기존 스타일 그대로 유지 */
 @media (min-width: 576px) {
   .plus-page.container {
     max-width: 480px;
@@ -409,7 +425,6 @@ const handlePayment = () => {
   filter: brightness(0.96);
 }
 
-/* 모바일 최적화된 모달 스타일 */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -516,7 +531,6 @@ const handlePayment = () => {
   box-shadow: 0 0 0 2px rgba(125, 136, 255, 0.1);
 }
 
-/* 플랜 선택 스타일 */
 .plan-selector {
   display: flex;
   flex-direction: column;
@@ -683,7 +697,6 @@ const handlePayment = () => {
   background: #eeeeee;
 }
 
-/* 약관 팝업 전용 스타일 */
 .terms-container {
   width: 100%;
   max-width: 440px;
@@ -829,7 +842,6 @@ const handlePayment = () => {
   background: #4A56B9;
 }
 
-/* 모바일 세로 화면 최적화 */
 @media (max-height: 700px) and (orientation: portrait) {
   .modal-container {
     max-height: 95vh;
@@ -853,7 +865,6 @@ const handlePayment = () => {
   }
 }
 
-/* 모바일 가로 화면 최적화 */
 @media (max-height: 500px) and (orientation: landscape) {
   .modal-backdrop {
     padding: 10px;

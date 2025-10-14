@@ -43,28 +43,54 @@ CREATE TABLE users (
 CREATE INDEX idx_users_invitation_code ON users(invitation_code);
 CREATE INDEX idx_users_role_no ON users(role_no);
 
--- === 보호자-환자 연결(guardian_patient_connection) 테이블 ===
+
+--보호자환자 연결테이블--
+-------------------------------------------------
 CREATE TABLE guardian_patient_connection (
-    connection_no SERIAL PRIMARY KEY,
-    patient_no INTEGER NOT NULL,
-    guardian1_no INTEGER NOT NULL,
-    guardian2_no INTEGER,
-    guardian3_no INTEGER,
-    FOREIGN KEY (patient_no) REFERENCES users(user_no) ON DELETE CASCADE,
+    connection_no   SERIAL PRIMARY KEY,
+    patient_no      INTEGER NOT NULL,
+    guardian1_no    INTEGER NOT NULL,
+    guardian2_no    INTEGER,
+    guardian3_no    INTEGER,
+	subscribe_starttime TIMESTAMPTZ, -- 구독 시작 시간
+    subscribe_endtime TIMESTAMPTZ,	-- 구독 만료 시각
+
+    FOREIGN KEY (patient_no)   REFERENCES users(user_no) ON DELETE CASCADE,
     FOREIGN KEY (guardian1_no) REFERENCES users(user_no) ON DELETE RESTRICT,
     FOREIGN KEY (guardian2_no) REFERENCES users(user_no) ON DELETE SET NULL,
     FOREIGN KEY (guardian3_no) REFERENCES users(user_no) ON DELETE SET NULL,
+
     UNIQUE(patient_no),
+
     CHECK (guardian1_no <> patient_no),
     CHECK (guardian2_no IS NULL OR guardian2_no <> patient_no),
     CHECK (guardian3_no IS NULL OR guardian3_no <> patient_no),
+
     CHECK (guardian2_no IS NULL OR guardian2_no IS DISTINCT FROM guardian1_no),
     CHECK (guardian3_no IS NULL OR guardian3_no IS DISTINCT FROM guardian1_no),
     CHECK (guardian2_no IS NULL OR guardian3_no IS NULL OR guardian2_no IS DISTINCT FROM guardian3_no)
 );
 
-CREATE INDEX idx_connection_patient ON guardian_patient_connection(patient_no);
-CREATE INDEX idx_connection_guardian1 ON guardian_patient_connection(guardian1_no);
+
+CREATE INDEX IF NOT EXISTS idx_connection_subscribe_endtime
+  ON guardian_patient_connection(subscribe_endtime);
+
+CREATE INDEX IF NOT EXISTS idx_connection_patient
+  ON guardian_patient_connection(patient_no);
+
+CREATE INDEX IF NOT EXISTS idx_connection_guardian1
+  ON guardian_patient_connection(guardian1_no);
+
+  CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian1
+  ON guardian_patient_connection(guardian1_no) WHERE guardian1_no IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian2
+  ON guardian_patient_connection(guardian2_no) WHERE guardian2_no IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian3
+  ON guardian_patient_connection(guardian3_no) WHERE guardian3_no IS NOT NULL;
+-----------------------------------------------------
+
 
 -- === 안심존(safe_zone) 테이블 ===
 CREATE TABLE safe_zone (
@@ -224,3 +250,7 @@ INSERT INTO search_Together (missing_post_id, user_id) VALUES
 
 INSERT INTO guardian_patient_connection (patient_no, guardian1_no, guardian2_no, guardian3_no) VALUES
 (3, 1, 2, NULL);
+
+SELECT user_no, name, birth_date, phone_number
+FROM users
+WHERE user_no = 13;
