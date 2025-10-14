@@ -153,8 +153,10 @@
                 </div>
 
                 <div class="button-group">
-                  <button type="submit" class="pay-btn">결제하기</button>
-                  <button type="button" class="cancel-btn" @click="closePayment">취소</button>
+                  <button type="submit" class="pay-btn" :disabled="paying">
+                    {{ paying ? '결제 중...' : '결제하기' }}
+                  </button>
+                  <button type="button" class="cancel-btn" @click="closePayment" :disabled="paying">취소</button>
                 </div>
               </form>
             </div>
@@ -227,7 +229,6 @@
         </div>
       </div>
     </teleport>
-
   </div>
 </template>
 
@@ -235,21 +236,39 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 
-const props = defineProps<{
-  userName?: string
-}>()
-
+const props = defineProps<{ userName?: string }>()
 const userName = props.userName ?? 'User'
 const u = (p: string) => encodeURI(p)
 const router = useRouter()
 
+// 내 보호자 번호 (세션 또는 로컬 저장소)
+const guardianNo = ref<number | null>(null)
+const paying = ref(false)
+
+// 세션이 있으면 서버에서 가져오기 (없으면 localStorage fallback)
+async function fetchMe() {
+  try {
+    const res = await fetch('/api/user/me', { credentials: 'include' })
+    const me = await res.json().catch(() => ({} as any))
+    guardianNo.value = Number(me.userNo ?? me.userId ?? me.id ?? 0) || null
+  } catch {
+    guardianNo.value = null
+  } finally {
+    if (!guardianNo.value) {
+      // 데모/테스트용: 미리 localStorage.setItem('guardianNo','1') 해두면 그 값 사용
+      guardianNo.value = Number(localStorage.getItem('guardianNo') || 0) || null
+    }
+  }
+}
+fetchMe().catch(() => { })
+
 // 모달 제어
 const paymentOpen = ref(false)
 const termsOpen = ref(false)
-const openPayment = () => paymentOpen.value = true
-const closePayment = () => paymentOpen.value = false
-const openTerms = () => termsOpen.value = true
-const closeTerms = () => termsOpen.value = false
+const openPayment = () => (paymentOpen.value = true)
+const closePayment = () => (paymentOpen.value = false)
+const openTerms = () => (termsOpen.value = true)
+const closeTerms = () => (termsOpen.value = false)
 
 // 결제 폼
 const form = reactive({
@@ -287,21 +306,32 @@ const handlePayment = async () => {
     alert('서비스 이용약관과 개인정보 처리방침에 동의해주세요.')
     return
   }
+  if (!guardianNo.value) {
+    alert('보호자 정보를 찾을 수 없습니다. (로그인 또는 guardianNo 설정 필요)')
+    return
+  }
 
   try {
+    paying.value = true
     const res = await fetch('/api/payments/confirm', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',                      // 로그인 세션 포함
+      headers: {
+        'Content-Type': 'application/json',
+        // 백엔드가 우선적으로 읽는 헤더(컨트롤러에서 먼저 확인): X-Mock-User
+        'X-Mock-User': String(guardianNo.value)
+      },
+      credentials: 'include',
       body: JSON.stringify({
         selectedPlan: form.selectedPlan,
         agreeTerm: form.agreeTerm,
         agreePrivacy: form.agreePrivacy,
-        // 필요시 카드정보도 전달(실결제 없으면 서버에서 무시)
+        // 데모 결제 정보(서버에서는 무시 가능)
         cardNumber: form.cardNumber,
         expiry: form.expiry,
         cvc: form.cvc,
-        owner: form.owner
+        owner: form.owner,
+        // 바디에도 백업으로 guardianNo 포함
+        guardianNo: guardianNo.value
       })
     })
 
@@ -311,9 +341,12 @@ const handlePayment = async () => {
       return
     }
 
-    // 성공
     if (data?.status === 'PAID') {
-      alert('결제가 완료되었습니다!')
+      const start = data?.subscription?.start
+      const end = data?.subscription?.end
+      const startKST = start ? new Date(start).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'
+      const endKST = end ? new Date(end).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'
+      alert(`결제가 완료되었습니다!\n시작: ${startKST}\n만료: ${endKST}`)
       closePayment()
       router.push('/plusplan')
     } else {
@@ -322,6 +355,8 @@ const handlePayment = async () => {
   } catch (e) {
     console.error(e)
     alert('결제 처리 중 오류가 발생했습니다.')
+  } finally {
+    paying.value = false
   }
 }
 </script>
@@ -447,7 +482,6 @@ const handlePayment = async () => {
   max-height: 90vh;
   max-height: 90dvh;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .modal-box {
@@ -677,6 +711,11 @@ const handlePayment = async () => {
   cursor: pointer;
 }
 
+.pay-btn[disabled] {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 .pay-btn:hover {
   background: #6b7aff;
 }
@@ -752,7 +791,6 @@ const handlePayment = async () => {
   padding: 24px;
   max-height: 65vh;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .terms-section {
@@ -845,7 +883,6 @@ const handlePayment = async () => {
 @media (max-height: 700px) and (orientation: portrait) {
   .modal-container {
     max-height: 95vh;
-    max-height: 95dvh;
   }
 
   .modal-content {
@@ -872,7 +909,6 @@ const handlePayment = async () => {
 
   .modal-container {
     max-height: 98vh;
-    max-height: 98dvh;
   }
 
   .terms-content {

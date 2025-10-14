@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.Objects;
 
@@ -215,4 +217,83 @@ public class ConnectController {
     public List<Map<String, Object>> getPatientGuardians(@PathVariable int patientNo) throws Exception {
         return connectDAO.selectGuardiansByPatientNo(patientNo);
     }
+    
+    @PostMapping("/api/payments/confirm")
+    public ResponseEntity<?> confirmPayment(
+            @RequestHeader(value = "X-Mock-User", required = false) String mockUser,
+            @RequestBody ConfirmReq req
+    ) {
+        try {
+            // 1) guardianNo 결정: 헤더 > 바디 > 에러
+            Integer guardianNo = null;
+            if (mockUser != null && !mockUser.isBlank()) {
+                try { guardianNo = Integer.parseInt(mockUser.trim()); } catch (Exception ignore) {}
+            }
+            if (guardianNo == null && req.getGuardianNo() != null) {
+                guardianNo = req.getGuardianNo();
+            }
+            if (guardianNo == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "보호자 정보가 없습니다. (헤더 X-Mock-User 또는 body.guardianNo 필요)"));
+            }
+
+            // 2) 플랜 → 개월 수
+            final int months = "12month".equalsIgnoreCase(req.getSelectedPlan()) ? 12 : 1;
+
+            // 3) 자바에서 시간 계산(UTC)
+            final OffsetDateTime start = OffsetDateTime.now(ZoneOffset.UTC);
+            final OffsetDateTime end   = start.plusMonths(months);
+
+            // 4) DB 저장 (mapper-connect.setSubscription 호출)
+            int updated = connectDAO.setSubscription(guardianNo, start, end);
+            if (updated == 0) {
+                // 보호자가 아직 어떤 환자와도 연결돼 있지 않은 경우
+                return ResponseEntity.badRequest().body(Map.of("message", "연결 레코드를 찾을 수 없습니다."));
+            }
+
+            // 5) 저장값 조회해서 응답
+            Map<String, Object> sub = connectDAO.selectSubscriptionByGuardian(guardianNo);
+            return ResponseEntity.ok(Map.of(
+                    "status", "PAID",
+                    "plan", req.getSelectedPlan(),
+                    "subscription", sub,   // { start, end }
+                    "message", "OK"
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "구독 처리 중 오류가 발생했습니다."));
+        }
+    }
+
+    // 결제/구독 요청 바디
+    public static class ConfirmReq {
+        private String selectedPlan;  // "1month" | "12month"
+        private Integer guardianNo;   // (옵션) 헤더가 없을 때 바디로 받기 위함
+        private Boolean agreeTerm;    // 프론트에서 오긴 하지만 서버에서는 사용 안 함(데모)
+        private Boolean agreePrivacy;
+        private String cardNumber;
+        private String expiry;
+        private String cvc;
+        private String owner;
+
+        public String getSelectedPlan() { return selectedPlan; }
+        public void setSelectedPlan(String selectedPlan) { this.selectedPlan = selectedPlan; }
+        public Integer getGuardianNo() { return guardianNo; }
+        public void setGuardianNo(Integer guardianNo) { this.guardianNo = guardianNo; }
+        public Boolean getAgreeTerm() { return agreeTerm; }
+        public void setAgreeTerm(Boolean agreeTerm) { this.agreeTerm = agreeTerm; }
+        public Boolean getAgreePrivacy() { return agreePrivacy; }
+        public void setAgreePrivacy(Boolean agreePrivacy) { this.agreePrivacy = agreePrivacy; }
+        public String getCardNumber() { return cardNumber; }
+        public void setCardNumber(String cardNumber) { this.cardNumber = cardNumber; }
+        public String getExpiry() { return expiry; }
+        public void setExpiry(String expiry) { this.expiry = expiry; }
+        public String getCvc() { return cvc; }
+        public void setCvc(String cvc) { this.cvc = cvc; }
+        public String getOwner() { return owner; }
+        public void setOwner(String owner) { this.owner = owner; }
+    }
+    
 }

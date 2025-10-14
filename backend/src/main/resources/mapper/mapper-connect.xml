@@ -299,5 +299,28 @@
   LIMIT 1
 </select>
 
+<!-- 결제 성공시: 시작/끝을 '넘겨준 값'으로 그대로 저장 -->
+<update id="setSubscription" parameterType="map">
+  UPDATE guardian_patient_connection
+  SET
+    subscribe_starttime = #{startTs, jdbcType=TIMESTAMP},
+    subscribe_endtime   = #{endTs,   jdbcType=TIMESTAMP}
+  WHERE guardian1_no = #{guardianNo}
+     OR guardian2_no = #{guardianNo}
+     OR guardian3_no = #{guardianNo}
+</update>
+
+<!-- (옵션) 프론트에 보여줄 값 조회 -->
+<select id="selectSubscriptionByGuardian" parameterType="int" resultType="map">
+  SELECT
+    subscribe_starttime AS "start",
+    subscribe_endtime   AS "end"
+  FROM guardian_patient_connection
+  WHERE guardian1_no = #{value}
+     OR guardian2_no = #{value}
+     OR guardian3_no = #{value}
+  ORDER BY connection_no
+  LIMIT 1
+</select>
 
 </mapper>
