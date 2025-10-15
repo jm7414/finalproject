@@ -26,13 +26,15 @@ onMounted(() => {
 // 수정할 게시물 데이터를 불러오는 함수
 async function fetchPostForEdit() {
   try {
-    const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`);
+    const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`, {
+      withCredentials: true
+    });
     title.value = response.data.title;
     content.value = response.data.content;
   } catch (error) {
     console.error('수정할 게시물 정보를 불러오는 데 실패했습니다:', error);
     alert('게시물 정보를 불러올 수 없습니다.');
-    router.push('/community'); // 실패 시 목록으로
+    router.push('/CommunityView');
   }
 }
 
@@ -49,18 +51,21 @@ async function submitPost() {
       content: content.value,
     };
 
-    if (isEditMode.value) { // 이해필요
-      // 수정 모드일 경우: PUT 요청
-      await axios.put(`http://localhost:8080/api/posts/${postId.value}`, postData);
+    if (isEditMode.value) {
+      // 2. 글 수정할 때 
+      await axios.put(`http://localhost:8080/api/posts/${postId.value}`, postData, {
+        withCredentials: true
+      });
       alert('게시글이 성공적으로 수정되었습니다!');
-      router.push(`/post/${postId.value}`); // 수정된 글로 이동
+      router.push(`/post/${postId.value}`);
     } else {
-      // 생성 모드일 경우: POST 요청
-      const response = await axios.post('http://localhost:8080/api/posts', postData);
+      // 3. 새 글 작성할 때
+      const response = await axios.post('http://localhost:8080/api/posts', postData, {
+        withCredentials: true
+      });
       const newPostId = response.data;
       router.push(`/post/${newPostId}`); 
     }
-
   } catch (error) {
     console.error('게시글 처리 중 오류가 발생했습니다:', error);
     alert('작업에 실패했습니다. 다시 시도해주세요.');
