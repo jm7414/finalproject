@@ -12,6 +12,8 @@ DROP TABLE IF EXISTS safe_zone CASCADE;
 DROP TABLE IF EXISTS guardian_patient_connection CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS role CASCADE;
+DROP TABLE IF EXISTS post_likes CASCADE;
+DROP TABLE IF EXISTS post_comments CASCADE;
 
 -- === 역할(role) 테이블 ===
 CREATE TABLE role (
@@ -52,8 +54,8 @@ CREATE TABLE guardian_patient_connection (
     guardian1_no    INTEGER NOT NULL,
     guardian2_no    INTEGER,
     guardian3_no    INTEGER,
-	subscribe_starttime TIMESTAMPTZ, -- 구독 시작 시간
-    subscribe_endtime TIMESTAMPTZ,	-- 구독 만료 시각
+   subscribe_starttime TIMESTAMPTZ, -- 구독 시작 시간
+    subscribe_endtime TIMESTAMPTZ,   -- 구독 만료 시각
 
     FOREIGN KEY (patient_no)   REFERENCES users(user_no) ON DELETE CASCADE,
     FOREIGN KEY (guardian1_no) REFERENCES users(user_no) ON DELETE RESTRICT,
@@ -161,6 +163,27 @@ CREATE TABLE post (
 CREATE INDEX idx_post_user_id ON post(user_id);
 CREATE INDEX idx_post_created_at ON post(created_at);
 CREATE INDEX idx_post_view_count ON post(view_count);
+
+-- === 좋아요(post_likes) 테이블 ===
+CREATE TABLE post_likes (
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY (post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+-- === 댓글(post_comments) 테이블 ===
+CREATE TABLE post_comments (
+    comment_id SERIAL PRIMARY KEY,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
 
 -- === 실종자 게시물(missing_post) 테이블 ===
 CREATE TABLE missing_post (
