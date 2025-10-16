@@ -38,7 +38,7 @@ export function getDefaultRouteByRole(roleNo) {
   switch (roleNo) {
     case 1: // 보호자
     case 3: // 구독자
-      return '/GD'
+      return '/map-main'
     case 2: // 환자
       return '/DP'
     default:

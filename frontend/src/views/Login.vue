@@ -136,8 +136,8 @@ async function onLogin() {
         const userData = await userResponse.json()
         // 역할에 따라 다른 페이지로 이동
         if (userData.roleNo === 1 || userData.roleNo === 3) {
-          // 보호자(1) 또는 구독자(3) -> GD 페이지
-          router.push('/GD')
+          // 보호자(1) 또는 구독자(3) -> MapMain 페이지
+          router.push('/map-main')
         } else if (userData.roleNo === 2) {
           // 환자(2) -> DP 페이지
           router.push('/DP')

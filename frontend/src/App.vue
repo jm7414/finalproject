@@ -2,7 +2,7 @@
   <div class="mobile-frame">
     <div class="app-layout">
       <AppHeader v-if="!shouldHideHeader" />
-      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage }">
+      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage || isMapMainPage }">
         <RouterView />
       </main>
       <AppFooter v-if="!isGDMainPage && !isDPMainPage" />
@@ -31,9 +31,14 @@ const isDPMainPage = computed(() => {
   return route.name === 'DP'
 })
 
+// MapMain 페이지인지 확인하는 computed 속성
+const isMapMainPage = computed(() => {
+  return route.name === 'map-main'
+})
+
 // 헤더를 숨겨야 하는 페이지들 확인
 const shouldHideHeader = computed(() => {
-  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD'
+  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD' || route.name === 'map-main'
 })
 </script>
 
@@ -80,5 +85,6 @@ body {
 /* padding 제거가 필요한 페이지 */
 .main-content.no-padding {
   padding: 0;
+  overflow: hidden;
 }
 </style>
