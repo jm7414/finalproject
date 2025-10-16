@@ -1,10 +1,13 @@
 <template>
-  <div class="app-layout" :class="{ 'gd-main-layout': isGDMainPage, 'dp-main-layout': isDPMainPage }">
-    <AppHeader v-if="!shouldHideHeader" />
-    <main class="main-content" :class="{ 'gd-main-page': isGDMainPage, 'dp-main-page': isDPMainPage }">
-      <RouterView /> </main>
-    <AppFooter v-if="!isGDMainPage && !isDPMainPage" />
+  <div class="mobile-frame">
+    <div class="app-layout">
+      <AppHeader v-if="!shouldHideHeader" />
+      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage }">
+        <RouterView />
+      </main>
+      <AppFooter v-if="!isGDMainPage && !isDPMainPage" />
     </div>
+  </div>
 </template>
 
 <script setup>
@@ -30,55 +33,52 @@ const isDPMainPage = computed(() => {
 
 // 헤더를 숨겨야 하는 페이지들 확인
 const shouldHideHeader = computed(() => {
-  return route.name === 'add-schedule' || route.name === 'DP'
+  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD'
 })
 </script>
 
 <style>
-/* GD_main 페이지일 때 #app의 padding 제거 (전역 스타일 덮어쓰기) */
-.app-layout.gd-main-layout {
-  margin-left: -2rem;
-  margin-right: -2rem;
-  width: calc(100% + 4rem);
+/* 모바일 프레임 외부 (회색 배경) */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #808080;
+  overflow: hidden;
 }
 
-/* DP_main 페이지일 때 #app의 padding 제거 (전역 스타일 덮어쓰기) */
-.app-layout.dp-main-layout {
-  margin-left: -2rem;
-  margin-right: -2rem;
-  width: calc(100% + 4rem);
+/* 375px × 812px 고정 프레임 */
+.mobile-frame {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 375px;
+  height: 812px;
+  background-color: #FFFFFF;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
 }
 
-@media (min-width: 1024px) {
-  .app-layout.gd-main-layout {
-    margin-left: -2rem;
-    margin-right: -2rem;
-    width: calc(100% + 4rem);
-  }
-  
-  .app-layout.dp-main-layout {
-    margin-left: -2rem;
-    margin-right: -2rem;
-    width: calc(100% + 4rem);
-  }
+.app-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 </style>
 
 <style scoped>
-.main-content{
-  padding-top: 30px;
-  padding-bottom: 100px;
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 90px 5px 80px 5px;
 }
 
-/* GD_main 페이지에서는 padding 제거 */
-.main-content.gd-main-page {
+/* padding 제거가 필요한 페이지 */
+.main-content.no-padding {
   padding: 0;
-  overflow-x: hidden;
-}
-
-/* DP_main 페이지에서는 padding 제거 */
-.main-content.dp-main-page {
-  padding: 0;
-  overflow-x: hidden;
 }
 </style>

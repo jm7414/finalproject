@@ -53,11 +53,11 @@ function navigate(item) {
 <style scoped>
 .app-footer {
   width: 100%;
-  position: fixed;
+  position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 70px; /* 푸터 전체 높이 */
+  height: 70px;
   z-index: 1000;
 }
 .nav-container {
@@ -65,24 +65,23 @@ function navigate(item) {
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 70px; /* 하단 바 높이 */
+  height: 70px;
   background-color: #FFFFFF;
   box-shadow: 0 -2px 10px rgba(84, 87, 92, 0.1);
 }
 .nav-item {
-  flex: 1; /* ★★★ 5개 아이템이 공간을 1:1:1:1:1로 나눠가짐 ★★★ */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* 중앙 정렬로 변경 */
+  justify-content: center;
   align-items: center;
   height: 100%;
-  padding: 8px 0 12px 0; /* 상하 여백 조정 - 하단 여백 감소 */
+  padding: 8px 0 12px 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   position: relative;
 }
 
-/* --- 일반 아이콘 스타일 (홈 제외) --- */
 .icon-wrapper {
   display: flex;
   flex-direction: column;
@@ -90,7 +89,7 @@ function navigate(item) {
   position: relative;
 }
 .icon-background {
-  width: 44px; /* 아이콘 배경 크기 감소 */
+  width: 44px;
   height: 44px;
   border-radius: 50%;
   display: flex;
@@ -102,7 +101,7 @@ function navigate(item) {
   background-color: #8E97FD;
 }
 .nav-icon {
-  width: 24px; /* 아이콘 크기 감소 */
+  width: 24px;
   height: 24px;
   fill: #A9ACB8;
   transition: all 0.3s ease;
@@ -111,23 +110,15 @@ function navigate(item) {
   fill: #FFFFFF;
 }
 
-/* --- 텍스트 스타일 --- */
 .nav-text {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   color: #A0A3B1;
   transition: all 0.3s ease;
-  margin-top: 4px; /* 아이콘과 텍스트 사이 간격 */
+  margin-top: 4px;
 }
 .nav-text.active {
   color: #8E97FD;
   font-weight: 600;
-}
-
-
-@media (min-width: 768px) {
-  .app-footer {
-    display: none;
-  }
 }
 </style>

@@ -1,10 +1,10 @@
 @import './base.css';
 
 #app {
-  /* max-width: 1280px;  ← 제거좁아짐 원인 */
-  max-width: none;          /*  전체 폭 사용 */
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   font-weight: normal;
 }
 
@@ -19,18 +19,5 @@ a,
 @media (hover: hover) {
   a:hover {
     background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-
-    display: block;             /* 중앙 정렬로 좁아지는 것 방지 */
-    place-items: initial;
-  }
-
-  #app {
-    display: block;             /*   반만 차는 현상 방지 */
-    padding: 0 2rem;
   }
 }
