@@ -25,6 +25,7 @@ import DP_Connect from '@/views/DP_Connect.vue'
 import GD_Connect from '@/views/GD_Connect.vue'
 import BasicSafeZoneLocationView from '@/views/BasicSafeZoneLocationView.vue'
 import BasicSafeZoneRadiusView from '@/views/BasicSafeZoneRadiusView.vue'
+import MapMain from '@/views/MapMain.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -191,6 +192,12 @@ const router = createRouter({
       path: '/basic-safe-zone/radius',
       name: 'basic-safe-zone-radius',
       component: BasicSafeZoneRadiusView,
+      meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
+    },
+    {
+      path: '/map-main',
+      name: 'map-main',
+      component: MapMain,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
     }
   ],
