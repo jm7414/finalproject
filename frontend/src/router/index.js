@@ -26,6 +26,8 @@ import GD_Connect from '@/views/GD_Connect.vue'
 import BasicSafeZoneLocationView from '@/views/BasicSafeZoneLocationView.vue'
 import BasicSafeZoneRadiusView from '@/views/BasicSafeZoneRadiusView.vue'
 import MapMain from '@/views/MapMain.vue'
+import Pr from '@/views/Pr.vue'
+import Game from '@/views/Game.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,6 +41,16 @@ const router = createRouter({
       path: '/gdc',
       name: 'gdc',
       component: GD_Connect,
+    },
+     {
+      path: '/pr',
+      name: 'pr',
+      component: Pr,
+    },
+    {
+      path: '/game',
+      name: 'game',
+      component: Game,
     },
      {
       path: '/dpc',

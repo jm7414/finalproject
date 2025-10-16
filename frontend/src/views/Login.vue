@@ -1,102 +1,91 @@
 <!-- src/views/Login.vue -->
 <template>
-  <div class="lg-wrap position-relative mx-auto bg-white" style="
-      --topWaveH: 180px;    /* 상단 블랍 높이 */
-      --topWaveX: 0px;      /* 상단 블랍 좌우 오프셋 */
-
-      /* 왼쪽/오른쪽 블랍 크기 */
-      --leftBlobW: 230px;   /* 왼쪽 블랍: 통째로 보이게 */
-      --rightBlobW: 48px;   /* 오른쪽 블랍: 포인트만 */
-      --decoEdgeGap: 0px;   /* 데코 좌/우 여백(0이면 화면 끝에 맞춤) */
-
-      /* 로그인 버튼/아이콘 크기 */
-      --go-h: 48px;
-      --go-minw: 64px;
-      --go-icon: 40px;
-      --go-radius: 16px;
-    ">
-    <!-- 상단 블랍 -->
-    <img class="deco-top-img" :src="topWave" alt="" aria-hidden="true" />
-
-    <!-- 콘텐츠(폼/텍스트) -->
-    <div class="lg-content">
-      <!-- 타이틀 -->
-      <div class="text-center">
-        <h1 class="fw-bold lg-title">환영합니다</h1>
-        <p class="text-secondary lg-sub">로그인 해주세요</p>
-      </div>
-
-      <!-- 폼 -->
-      <form class="px-4 mt-3" @submit.prevent="onLogin">
-        <!-- 아이디 -->
-        <div class="mb-4">
-          <div class="input-group input-group-lg lg-pill lg-shadow">
-            <span class="input-group-text bg-white border-0 lg-pill-start">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="8" r="4.5" stroke="#9A9A9A" stroke-width="1.6" />
-                <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#9A9A9A" stroke-width="1.6" />
-              </svg>
-            </span>
-            <input v-model.trim="form.username" type="text" class="form-control border-0 lg-pill-end" placeholder="아이디"
-              autocomplete="username" required />
-          </div>
-        </div>
-
-        <!-- 비밀번호 -->
-        <div class="mb-2">
-          <div class="input-group input-group-lg lg-pill lg-shadow">
-            <span class="input-group-text bg-white border-0 lg-pill-start">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="4" y="10" width="16" height="10" rx="2" stroke="#9A9A9A" stroke-width="1.6" />
-                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9A9A9A" stroke-width="1.6" />
-              </svg>
-            </span>
-            <input :type="showPw ? 'text' : 'password'" v-model="form.password" class="form-control border-0"
-              placeholder="비밀번호" autocomplete="current-password" required />
-            <button type="button" class="btn btn-white border-0 pe-3" @click="showPw = !showPw" aria-label="비밀번호 보기">
-              <svg v-if="showPw" width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z" stroke="#6c757d" stroke-width="1.6" />
-                <circle cx="12" cy="12" r="3" stroke="#6c757d" stroke-width="1.6" />
-              </svg>
-              <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M3 3l18 18" stroke="#6c757d" stroke-width="1.6" />
-                <path d="M2 12s4-6 10-6a9.6 9.6 0 0 1 6 2" stroke="#6c757d" stroke-width="1.6" />
-                <path d="M20.7 15.5C18.7 17.6 15.7 18 12 18 6 18 2 12 2 12a19 19 0 0 1 4-4" stroke="#6c757d"
-                  stroke-width="1.6" />
-              </svg>
+    <div class="container-sm py-3" style="max-width:414px">
+        <!-- 헤더 -->
+        <header class="border-bottom pb-2 mb-3 position-relative">
+            <button type="button" class="btn btn-link text-body p-0 position-absolute start-0 top-0">
+                <i class="bi bi-arrow-left fs-5"></i>
             </button>
-          </div>
+            <h5 class="text-center m-0">로그인</h5>
+        </header>
+
+        <!-- 브랜드 -->
+        <section class="text-center mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-4 mb-2"
+                style="width:72px;height:72px;background:#E7EAFD">
+                <img :src="mamaLogo" alt="맘마미아 로고" style="width:44px;height:44px;object-fit:contain" />
+            </div>
+            <h4 class="fw-semibold mb-1">맘마미아</h4>
+            <div class="text-secondary">기술로 연결하고, 마음으로 돌보다</div>
+        </section>
+
+        <!-- 폼 (정적) -->
+        <form novalidate>
+            <!-- 아이디 -->
+            <div class="mb-3">
+                <label class="form-label">아이디</label>
+                <div class="input-group">
+                    <input type="text" class="form-control rounded-start-3 border-end-0" placeholder="아이디를 입력하세요"
+                        style="height:48px">
+                    <span class="input-group-text bg-white rounded-end-3 border-start-0" style="height:48px">
+                        <i class="bi bi-person"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 비밀번호 -->
+            <div class="mb-4">
+                <label class="form-label">비밀번호</label>
+                <div class="input-group">
+                    <input type="password" class="form-control rounded-start-3 border-end-0" placeholder="비밀번호를 입력하세요"
+                        style="height:48px">
+                    <span class="input-group-text bg-white rounded-end-3 border-start-0" style="height:48px">
+                        <i class="bi bi-eye-slash"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 로그인 버튼 -->
+            <button type="button" class="btn w-100 rounded-3 py-3 mb-3"
+                style="background:#6F74E9;border-color:#6F74E9;color:#fff">
+                로그인
+            </button>
+
+            <!-- 찾기 링크 -->
+            <div class="d-flex justify-content-center align-items-center text-secondary mb-3">
+                <a href="#" class="text-secondary text-decoration-none">아이디 찾기</a>
+                <span class="mx-3" style="color:#d0d0d0">|</span>
+                <a href="#" class="text-secondary text-decoration-none">비밀번호 찾기</a>
+            </div>
+
+            <!-- 또는 -->
+            <div class="d-flex align-items-center text-secondary mb-3">
+                <div class="flex-grow-1 border-top"></div>
+                <span class="px-3">또는</span>
+                <div class="flex-grow-1 border-top"></div>
+            </div>
+
+            <!-- 회원가입 -->
+            <p class="text-center mb-3">아직 회원이 아니신가요?</p>
+            <button type="button" class="btn btn-outline-secondary w-100 rounded-3 py-3">회원가입</button>
+        </form>
+
+        <!-- 푸터 -->
+        <div class="text-center mt-4">
+            <div class="small text-secondary d-flex justify-content-center align-items-center">
+                <a href="#" class="text-secondary text-decoration-none">이용약관</a>
+                <span class="mx-3" style="color:#d0d0d0">|</span>
+                <a href="#" class="text-secondary text-decoration-none">개인정보처리방침</a>
+                <span class="mx-3" style="color:#d0d0d0">|</span>
+                <a href="#" class="text-secondary text-decoration-none">고객센터</a>
+            </div>
+            <div class="small text-muted mt-2">© 2025 Mamamia. All rights reserved.</div>
         </div>
-
-        <p class="text-center text-secondary small mb-5">
-          <a href="#" class="text-decoration-none text-secondary" @click.prevent="goToForgotPassword">비밀번호가 기억나지 않으신가요?</a>
-        </p>
-
-        <!-- CTA: 가운데 정렬 -->
-        <div class="cta-row mb-4">
-          <div class="cta-title">로그인</div>
-          <button type="submit" class="lg-go shadow" aria-label="로그인">
-            <svg class="lg-go-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M8 12h8M13 7l5 5-5 5" stroke="#fff" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
-          </button>
-        </div>
-
-        <p class="text-center text-secondary">
-          회원이 아니신가요? 
-          <router-link to="/SignUp" class="text-decoration-none text-primary">회원가입</router-link>
-        </p>
-      </form>
     </div>
-
-    <!-- 하단 블랍들 -->
-    <img class="deco-blob-left-img" :src="leftBlob" alt="" aria-hidden="true" />
-    <img class="deco-blob-right-img" :src="rightBlob" alt="" aria-hidden="true" />
-  </div>
 </template>
 
 <script setup>
+import mamaLogo from '@/assets/images/mama.png'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import topWave from '@/assets/images/qwe.svg'
