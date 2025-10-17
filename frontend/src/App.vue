@@ -2,10 +2,10 @@
   <div class="mobile-frame">
     <div class="app-layout">
       <AppHeader v-if="!shouldHideHeader" />
-      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage }">
+      <main class="main-content" :class="{ 'no-padding': isDPMainPage }">
         <RouterView />
       </main>
-      <AppFooter v-if="!isGDMainPage && !isDPMainPage" />
+      <AppFooter v-if="!isDPMainPage" />
     </div>
   </div>
 </template>
@@ -33,7 +33,7 @@ const isDPMainPage = computed(() => {
 
 // 헤더를 숨겨야 하는 페이지들 확인
 const shouldHideHeader = computed(() => {
-  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD'
+  return route.name === 'add-schedule'
 })
 </script>
 

@@ -1,604 +1,315 @@
-<!-- src/views/GD_main.vue -->
+<!-- src/views/Pr.vue -->
 <template>
-  <!-- 헤더 높이만큼 위로 당김(지도 딱 붙게) -->
-  <div class="cg-wrap position-relative bg-white" :style="wrapStyle">
-    <!-- 지도 -->
-    <div ref="mapEl" class="w-100" style="height:900px;"></div>
+  <div class="container-sm py-3" style="max-width:414px">
+    <!-- 상단: 테스트 버튼은 항상 표시, 헤더는 이벤트 있을 때만 -->
+    <div class="d-flex align-items-center mb-3">
+      <h5 v-if="missingEvent" class="fw-bold m-0 me-auto">
+        <span class="text-dark">{{ (connected ? patient.name : '환자') || '환자' }}</span>의 이웃을 찾아요
+      </h5>
+      <button class="btn btn-sm btn-outline-danger rounded-pill ms-auto" @click="toggleTestEvent">
+        테스트 이벤트 {{ missingEvent ? '해제' : '발생' }}
+      </button>
+    </div>
 
-    <!-- 지도 위 정보 카드 -->
-    <div class="card cg-glass shadow-sm position-absolute cg-info">
-      <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
-        <div class="symbol symbol-60px rounded-circle overflow-hidden flex-shrink-0">
-          <img :src="patient.avatarUrl" alt="avatar" class="w-100 h-100" style="object-fit:cover;" />
+    <!-- 상태 문구(문구만 변경, 화면은 그대로 유지) -->
+    <div class="my-3">
+      <template v-if="connected">
+        <div class="fs-5 fw-semibold mb-1">
+          <span class="text-success fw-semibold">{{ patient.name }}</span>님은
         </div>
-        <div class="flex-grow-1 lh-sm">
-          <div class="fw-semibold cg-name">{{ patient.name }}님</div>
-          <div class="small text-muted">13:00 | 마트 들려서 양..</div>
-          <div class="small" :class="patient.safe ? 'text-success' : 'text-danger'">
-            현재 위치: {{ patient.safe ? '안심존' : '주의구역' }}
+        <div class="fs-5 fw-semibold">
+          <span :class="safeStatus.safe ? 'text-body' : 'text-danger'">
+            {{ safeStatus.safe ? '안전한 위치에 있습니다.' : '주의 구역에 있습니다.' }}
+          </span>
+          <span v-if="safeStatus.checkedAt" class="text-secondary small ms-1">({{ safeStatus.checkedAt }} 기준)</span>
+        </div>
+      </template>
+      <template v-else>
+        <div class="fs-5 fw-semibold">연결한 환자가 없습니다.</div>
+      </template>
+    </div>
+
+    <!-- 실종 제보 카드 (이벤트 있을 때만) -->
+    <div v-if="missingEvent" class="card border-0 shadow-sm mb-3">
+      <div class="row g-3 align-items-center p-3">
+        <div class="col-auto">
+          <img v-if="missingEvent.avatarUrl" :src="missingEvent.avatarUrl" alt="face" class="rounded"
+            style="width:56px;height:56px;object-fit:cover">
+          <div v-else class="rounded-circle d-flex align-items-center justify-content-center bg-light border"
+            style="width:56px;height:56px;font-size:28px;line-height:1">👤</div>
+        </div>
+        <div class="col">
+          <div class="small fw-semibold">
+            {{ missingEvent.name }} <span v-if="missingEvent.age">({{ missingEvent.age }})</span>
           </div>
+          <div class="small text-secondary" v-if="missingEvent.location">실종 위치 : {{ missingEvent.location }}</div>
+          <div class="small text-secondary" v-if="missingEvent.time">실종 시간 : {{ missingEvent.time }}</div>
         </div>
-        <button type="button" class="cg-bell btn p-0 d-inline-flex align-items-center justify-content-center"
-          @click="$emit('click-notify')" aria-label="알림">
-          <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path d="M8 16a2 2 0 0 0 1.985-1.75H6.015A2 2 0 0 0 8 16z" />
-            <path
-              d="M8 1.918a3 3 0 0 0-3 3v1.098c0 .502-.145.993-.417 1.41L3.1 8.908c-.533.8-.106 1.892.83 2.086A31 31 0 0 0 8 11.5c1.394 0 2.788-.11 4.07-.506.937-.194 1.364-1.286.83-2.086l-1.483-2.082a2.5 2.5 0 0 1-.417-1.41V4.918a3 3 0 0 0-3-3z" />
-          </svg>
+        <div class="col-12">
+          <button class="btn btn-outline-dark w-100 rounded-pill" @click="goToMapPage">지도에서 보기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kakao 지도 프리뷰(연결 X이면 기본 좌표만) -->
+    <div class="card border-0 shadow-sm position-relative overflow-hidden mb-4 rounded-4">
+      <div ref="mapEl" class="w-100" style="height:280px;"></div>
+      <button class="btn btn-light rounded-pill position-absolute start-50 translate-middle-x" style="bottom:12px"
+        @click="goToMapPage">
+        지도 자세히 보기
+      </button>
+    </div>
+
+    <!-- 가장 빠른 일정 -->
+    <h6 class="fw-bold mb-2">가장 빠른 일정</h6>
+    <div v-if="nextSchedule" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <div class="d-flex align-items-center gap-2">
+          <span class="d-inline-block rounded-circle" style="width:10px;height:10px;background:#6c757d"></span>
+          <span class="fw-semibold">{{ nextSchedule.title }}</span>
+        </div>
+        <span class="text-secondary">{{ nextSchedule.time }}</span>
+      </div>
+      <div class="small text-secondary mb-1">{{ nextSchedule.location || '위치 정보 없음' }}</div>
+      <div class="small text-secondary" v-if="nextSchedule.depart">예상 출발: {{ nextSchedule.depart }}</div>
+      <div class="small text-secondary" v-if="nextSchedule.arrive">예상 도착: {{ nextSchedule.arrive }}</div>
+    </div>
+    <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
+      <div class="card-body text-center text-muted">오늘 남은 일정이 없습니다.</div>
+    </div>
+
+    <button class="btn btn-outline-dark w-100 rounded-pill mb-3" @click="router.push('/calendar')">
+      일정 자세히 보기
+    </button>
+
+    <!-- 기능 타일 -->
+    <div class="row g-3 align-items-stretch">
+      <!-- 1) 기본 안심존 설정 -->
+      <div class="col-6">
+        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
+          @click="router.push('/geo-fencing')" style="height:220px;
+                       background-image:
+                         linear-gradient(0deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.18) 45%, rgba(255,255,255,0) 75%),
+                         linear-gradient(135deg,#6f82ff 0%,#576cff 55%,#475cff 100%);">
+          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
+            style="bottom:44px">
+            <img :src="zone1" alt="" draggable="false"
+              style="height:100%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.14) translateY(2%);">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
+            style="height:44px">기본 안심존 설정</div>
+        </button>
+      </div>
+
+      <!-- 2) 예상 위치 -->
+      <div class="col-6">
+        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
+          @click="router.push('/predict-location')" style="height:196px;
+                       background-image:
+                         linear-gradient(0deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
+                         linear-gradient(135deg,#ff7b64 0%,#ff5a42 60%,#ff3f2e 100%);">
+          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
+            style="bottom:40px">
+            <img :src="locationIcon" alt="" draggable="false"
+              style="height:65%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.12);">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
+            style="height:40px">예상 위치</div>
+        </button>
+      </div>
+
+      <!-- 3) AI 보고서 -->
+      <div class="col-6">
+        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
+          @click="router.push('/report')" style="height:196px;
+                       background-image:
+                         linear-gradient(0deg, rgba(255,255,255,.32) 0%, rgba(255,255,255,.14) 45%, rgba(255,255,255,0) 75%),
+                         linear-gradient(135deg,#ffd6b9 0%,#ffb487 62%,#ff965f 100%);">
+          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
+            style="bottom:40px">
+            <img :src="report2" alt="" draggable="false" class="position-absolute top-50 start-50 translate-middle"
+              style="height:132%;max-height:none;width:auto;object-fit:contain;transform:translate(-50%,-56%);">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
+            style="height:40px;color:#232323">AI 보고서</div>
+        </button>
+      </div>
+
+      <!-- 4) 환자 연결 관리 -->
+      <div class="col-6" style="margin-top:-8px">
+        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
+          @click="router.push('/gdc')" style="height:220px;
+                       background-image:
+                         linear-gradient(0deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
+                         linear-gradient(135deg,#ffe08f 0%,#ffc050 60%,#ffae2a 100%);">
+          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
+            style="bottom:44px">
+            <img :src="connectIcon" alt="" draggable="false"
+              style="height:100%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.14) translateY(6%);">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
+            style="height:44px;color:#353535">환자 연결 관리</div>
         </button>
       </div>
     </div>
 
-    <!-- 하단 흰 영역 채우기(디자인 유지) -->
-    <div class="position-absolute start-0 end-0 bg-white" style="height:176px; bottom:0;"></div>
-
-    <!-- (에러 표시) -->
-    <div v-if="err" class="position-absolute top-0 start-0 w-100 text-center p-2"
-      style="background:rgba(255,255,255,.92);">
+    <!-- 에러 토스트 -->
+    <div v-if="err" class="alert alert-warning mt-3" role="alert" style="white-space:pre-wrap">
       {{ err }}
-    </div>
-  </div>
-
-  <!-- ================== Bottom Sheet ================== -->
-  <div class="bs-backdrop"
-    :style="{ opacity: backdropOpacity, pointerEvents: sheetHeight > collapsedH + 1 ? 'auto' : 'none' }"
-    @click="toCollapsed"></div>
-
-  <div ref="sheetEl" class="bs-sheet card rounded-top-4 shadow-lg" :style="sheetStyle" @pointerdown="onPointerDown">
-    <div class="d-flex justify-content-center pt-2 pb-1">
-      <div class="bs-handle"></div>
-    </div>
-
-    <div class="card-body pt-2 pb-3 px-3">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="d-flex align-items-center gap-2">
-          <img :src="patient.avatarUrl" class="rounded-circle" width="40" height="40" alt="avatar" />
-          <div class="fw-semibold text-dark">안녕하세요. {{ patient.name }} 보호자님</div>
-        </div>
-        <span class="badge text-dark border bg-danger-subtle px-3 py-2 rounded-2">환자 상태 변환</span>
-      </div>
-
-      <!-- 위험 알림 카드 -->
-      <div class="card border-0 rounded-3 mb-3 alert-soft">
-        <div class="card-body d-flex align-items-center gap-3 py-3">
-          <div class="d-flex align-items-center justify-content-center rounded-3 bg-white bg-opacity-10"
-            style="width:70px;height:70px; overflow:hidden;">
-            <img :src="patient.avatarUrl" alt="avatar" style="width:100%;height:100%;object-fit:cover;" />
-          </div>
-          <div class="text-light">
-            <div class="fw-semibold" style="color:#000000;">일 지 매 (71)</div>
-            <div style="color:#000000;">실종 위치 : 청주 동남지구</div>
-            <div style="color:#000000;">실종 시간 : 2025/09/30</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 상단 두 타일 -->
-      <div class="row g-2 mb-3" ref="topTilesRow">
-        <div class="col-6">
-          <div class="card border-0 rounded-4" style="background:#DCFCE7; cursor: pointer;" @click="goToGeoFencing">
-            <div class="card-body py-3 d-flex align-items-center gap-2">
-              <img :src="cir" alt="안심 아이콘" aria-hidden="true" class="icon-44" />
-              <div class="fw-semibold">안심 zone</div>
-            </div>
-          </div>
-        </div>
-        <div class="col-6">
-          <div class="card border-0 rounded-4" style="background:#F0F7FF; cursor: pointer;" @click="goToPredictLocation">
-            <div class="card-body py-3 d-flex align-items-center gap-2">
-              <img :src="cirr" alt="예상 위치 아이콘" aria-hidden="true" class="icon-44" />
-              <div class="fw-semibold">예상 위치</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 🔽 접힘 기준 앵커: 이 아래는 접힘 상태에서 안 보여도 됨 -->
-      <div ref="foldAnchor" style="height:0; margin:0; padding:0;"></div>
-
-      <!-- 중간 타일 묶음 -->
-      <div class="row g-2 mb-3">
-        <!-- 좌측 큰: 커뮤니티 -->
-        <div class="col-6">
-          <div class="card border-0 rounded-3 text-light d-flex justify-content-end"
-            style="background:rgba(74,98,221,0.85);height:212px;position:relative;cursor:pointer;"
-            @click="goToCommunity">
-            <img :src="cur" alt="커뮤니티 아이콘" aria-hidden="true"
-              class="position-absolute top-0 end-0 p-0 icon-88 opacity-75" />
-            <div class="p-3 fw-semibold fs-4" style="color:#FFECCC;">커뮤니티</div>
-          </div>
-        </div>
-
-        <!-- 우측 2단: 종합 지원 / 건강 리포트 -->
-        <div class="col-6 d-flex flex-column gap-2">
-          <!-- 종합 지원 -->
-          <div class="card border-0 rounded-3"
-            style="background:rgba(170,194,254,0.91);height:100px;position:relative;cursor:pointer;"
-            @click="goToTotalSupport">
-            <img :src="supportAgent" alt="지원 상담 아이콘" aria-hidden="true"
-              class="position-absolute top-0 end-0 p-0 icon-64 opacity-75" />
-            <div class="p-3 fw-semibold text-dark fs-5">종합 지원</div>
-          </div>
-
-          <!-- 건강 리포트 -->
-          <div class="card border-0 rounded-3" style="background:#FFECCC;height:100px;position:relative;cursor:pointer;"
-            @click="goToReport">
-            <img :src="bookOpen" alt="건강 리포트 아이콘" aria-hidden="true"
-              class="position-absolute end-0 bottom-0 p-2 icon-80 opacity-25" />
-            <div class="p-3 fw-semibold fs-5" style="color:rgba(74,98,221,0.85);">건강 리포트</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 오늘의 일정 -->
-      <div class="mb-2 fw-bold fs-6 text-dark">오늘의 일정</div>
-      <div v-if="todaySchedule" class="card border-0 shadow-sm rounded-4" style="cursor: pointer;" @click="goToCalendar">
-        <div class="card-body">
-          <div class="text-muted small mb-1">오늘 일정</div>
-          <div class="fw-semibold">{{ todaySchedule.time }}</div>
-          <div class="text-secondary">{{ todaySchedule.title }}</div>
-          <div class="text-muted small mt-1">{{ todaySchedule.location || '위치 정보 없음' }}</div>
-        </div>
-      </div>
-      <div v-else class="card border-0 shadow-sm rounded-4" style="cursor: pointer;" @click="goToCalendar">
-        <div class="card-body text-center text-muted">
-          오늘 일정이 없습니다.
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import supportAgent from '@/assets/images/support_agent.svg'
-import cir from '@/assets/images/cir.svg'
-import cirr from '@/assets/images/cirr.svg'
-import cur from '@/assets/images/cur.svg'
-import bookOpen from '@/assets/images/Book open.svg'
+
+import zone1 from '@/assets/images/zone 1.svg'
+import locationIcon from '@/assets/images/location.svg'
+import report2 from '@/assets/images/report2.png'
+import connectIcon from '@/assets/images/connect.svg'
 
 const router = useRouter()
 
-// 일정 관련 데이터
-const patientUserNo = ref(null)
-const allSchedules = ref([])
-const scheduleLocations = ref({}) // scheduleNo를 키로 하는 위치 정보 맵
-
-// 안심존 관련
-let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
-
-// 예상 위치 페이지로 이동하는 함수
-const goToPredictLocation = () => {
-  router.push('/predict-location')
+/* ===== API ===== */
+const ENDPOINTS = {
+  myPatient: '/api/user/my-patient',
+  patientByNo: (no) => `/api/user/${no}`,
+  lastRecord: (no) => `/api/record/last/${no}`,
+  schedules: (no) => `/api/schedule/list/${no}`,
+  scheduleLocations: (sn) => `/api/schedule/${sn}/locations`,
+  basicSafeZone: (no) => `/api/schedule/basic-safe-zone/${no}`,
+  activeMissing: (no) => `/api/missing/active/${no}`,
 }
 
-// 안심존 페이지로 이동하는 함수
-const goToGeoFencing = () => {
-  router.push('/geo-fencing')
-}
-
-// 종합 지원 페이지로 이동하는 함수
-const goToTotalSupport = () => {
-  router.push('/total-support')
-}
-
-// 건강 리포트 페이지로 이동하는 함수
-const goToReport = () => {
-  router.push('/report')
-}
-
-// 커뮤니티 페이지로 이동하는 함수
-const goToCommunity = () => {
-  router.push('/CommunityView')
-}
-
-// 캘린더 페이지로 이동하는 함수
-const goToCalendar = () => {
-  router.push('/calendar')
-}
-
-/* ===== 기존 지도/카드 props ===== */
-const props = defineProps({
-  kakaoKey: { type: String, default: '' },
-  foldNudge: { type: Number, default: -20 },
-  center: { type: Object, default: () => ({ lat: 37.4943524920695, lng: 126.88767655688868 }) },
-  patient: {
-    type: Object,
-    default: () => ({
-      name: '홍길동', taken: 1, total: 3, safe: true,
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&auto=format&fit=crop'
-    })
-  },
-  pullUp: { type: Number, default: 70 },
-  pullUpDesktop: { type: Number, default: 80 },
-  /* 💡 지도 위 카드 위치(조절 가능) */
-  infoTop: { type: Number, default: 124 },
-  infoTopDesktop: { type: Number, default: 132 }
-})
-
-/* ===== 지도 쪽: 헤더 딱 붙이기 + 카드 위치 변수 주입 ===== */
-const wrapStyle = computed(() => ({
-  marginTop: `-${props.pullUp}px`,
-  '--pullUpDesktop': `-${props.pullUpDesktop}px`,
-  '--infoTop': `${props.infoTop}px`,
-  '--infoTopDesktop': `${props.infoTopDesktop}px`,
-}))
-
-/* ===== 일정 관련 함수 ===== */
-// 시간을 12시간 형식으로 변환 (오전/오후 포함)
-function formatTime(timeString) {
-  if (!timeString) return ''
-  
-  const [hour, minute] = timeString.split(':')
-  const hourNum = parseInt(hour)
-  
-  if (hourNum === 0) {
-    return `오전 12:${minute}`
-  } else if (hourNum < 12) {
-    return `오전 ${String(hourNum).padStart(2, '0')}:${minute}`
-  } else if (hourNum === 12) {
-    return `오후 12:${minute}`
-  } else {
-    return `오후 ${String(hourNum - 12).padStart(2, '0')}:${minute}`
-  }
-}
-
-// 위치 정보를 화살표 형식으로 포맷팅
-function formatLocation(scheduleNo) {
-  const locations = scheduleLocations.value[scheduleNo]
-  if (!locations || locations.length === 0) return ''
-  
-  // sequence_order 순서대로 정렬
-  const sortedLocations = [...locations].sort((a, b) => a.sequenceOrder - b.sequenceOrder)
-  
-  // 위치명을 화살표로 연결
-  return sortedLocations.map(loc => loc.locationName).join(' → ')
-}
-
-// 보호자가 관리하는 환자 정보 가져오기
-async function fetchPatientInfo() {
-  try {
-    const response = await fetch('http://localhost:8080/api/user/my-patient', {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('환자 정보를 가져올 수 없습니다.')
-    }
-    
-    const patient = await response.json()
-    
-    // 메시지만 있는 경우 (환자가 없는 경우)
-    if (patient.message) {
-      console.warn(patient.message)
-      return null
-    }
-    
-    return patient.userNo
-  } catch (error) {
-    console.error('환자 정보 조회 오류:', error)
-    return null
-  }
-}
-
-// 일정 목록 가져오기
-async function fetchSchedules(userNo) {
-  try {
-    const response = await fetch(`http://localhost:8080/api/schedule/list/${userNo}`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('일정 목록을 가져올 수 없습니다.')
-    }
-    
-    const schedules = await response.json()
-    return schedules
-  } catch (error) {
-    console.error('일정 목록 조회 오류:', error)
-    return []
-  }
-}
-
-// 특정 일정의 위치 목록 가져오기
-async function fetchScheduleLocations(scheduleNo) {
-  try {
-    const response = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}/locations`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('위치 정보를 가져올 수 없습니다.')
-    }
-    
-    const locations = await response.json()
-    return locations
-  } catch (error) {
-    console.error('위치 정보 조회 오류:', error)
-    return []
-  }
-}
-
-// 모든 일정 데이터 로드
-async function loadScheduleData() {
-  // 1. 환자 정보 조회
-  const userNo = await fetchPatientInfo()
-  if (!userNo) {
-    console.warn('관리하는 환자가 없습니다.')
-    return
-  }
-  
-  patientUserNo.value = userNo
-  
-  // 2. 일정 목록 조회
-  const schedules = await fetchSchedules(userNo)
-  allSchedules.value = schedules
-  
-  // 3. 각 일정의 위치 정보 조회
-  for (const schedule of schedules) {
-    const locations = await fetchScheduleLocations(schedule.scheduleNo)
-    scheduleLocations.value[schedule.scheduleNo] = locations
-  }
-}
-
-// 오늘 일정 (첫 번째만)
-const todaySchedule = computed(() => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  const todayKey = `${year}-${month}-${day}`
-  
-  const todaySchedules = allSchedules.value
-    .filter(schedule => schedule.scheduleDate === todayKey)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime))
-  
-  if (todaySchedules.length === 0) return null
-  
-  const schedule = todaySchedules[0]
-  return {
-    id: schedule.scheduleNo,
-    time: `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`,
-    title: schedule.scheduleTitle,
-    location: formatLocation(schedule.scheduleNo)
-  }
-})
-
-// 현재 진행 중인 일정 찾기
-function getCurrentSchedule() {
-  const now = new Date()
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  const todayKey = `${year}-${month}-${day}`
-  
-  // 오늘 일정만 필터링
-  const todaySchedules = allSchedules.value.filter(schedule => schedule.scheduleDate === todayKey)
-  
-  // 현재 시간
-  const currentHour = now.getHours()
-  const currentMinute = now.getMinutes()
-  const currentTimeInMinutes = currentHour * 60 + currentMinute
-  
-  // 현재 시간에 해당하는 일정들 모두 찾기
-  const currentSchedules = []
-  
-  for (const schedule of todaySchedules) {
-    const [startHour, startMinute] = schedule.startTime.split(':').map(Number)
-    const [endHour, endMinute] = schedule.endTime.split(':').map(Number)
-    
-    const startTimeInMinutes = startHour * 60 + startMinute
-    const endTimeInMinutes = endHour * 60 + endMinute
-    
-    // 현재 시간이 일정 시간 범위 안에 있는지 확인
-    if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) {
-      currentSchedules.push(schedule)
-    }
-  }
-  
-  // 일정이 없으면 null 반환
-  if (currentSchedules.length === 0) return null
-  
-  // 일정이 여러 개 겹치면 시작 시간이 가장 빠른 것 선택
-  if (currentSchedules.length > 1) {
-    console.warn(`⚠️ ${currentSchedules.length}개의 일정이 현재 시간에 겹칩니다. 가장 먼저 시작된 일정을 표시합니다.`)
-    currentSchedules.forEach(s => {
-      console.log(`  - ${s.scheduleTitle} (${s.startTime} ~ ${s.endTime})`)
-    })
-  }
-  
-  // 시작 시간 기준으로 정렬 후 첫 번째 반환
-  return currentSchedules.sort((a, b) => 
-    a.startTime.localeCompare(b.startTime)
-  )[0]
-}
-
-// 일정의 안심존(버퍼) 가져오기
-async function fetchScheduleSafeZone(scheduleNo) {
-  try {
-    const response = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}/route`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('경로 정보를 가져올 수 없습니다.')
-    }
-    
-    const route = await response.json()
-    return route.bufferCoordinates ? JSON.parse(route.bufferCoordinates) : null
-  } catch (error) {
-    console.error('일정 안심존 조회 오류:', error)
-    return null
-  }
-}
-
-// 기본 안심존 가져오기
-async function fetchBasicSafeZone(userNo) {
-  try {
-    const response = await fetch(`http://localhost:8080/api/schedule/basic-safe-zone/${userNo}`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('기본 안심존을 가져올 수 없습니다.')
-    }
-    
-    const result = await response.json()
-    
-    // 메시지만 있는 경우 (기본 안심존이 설정되지 않은 경우)
-    if (result.message) {
-      console.warn(result.message)
-      return null
-    }
-    
-    return result.boundaryCoordinates ? JSON.parse(result.boundaryCoordinates) : null
-  } catch (error) {
-    console.error('기본 안심존 조회 오류:', error)
-    return null
-  }
-}
-
-// 지도에 경로형 안심존(버퍼 폴리곤) 그리기
-function drawScheduleSafeZone(map, bufferCoordinates) {
-  if (!map || !bufferCoordinates) return
-  
-  try {
-    // 기존 안심존 제거
-    if (currentSafeZone) {
-      currentSafeZone.setMap(null)
-    }
-    
-    // bufferCoordinates는 [{ latitude, longitude }, ...] 형식
-    const kakaoPath = bufferCoordinates.map(coord => 
-      new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
-    )
-    
-    // 폴리곤 생성
-    currentSafeZone = new window.kakao.maps.Polygon({
-      path: kakaoPath,
-      strokeWeight: 2,
-      strokeColor: '#EF4444',
-      strokeOpacity: 0.8,
-      fillColor: '#EF4444',
-      fillOpacity: 0.3
-    })
-    
-    currentSafeZone.setMap(map)
-    
-    // 안심존이 보이도록 지도 범위 조정
-    const bounds = new window.kakao.maps.LatLngBounds()
-    kakaoPath.forEach(latLng => bounds.extend(latLng))
-    map.setBounds(bounds)
-    
-    console.log('경로형 안심존 표시 완료')
-  } catch (error) {
-    console.error('경로형 안심존 표시 오류:', error)
-  }
-}
-
-// 지도에 기본형 안심존(원형) 그리기
-function drawBasicSafeZone(map, boundaryData) {
-  if (!map || !boundaryData) return
-  
-  try {
-    // 기존 안심존 제거
-    if (currentSafeZone) {
-      currentSafeZone.setMap(null)
-    }
-    
-    // boundaryData 구조: { type: 'Circle', center: { lat, lng }, radius, ... }
-    if (boundaryData.type === 'Circle') {
-      const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
-      const radius = boundaryData.radius
-      
-      // 원형 폴리곤 생성 (Turf.js 없이 직접 계산)
-      const circlePoints = []
-      const steps = 64
-      const earthRadius = 6371000 // 지구 반경 (미터)
-      
-      for (let i = 0; i < steps; i++) {
-        const angle = (Math.PI * 2 * i) / steps
-        const dx = radius * Math.cos(angle)
-        const dy = radius * Math.sin(angle)
-        
-        const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
-        const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)
-        
-        circlePoints.push(new window.kakao.maps.LatLng(lat, lng))
-      }
-      
-      // 폴리곤 생성
-      currentSafeZone = new window.kakao.maps.Polygon({
-        path: circlePoints,
-        strokeWeight: 3,
-        strokeColor: '#6366f1',
-        strokeOpacity: 0.8,
-        fillColor: '#6366f1',
-        fillOpacity: 0.2
-      })
-      
-      currentSafeZone.setMap(map)
-      
-      // 지도 레벨 조정
-      const bounds = new window.kakao.maps.LatLngBounds()
-      circlePoints.forEach(point => bounds.extend(point))
-      map.setBounds(bounds)
-      
-      console.log('기본형 안심존 표시 완료')
-    }
-  } catch (error) {
-    console.error('기본형 안심존 표시 오류:', error)
-  }
-}
-
-// 안심존 업데이트 (현재 일정에 따라)
-async function updateSafeZone(map) {
-  if (!map || !patientUserNo.value) return
-  
-  try {
-    // 1. 현재 진행 중인 일정 찾기
-    const currentSchedule = getCurrentSchedule()
-    
-    if (currentSchedule) {
-      // 2. 진행 중인 일정이 있으면 해당 일정의 안심존 표시
-      console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
-      const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
-      
-      if (bufferCoordinates && bufferCoordinates.length > 0) {
-        drawScheduleSafeZone(map, bufferCoordinates)
-        return
-      }
-    }
-    
-    // 3. 진행 중인 일정이 없거나 안심존이 없으면 기본 안심존 표시
-    console.log('기본 안심존 표시')
-    const basicSafeZone = await fetchBasicSafeZone(patientUserNo.value)
-    
-    if (basicSafeZone) {
-      drawBasicSafeZone(map, basicSafeZone)
-    } else {
-      console.warn('표시할 안심존이 없습니다.')
-    }
-  } catch (error) {
-    console.error('안심존 업데이트 오류:', error)
-  }
-}
-
-/* ===== Kakao Map Loader ===== */
-const mapEl = ref(null)
+/* ===== 상태 ===== */
+const connected = ref(false)
 const err = ref('')
-let mapInstance = null // 지도 인스턴스 저장
+const mapEl = ref(null)
 
+const patient = ref({ userNo: null, name: '', avatarUrl: null })
+const missingEvent = ref(null)
+
+const safeStatus = ref({ safe: true, checkedAt: '' })
+const lastLocation = ref(null)
+const allSchedules = ref([])
+const scheduleLocationsMap = ref({})
+
+/* ===== 유틸 ===== */
+function fmtTime(hhmm) {
+  if (!hhmm) return ''
+  const [h, m] = hhmm.split(':').map(Number)
+  const isPM = h >= 12
+  const hour12 = h % 12 || 12
+  return `${isPM ? '오후' : '오전'} ${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+function timeToMin(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m }
+function formatLocation(scheduleNo) {
+  const arr = scheduleLocationsMap.value[scheduleNo]
+  if (!arr || arr.length === 0) return ''
+  const sorted = [...arr].sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+  return sorted.map(v => v.locationName).join(' → ')
+}
+function tsToLocal(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`
+}
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000
+  const toRad = d => d * Math.PI / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+async function fetchJSON(url) {
+  const res = await fetch(url, { method: 'GET', credentials: 'include' })
+  if (!res.ok) throw new Error(`${url} → ${res.status}`)
+  return res.json()
+}
+
+/* ===== 데이터 로딩 ===== */
+async function getMyPatientNoAndProfile() {
+  const r = await fetchJSON(ENDPOINTS.myPatient).catch(() => ({}))
+  if (r?.message) { connected.value = false; return null }
+  const userNo = r?.userNo ?? r?.id ?? r
+  connected.value = !!userNo
+  if (!connected.value) return null
+
+  if (!r?.name) {
+    try {
+      const u = await fetchJSON(ENDPOINTS.patientByNo(userNo))
+      patient.value = { userNo, name: u?.name || '', avatarUrl: u?.profilePhoto || null }
+    } catch {
+      patient.value = { userNo, name: '', avatarUrl: null }
+    }
+  } else {
+    patient.value = { userNo, name: r.name || '', avatarUrl: r.profilePhoto || null }
+  }
+  return userNo
+}
+async function getLastLocation(no) {
+  try {
+    const r = await fetchJSON(ENDPOINTS.lastRecord(no))
+    if (r?.lat && r?.lng) lastLocation.value = { lat: r.lat, lng: r.lng, ts: r.ts }
+  } catch { }
+}
+async function getSchedules(no) {
+  const list = await fetchJSON(ENDPOINTS.schedules(no)).catch(() => [])
+  allSchedules.value = Array.isArray(list) ? list : []
+  for (const s of allSchedules.value) {
+    try {
+      const locs = await fetchJSON(ENDPOINTS.scheduleLocations(s.scheduleNo))
+      scheduleLocationsMap.value[s.scheduleNo] = Array.isArray(locs) ? locs : []
+    } catch {
+      scheduleLocationsMap.value[s.scheduleNo] = []
+    }
+  }
+}
+async function getBasicSafeCheck(no) {
+  try {
+    const r = await fetchJSON(ENDPOINTS.basicSafeZone(no))
+    if (r?.message) return
+    const data = r?.boundaryCoordinates ? JSON.parse(r.boundaryCoordinates) : r
+    if (data?.type === 'Circle' && lastLocation.value) {
+      const d = haversine(lastLocation.value.lat, lastLocation.value.lng, data.center.lat, data.center.lng)
+      safeStatus.value.safe = d <= (data.radius || 0)
+      safeStatus.value.checkedAt = tsToLocal(lastLocation.value.ts) || tsToLocal(new Date().toISOString())
+    }
+  } catch { }
+}
+async function getActiveMissing(no) {
+  try {
+    const r = await fetchJSON(ENDPOINTS.activeMissing(no))
+    if (r?.message) { missingEvent.value = null }
+    else if (r) {
+      missingEvent.value = {
+        name: r.name ?? patient.value.name ?? '환자',
+        age: r.age ?? '',
+        location: r.location ?? '',
+        time: r.time ?? tsToLocal(r.ts) ?? '',
+        avatarUrl: r.avatarUrl ?? null
+      }
+    }
+  } catch { missingEvent.value = null }
+}
+
+/* ===== Kakao Map ===== */
+const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
+const defaultCenter = { lat: 37.4943524920695, lng: 126.88767655688868 }
+let map, marker
 function loadKakao(key) {
   return new Promise((resolve, reject) => {
-    if (!key) return reject(new Error('Kakao JavaScript 키가 비어 있습니다. (.env 또는 prop 확인)'))
+    if (!key) return reject(new Error('Kakao JavaScript 키가 비어 있습니다.'))
     if (window.kakao?.maps) return resolve(window.kakao)
     let s = document.querySelector('script[data-kakao-sdk]')
     if (!s) {
@@ -606,7 +317,7 @@ function loadKakao(key) {
       s.setAttribute('data-kakao-sdk', 'true')
       s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=services`
       s.async = true
-      s.onerror = () => reject(new Error('Kakao SDK 로드 실패(도메인/키 확인)'))
+      s.onerror = () => reject(new Error('Kakao SDK 로드 실패'))
       document.head.appendChild(s)
     }
     s.addEventListener('load', () => {
@@ -615,241 +326,79 @@ function loadKakao(key) {
     }, { once: true })
   })
 }
+async function initMap() {
+  try {
+    const kakao = await loadKakao(kakaoKey)
+    const c = new kakao.maps.LatLng(
+      lastLocation.value?.lat ?? defaultCenter.lat,
+      lastLocation.value?.lng ?? defaultCenter.lng
+    )
+    map = new kakao.maps.Map(mapEl.value, { center: c, level: 3 })
+    marker = new kakao.maps.Marker({ position: c })
+    marker.setMap(map)
+  } catch (e) { console.error('[Pr] Kakao Map Error:', e?.message || e) }
+}
+function updateMarker() {
+  if (!map || !marker || !lastLocation.value) return
+  const kakao = window.kakao
+  const c = new kakao.maps.LatLng(lastLocation.value.lat, lastLocation.value.lng)
+  marker.setPosition(c); map.setCenter(c)
+}
 
+/* ===== 기타 ===== */
+const nextSchedule = computed(() => {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const todayKey = `${yyyy}-${mm}-${dd}`
+
+  const todayList = allSchedules.value
+    .filter(s => s.scheduleDate === todayKey)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const upcoming = todayList.find(s => timeToMin(s.startTime) >= nowMin)
+  if (!upcoming) return null
+
+  const t = `${fmtTime(upcoming.startTime)} - ${fmtTime(upcoming.endTime)}`
+  const loc = formatLocation(upcoming.scheduleNo)
+  return { id: upcoming.scheduleNo, title: upcoming.scheduleTitle, time: t, location: loc, depart: null, arrive: null }
+})
+
+function toggleTestEvent() {
+  if (missingEvent.value) { missingEvent.value = null }
+  else {
+    missingEvent.value = {
+      name: (connected.value ? patient.value.name : '사용자') || '사용자',
+      age: 71,
+      location: '청주 동남지구',
+      time: tsToLocal(new Date().toISOString()),
+      avatarUrl: null
+    }
+  }
+}
+function goToMapPage() { router.push('/predict-location') }
+
+/* ===== 초기화 ===== */
 onMounted(async () => {
-  // 일정 데이터 로드
-  await loadScheduleData()
-  
   try {
-    const key = props.kakaoKey || import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
-    const kakao = await loadKakao(key)
-    const center = new kakao.maps.LatLng(props.center.lat, props.center.lng)
-    const map = new kakao.maps.Map(mapEl.value, { center, level: 3 })
-    mapInstance = map // 지도 인스턴스 저장
-    
-    new kakao.maps.Marker({ position: center }).setMap(map)
-    await nextTick()
-    map.relayout(); map.setCenter(center)
-    
-    // 안심존 표시
-    await updateSafeZone(map)
-    
-    window.addEventListener('resize', onResize)
-  } catch (e) { console.error(e); err.value = e.message }
-  await nextTick()
-  measureCollapsed()  // ✅ 처음 로드 시 접힘 높이 자동 계산
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', onResize)
-})
-
-/* ===== Bottom Sheet: 드래그로만 열기 (collapsed ↔ 80% open) ===== */
-const sheetEl = ref(null)
-const topTilesRow = ref(null)
-const foldAnchor = ref(null)
-
-const vh = () => window.innerHeight
-const openH = () => Math.round(vh() * 0.8)
-const collapsedH = ref(Math.round(vh() * 0.28) || 280) // 초기값(대략), 곧 재계산됨
-const sheetHeight = ref(collapsedH.value)
-
-let startY = 0
-let startH = collapsedH.value
-let dragging = false
-
-const sheetStyle = computed(() => ({
-  height: sheetHeight.value + 'px',
-}))
-const backdropOpacity = computed(() => {
-  const t = Math.max(0, Math.min(1, (sheetHeight.value - collapsedH.value) / (openH() - collapsedH.value)))
-  return (0.6 * t).toFixed(2)
-})
-
-function onPointerDown(e) {
-  dragging = true
-  startY = e.clientY || (e.touches && e.touches[0].clientY)
-  startH = sheetHeight.value
-  window.addEventListener('pointermove', onPointerMove, { passive: false })
-  window.addEventListener('pointerup', onPointerUp, { once: true })
-}
-function onPointerMove(e) {
-  if (!dragging) return
-  e.preventDefault()
-  const y = e.clientY || (e.touches && e.touches[0].clientY)
-  const delta = startY - y
-  const next = Math.max(collapsedH.value, Math.min(openH(), startH + delta))
-  sheetHeight.value = next
-}
-function onPointerUp() {
-  dragging = false
-  const mid = (collapsedH.value + openH()) / 2
-  sheetHeight.value = sheetHeight.value > mid ? openH() : collapsedH.value
-  window.removeEventListener('pointermove', onPointerMove)
-}
-function toCollapsed() { sheetHeight.value = collapsedH.value }
-
-/* ✅ 접힘 높이 자동 계산 (일지매 + 상단 두 타일까지 보이게) */
-function measureCollapsed() {
-  try {
-    if (!sheetEl.value || !foldAnchor.value) return
-    const sheetRect = sheetEl.value.getBoundingClientRect()
-    const anchorRect = foldAnchor.value.getBoundingClientRect()
-    // 앵커의 bottom이 시트 상단에서 얼마나 떨어져 있는지 + 약간의 여백
-    const desired = Math.ceil(anchorRect.bottom - sheetRect.top + 12 + (props.foldNudge || 0))
-    const clamped = Math.max(240, Math.min(desired, openH() - 8))
-    collapsedH.value = clamped
-    // 열려있지 않다면, 현재 높이를 접힘값으로 맞춰준다
-    const mid = (startH + openH()) / 2
-    if (!dragging && sheetHeight.value <= mid) sheetHeight.value = collapsedH.value
+    const userNo = await getMyPatientNoAndProfile()
+    if (!userNo) {
+      await initMap() // 연결 없어도 기본 지도는 보여줌
+      return
+    }
+    await Promise.all([
+      getLastLocation(userNo),
+      getSchedules(userNo),
+      getActiveMissing(userNo)
+    ])
+    await initMap()
+    updateMarker()
+    await getBasicSafeCheck(userNo)
   } catch (e) {
-    // 실패시 기존 비율 유지
-    console.warn('measureCollapsed failed', e)
+    console.error(e)
+    err.value = `[메인 초기화 오류]\n${e?.message || e}`
   }
-}
-
-function onResize() {
-  // 뷰포트 변할 때 오픈/접힘 기준 갱신
-  const wasOpen = sheetHeight.value > (collapsedH.value + openH()) / 2
-  measureCollapsed()
-  sheetHeight.value = wasOpen ? openH() : collapsedH.value
-}
+})
 </script>
-
-<style scoped>
-/* ===== 전체 프레임: 화면 가득 채우기 ===== */
-.cg-wrap {
-  width: 100%;
-  min-height: 100vh;
-  overflow: hidden;
-}
-
-@media (min-width:768px) {
-  .cg-wrap {
-    margin-top: var(--pullUpDesktop, -80px) !important;
-  }
-}
-
-/* 지도 카드 (위치: 변수화) */
-.cg-info {
-  left: 50%;
-  transform: translateX(-50%);
-  top: var(--infoTop, 124px);
-  width: calc(100% - 32px);
-  max-width: 500px;
-  height: 82px;
-  border-radius: 8px;
-  z-index: 10;
-}
-
-@media (min-width:768px) {
-  .cg-info {
-    top: var(--infoTopDesktop, 132px);
-  }
-}
-
-.cg-glass {
-  background: rgba(251, 252, 255, 0.7);
-  backdrop-filter: saturate(140%) blur(6px);
-}
-
-.cg-name {
-  color: #3F414E;
-}
-
-.cg-bell {
-  width: 56px;
-  height: 52px;
-  border-radius: 999px;
-  background: rgba(74, 98, 221, 0.85);
-  border: 4px solid #FFECCC;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
-}
-
-.symbol-60px {
-  width: 60px;
-  height: 60px;
-}
-
-/* ===== Bottom Sheet ===== */
-.bs-backdrop {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  transition: opacity .15s ease;
-  z-index: 998;
-}
-
-.bs-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 100%;
-  background: #F0EFEF;
-  border: 0;
-  z-index: 999;
-  touch-action: none;
-}
-
-.bs-handle {
-  width: 51px;
-  height: 4px;
-  border-radius: 100px;
-  background: #79747E;
-  opacity: .9;
-}
-
-/* 아이콘 크기 유틸 */
-.icon-44 {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-}
-
-/* 상단 타일 */
-.icon-64 {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-}
-
-/* 종합 지원 */
-.icon-80 {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-}
-
-/* 건강 리포트 */
-.icon-88 {
-  width: 88px;
-  height: 88px;
-  object-fit: contain;
-}
-
-/* 커뮤니티 */
-
-.card {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
-}
-
-.alert-soft{
-  /* 같은 레드(#F86969) 계열, 투명도만 낮춰서 덜 눈에 띄게 */
-  background: linear-gradient(180deg,
-              rgba(248,105,105, .18),
-              rgba(248,105,105, .12));
-  border: 1px solid rgba(248,105,105, .28);
-  box-shadow: 0 4px 14px rgba(248,105,105,.08); /* 살짝만 */
-  border-radius: 12px;
-}
-.alert-soft:hover{
-  background: linear-gradient(180deg,
-              rgba(248,105,105, .22),
-              rgba(248,105,105, .16));
-}
-
-</style>
-
