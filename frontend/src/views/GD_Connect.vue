@@ -1,510 +1,358 @@
+<!-- src/views/GDC.vue -->
 <template>
-  <main class="gdc-wrap">
-    <!-- 상단 상태/액션 바로가기 바 -->
-    <div class="topbar">
-      <div class="left">
-        <strong>보호자-환자 연결</strong>
-        <span class="muted" v-if="stage === 'connected'">연결 유지 중</span>
+  <div class="container-sm d-flex flex-column py-3" style="max-width:414px; height:100svh; overflow:hidden">
+    <!-- 상단 헤더 -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <button class="btn btn-link text-body p-0" @click="goBack" :disabled="busy">
+        <i class="bi bi-chevron-left fs-5"></i>
+      </button>
+      <div class="text-center">
+        <h6 class="mb-0 fw-semibold">보호자-환자 연결</h6>
+        <small class="text-secondary" v-if="connected">연결 유지 중</small>
+        <small class="text-secondary" v-else>아직 연결되지 않음</small>
       </div>
+      <button class="btn btn-link text-body p-0" :disabled="busy">
+        <i class="bi bi-three-dots-vertical fs-5"></i>
+      </button>
     </div>
 
-    <!-- 연결 폼: 연결 전만 노출 -->
-    <div v-if="stage === 'form'" class="card">
-      <h2 class="title">초대코드로 연결</h2>
+    <!-- 본문 -->
+    <div class="flex-grow-1 d-flex flex-column overflow-hidden">
+      <!-- [A] 초대코드 입력: 연결 전 전용 -->
+      <div v-if="!connected" class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h5 class="fw-bold mb-2">초대코드로 연결</h5>
+          <p class="text-secondary small mb-3">
+            환자 또는 다른 보호자에게 받은 <span class="fw-semibold">초대코드</span>를 입력해 연결을 완료하세요.
+          </p>
 
-      <div class="field">
-        <label class="label">내 보호자 번호</label>
-        <input class="input" :value="guardianNo ?? ''" disabled />
-      </div>
+          <form class="input-group mb-2" @submit.prevent="connectWithCode">
+            <input v-model.trim="inviteCode" class="form-control" type="text" inputmode="text"
+              autocomplete="one-time-code" placeholder="예: A1B2C3" :disabled="busy" />
+            <button class="btn btn-primary" type="submit" :disabled="busy || !inviteCode">
+              {{ busy ? '연결 중...' : '연결하기' }}
+            </button>
+          </form>
 
-      <div class="field">
-        <label class="label" for="invite">환자 초대코드</label>
-        <input id="invite" class="input" type="text" v-model.trim="inviteCode" placeholder="예: 8자리 코드" />
-      </div>
-
-      <div class="field" v-if="resolvedPreview">
-        <label class="label">확인된 환자</label>
-        <div class="kv-inline">
-          <span class="code">#{{ resolvedPreview.patientNo }}</span>
-          <span class="dot"></span>
-          <span>{{ resolvedPreview.name }}</span>
+          <div class="small text-secondary">
+            연결이 완료되면 환자 정보와 다른 보호자들이 아래에 표시됩니다.
+          </div>
         </div>
       </div>
 
-      <div class="row">
-        <button class="btn ghost" :disabled="busy || !inviteCode" @click="previewInvite">
-          {{ busy && previewing ? '확인 중...' : '코드 확인' }}
-        </button>
-        <button class="btn" :disabled="!canSubmit || busy" @click="handleConnect">
-          {{ busy && !previewing ? '연결 중...' : '연결' }}
-        </button>
-      </div>
+      <!-- [B] 연결된 환자 카드: 연결 후 전용 -->
+      <div v-if="connected" class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold d-flex align-items-center gap-2">
+              <span class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                style="width:40px;height:40px;background:#f1f3f5">
+                <i class="bi bi-person"></i>
+              </span>
+              연결된 환자
+            </div>
 
-      <p v-if="msg" class="msg ok">{{ msg }}</p>
-      <p v-if="err" class="msg err">{{ err }}</p>
-    </div>
+            <button class="btn btn-danger btn-sm" :disabled="busy" @click="disconnect">
+              <i class="bi bi-link-slash me-1"></i>
+              {{ busy ? '해제 중...' : '연결 해제' }}
+            </button>
+          </div>
 
-    <!-- 연결 이후 보여줄 요약 카드 -->
-    <div v-else-if="stage === 'connected'" class="card">
-      <div class="flex-row">
-        <h2 class="title">연결된 환자</h2>
-        <div class="gap8">
-          <!-- 다환자 금지: 새 연결 버튼 제거 -->
-          <button class="btn danger" :disabled="busy" @click="disconnect">
-            {{ busy ? '해제 중...' : '연결 해제' }}
-          </button>
+          <h4 class="fw-bold mb-3">환자 정보</h4>
+
+          <div class="border-top">
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+              <!-- 라벨/값 색상 고정 -->
+              <div style="color:#495057;">환자 번호</div>
+              <div class="fw-semibold" style="color:#212529;">#{{ patient.id || '-' }}</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+              <div style="color:#495057;">이름</div>
+              <div class="fw-semibold" style="color:#212529;">{{ patient.name || '-' }}</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+              <div style="color:#495057;">생년월일</div>
+              <div class="fw-semibold" style="color:#212529;">{{ formatBirth(patient.birth) }}</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2">
+              <div style="color:#495057;">연락처</div>
+              <div class="fw-semibold" style="color:#212529;">{{ patient.phone || '-' }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <section class="section">
-        <h3 class="section-title">환자 정보</h3>
-        <div class="kv">
-          <div class="k">환자 번호</div>
-          <div class="v">#{{ patient?.userNo ?? '(알 수 없음)' }}</div>
-        </div>
-        <div class="kv">
-          <div class="k">이름</div>
-          <div class="v">{{ patient?.name || '(이름 없음)' }}</div>
-        </div>
-        <div class="kv">
-          <div class="k">생년월일</div>
-          <div class="v">{{ formatBirth(patient?.birth) }}</div>
-        </div>
-        <div class="kv">
-          <div class="k">연락처</div>
-          <div class="v">{{ patient?.phoneNumber || '-' }}</div>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="flex-row">
-          <h3 class="section-title">연결된 보호자</h3>
-          <span class="muted">최대 3명</span>
+      <!-- [C] 연결된 보호자: 연결 후 전용 -->
+      <template v-if="connected">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="fw-semibold"><i class="bi bi-people me-1"></i>연결된 보호자</div>
+          <small class="text-secondary">최대 {{ subscriptionSlots }}명</small>
         </div>
 
-        <div v-if="guardians.length === 0" class="muted">아직 다른 보호자 연결이 없습니다.</div>
-
-        <ul v-else class="list">
-          <li v-for="g in guardians" :key="g.guardianId" class="item">
-            <div class="item-primary">
-              <div class="item-title">{{ g.name ?? '(이름 없음)' }}</div>
-              <div class="item-sub">
-                <span class="chip">{{ g.relation ?? '보호자' }}</span>
-                <span v-if="g.guardianId" class="code">#{{ g.guardianId }}</span>
+        <div class="row row-cols-3 g-2 mb-3">
+          <div v-for="(g, idx) in guardianSlots" :key="idx" class="col">
+            <!-- 채워진 슬롯 -->
+            <div v-if="g" class="card h-100 border">
+              <div class="card-body text-center p-2">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center bg-light mb-1"
+                  style="width:38px;height:38px">
+                  <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="small fw-semibold text-truncate" :title="g.name">{{ g.name }}</div>
+                <div class="text-secondary small text-truncate" :title="g.phone">{{ g.phone }}</div>
+                <span class="badge bg-light text-secondary mt-1">
+                  <i class="bi bi-shield-check me-1"></i>{{ g.role || '보호자' }}
+                </span>
               </div>
             </div>
-          </li>
-        </ul>
-      </section>
 
-      <p v-if="msg" class="msg ok">{{ msg }}</p>
-      <p v-if="err" class="msg err">{{ err }}</p>
+            <!-- 빈 슬롯 -->
+            <div v-else class="card h-100 border bg-light-subtle">
+              <div class="card-body text-center p-2 d-flex flex-column align-items-center justify-content-center">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-1 bg-white border"
+                  style="width:38px;height:38px">
+                  <i class="bi bi-person-plus"></i>
+                </div>
+                <div class="small text-secondary">빈 슬롯</div>
+                <button class="btn btn-sm btn-outline-secondary mt-1" @click="openInviteTip"
+                  :disabled="busy">초대</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 안내/에러 -->
+      <p v-if="msg" class="text-success small mb-1">{{ msg }}</p>
+      <div v-if="err" class="alert alert-warning small" style="white-space:pre-wrap">{{ err }}</div>
     </div>
-  </main>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-const stage = ref('form')
+/* =========================
+   0) 엔드포인트 (백엔드에 맞춤)
+========================= */
+const ENDPOINTS = {
+  me: '/api/user/me',
+  myPatient: '/api/user/my-patient',
+  patientBasic: (no) => `/api/connect/patient/${encodeURIComponent(no)}/basic`,
+  patientGuardians: (no) => `/api/connect/patient/${encodeURIComponent(no)}/guardians`,
+  createConnection: '/api/connect/connections',
+  cancelConnection: (pno, gno) =>
+    `/api/connect/connections?patientNo=${encodeURIComponent(pno)}&guardianNo=${encodeURIComponent(gno)}`,
+  resolveInvite: (code) => `/api/connect/resolve-invite?code=${encodeURIComponent(code)}`
+}
 
-// 핵심 상태
-const guardianNo = ref(null)
-const inviteCode = ref('')
-const resolvedPreview = ref(null) // { patientNo, name }
-
-// 연결 후 표시 상태
-const patient = ref(null)
-const guardians = ref([])
-
-// UX 상태
+/* =========================
+   1) 상태
+========================= */
+const router = useRouter()
+const busy = ref(false)
 const msg = ref('')
 const err = ref('')
-const busy = ref(false)
-const previewing = ref(false)
 
-// 버튼 활성화 조건
-const canSubmit = computed(() => !!guardianNo.value && !!inviteCode.value)
+const subscriptionSlots = 3
 
-// 로컬 저장 키
-const LS_KEY = 'gdc:lastConnection'
+const guardianNo = ref(null)
+const connected = ref(false)
 
-// 공통 fetch
-async function request(url, options = {}) {
-  const res = await fetch(url, { credentials: 'include', ...options })
-  const isJson = (res.headers.get('content-type') || '').includes('application/json')
-  const body = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '')
-  if (!res.ok) throw new Error(typeof body === 'string' ? body : (body.message || `${res.status}`))
-  return body
-}
+const inviteCode = ref('')
 
-// API
-async function fetchMe() {
-  return await request('/api/user/me')
-}
-
-async function apiResolveInvite(code) {
-  return await request(`/api/connect/resolve-invite?code=${encodeURIComponent(code)}`)
-}
-
-async function apiCreateConnection({ patientNo, guardianNo }) {
-  return await request('/api/connect/connections', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      patientNo: Number(patientNo),
-      guardian1No: Number(guardianNo)
-    })
-  })
-}
-
-async function apiCancelConnection({ patientNo, guardianNo }) {
-  const url = `/api/connect/connections?patientNo=${encodeURIComponent(patientNo)}&guardianNo=${encodeURIComponent(guardianNo)}`
-  const res = await fetch(url, { method: 'DELETE', credentials: 'include' })
-  const isJson = (res.headers.get('content-type') || '').includes('application/json')
-  const body = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '')
-  if (!res.ok) throw new Error(typeof body === 'string' ? body : (body.message || `해제 실패 (${res.status})`))
-  return body
-}
-
-// 로컬 저장
-function saveLastConnection(payload) {
-  localStorage.setItem(LS_KEY, JSON.stringify(payload))
-}
-function loadLastConnection() {
-  const raw = localStorage.getItem(LS_KEY)
-  if (!raw) return null
-  try { return JSON.parse(raw) } catch { return null }
-}
-function clearLastConnection() {
-  localStorage.removeItem(LS_KEY)
-}
-
-// 날짜 포맷
-function formatBirth(d) {
-  if (!d) return '-'
-  const s = String(d).split('T')[0]
-  return s
-}
-
-// 초기 진입
-onMounted(async () => {
-  try {
-    const me = await fetchMe()
-    guardianNo.value = me.userNo ?? me.userId ?? me.id
-
-    const last = loadLastConnection()
-    if (last && Number(last.guardianNo) === Number(guardianNo.value)) {
-      stage.value = 'connected'
-      patient.value = last.patient || { userNo: last.patientNo }
-      guardians.value = Array.isArray(last.guardians) ? last.guardians : []
-      msg.value = '저장된 연결을 불러왔습니다.'
-    } else {
-      stage.value = 'form'
-    }
-  } catch {
-    err.value = '내 정보 조회 실패. 다시 로그인 해주세요.'
-  }
+const patient = ref({
+  id: null, name: '', birth: '', phone: '', profilePhoto: null
 })
 
-// 초대코드 미리 확인
-async function previewInvite() {
-  msg.value = ''
-  err.value = ''
-  resolvedPreview.value = null
-  previewing.value = true
+const guardianSlots = ref([null, null, null])
+
+/* =========================
+   2) 공통 fetch
+========================= */
+async function request(url, options = {}) {
+  const res = await fetch(url, { credentials: 'include', ...options })
+  const ct = res.headers.get('content-type') || ''
+  const isJson = ct.includes('application/json')
+  const body = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '')
+  if (!res.ok) throw new Error(typeof body === 'string' ? body : body.message || `${res.status}`)
+  return body
+}
+
+/* =========================
+   3) 유틸
+========================= */
+function pickId(obj) {
+  if (obj == null) return null
+  if (typeof obj === 'number') return obj
+  if (typeof obj === 'string') return obj.trim() || null
+  if (typeof obj === 'object') {
+    const cand = obj.userNo ?? obj.patientNo ?? obj.id ?? obj.userId ?? null
+    if (typeof cand === 'number') return cand
+    if (typeof cand === 'string') return cand.trim() || null
+  }
+  return null
+}
+function formatBirth(d) {
+  if (!d) return '-'
+  return String(d).split('T')[0]
+}
+function toPhone(p) {
+  if (!p) return ''
+  const digits = String(p).replace(/\D/g, '')
+  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+  return p
+}
+function mapGuardiansToSlots(list) {
+  const mapped = (list || []).map((g) => ({
+    name: g.name ?? g.guardianName ?? '(이름 없음)',
+    phone: toPhone(g.phoneNumber ?? g.phone ?? ''),
+    role: g.relation ?? g.role ?? '보호자'
+  }))
+  const slots = [null, null, null]
+  for (let i = 0; i < Math.min(mapped.length, 3); i++) slots[i] = mapped[i]
+  return slots
+}
+
+/* =========================
+   4) API 호출
+========================= */
+async function fetchMe() {
+  const me = await request(ENDPOINTS.me)
+  guardianNo.value = pickId(me)
+  if (!guardianNo.value) throw new Error('내 guardianNo를 확인할 수 없습니다.')
+}
+
+async function fetchMyPatient() {
+  const r = await request(ENDPOINTS.myPatient).catch(() => ({}))
+  const userNo = pickId(r)
+  connected.value = !!userNo
+  return userNo || null
+}
+
+async function fetchPatientDetail(userNo) {
   try {
-    const data = await apiResolveInvite(inviteCode.value)
-    resolvedPreview.value = { patientNo: data.patientNo, name: data.name || data.patientName || '(이름 없음)' }
-    msg.value = '초대코드 확인 완료'
+    const u = await request(ENDPOINTS.patientBasic(userNo))
+    patient.value = {
+      id: pickId(u) || userNo,
+      name: u?.name ?? '',
+      birth: u?.birth ?? '',
+      phone: toPhone(u?.phoneNumber ?? ''),
+      profilePhoto: u?.profilePhoto ?? null
+    }
   } catch {
-    err.value = '유효하지 않은 초대코드입니다.'
-  } finally {
-    previewing.value = false
+    const u = await request(`/api/user/${encodeURIComponent(userNo)}`)
+    patient.value = {
+      id: pickId(u) || userNo,
+      name: u?.name ?? '',
+      birth: u?.birthDate ?? u?.birth ?? '',
+      phone: toPhone(u?.phoneNumber ?? u?.phone ?? ''),
+      profilePhoto: u?.profilePhoto ?? null
+    }
   }
 }
 
-// 실제 연결
-async function handleConnect() {
-  if (stage.value === 'connected') {
-    err.value = '이미 다른 보호자와 연결되어 있습니다. 구독해주세요.!'
+async function fetchGuardians(patientNo) {
+  if (!patientNo) {
+    guardianSlots.value = [null, null, null]
     return
   }
+  const list = await request(ENDPOINTS.patientGuardians(patientNo))
+  guardianSlots.value = mapGuardiansToSlots(list)
+}
+
+/* 초대코드로 연결 */
+async function connectWithCode() {
+  if (!inviteCode.value) return
+  busy.value = true
   msg.value = ''
   err.value = ''
-  busy.value = true
   try {
-    const info = await apiResolveInvite(inviteCode.value)
-    const pno = info.patientNo
-    const res = await apiCreateConnection({ patientNo: pno, guardianNo: guardianNo.value })
+    const info = await request(ENDPOINTS.resolveInvite(inviteCode.value))
+    const pno = pickId(info?.patientNo ?? info)
+    if (!pno) throw new Error('유효하지 않은 초대코드입니다.')
 
-    // 서버가 ok=false로 보낼 수도 있으므로 확인
-    if (res && res.ok === false) {
-      throw new Error(res.message || '연결 실패')
-    }
-
-    stage.value = 'connected'
-    patient.value = res.patient || { userNo: pno, name: info.name || info.patientName }
-    guardians.value = Array.isArray(res.guardians) ? res.guardians : []
-    msg.value = '연결이 완료되었습니다.'
-
-    saveLastConnection({
-      patientNo: pno,
-      guardianNo: guardianNo.value,
-      patient: patient.value,
-      guardians: guardians.value
+    await request(ENDPOINTS.createConnection, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientNo: pno, guardian1No: guardianNo.value })
     })
 
+    const confirmedPno = await fetchMyPatient()
+    if (!confirmedPno) throw new Error('연결 확인에 실패했습니다.')
+    await fetchPatientDetail(confirmedPno)
+    await fetchGuardians(confirmedPno)
+
     inviteCode.value = ''
-    resolvedPreview.value = null
+    msg.value = '연결이 완료되었습니다.'
   } catch (e) {
-    const t = String(e.message || e)
-    if (t.includes('이미 다른 환자에 연결된 보호자')) {
-      err.value = '이미 다른 환자에 연결된 보호자입니다. 기존 연결을 해제한 뒤 다시 시도하세요.'
-    } else if (t.includes('필수')) {
-      err.value = '연결 실패: 필수 값 누락'
-    } else {
-      err.value = '연결 처리 중 오류가 발생했습니다.'
-    }
+    err.value = '초대코드 연결에 실패했습니다.\n' + (e?.message || '')
   } finally {
     busy.value = false
   }
 }
 
-// 연결 해제
+/* 연결 해제 */
 async function disconnect() {
   msg.value = ''
   err.value = ''
+  if (!connected.value || !patient.value.id || !guardianNo.value) return
   busy.value = true
   try {
-    const pno = patient.value?.userNo || patient.value?.patientNo
-    if (!pno || !guardianNo.value) throw new Error('대상 없음')
-
-    const res = await apiCancelConnection({ patientNo: pno, guardianNo: Number(guardianNo.value) })
-
-    patient.value = res.patient || { userNo: pno }
-    guardians.value = Array.isArray(res.guardians) ? res.guardians : []
-
-    if (!guardians.value || guardians.value.length === 0) {
-      clearLastConnection()
-      stage.value = 'form'
-      msg.value = '연결이 해제되었습니다.'
-    } else {
-      saveLastConnection({
-        patientNo: pno,
-        guardianNo: guardianNo.value,
-        patient: patient.value,
-        guardians: guardians.value
-      })
-      msg.value = '연결이 해제되었습니다. (다른 보호자 연결은 유지됨)'
-    }
-  } catch {
-    err.value = '연결 해제 중 오류가 발생했습니다.'
+    await request(ENDPOINTS.cancelConnection(patient.value.id, guardianNo.value), { method: 'DELETE' })
+    connected.value = false
+    guardianSlots.value = [null, null, null]
+    patient.value = { id: null, name: '', birth: '', phone: '', profilePhoto: null }
+    msg.value = '연결이 해제되었습니다.'
+  } catch (e) {
+    err.value = '연결 해제 중 오류가 발생했습니다.\n' + (e?.message || '')
   } finally {
     busy.value = false
   }
 }
+
+/* =========================
+   5) 네비 / 기타
+========================= */
+function goBack() {
+  history.length > 1 ? router.back() : router.push('/')
+}
+function openInviteTip() {
+  msg.value = '빈 슬롯을 채우려면 다른 보호자에게 초대코드를 요청하세요.'
+}
+
+/* =========================
+   6) 초기화
+========================= */
+onMounted(async () => {
+  try {
+    await fetchMe()
+    const pno = await fetchMyPatient()
+    if (!pno) {
+      patient.value = { id: null, name: '', birth: '', phone: '', profilePhoto: null }
+      guardianSlots.value = [null, null, null]
+      msg.value = ''
+      return
+    }
+    await fetchPatientDetail(pno)
+    await fetchGuardians(pno)
+    msg.value = '저장된 연결을 불러왔습니다.'
+  } catch (e) {
+    err.value = '초기화 중 오류가 발생했습니다.\n' + (e?.message || '')
+  }
+})
 </script>
 
+<style>
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+</style>
 <style scoped>
-.gdc-wrap {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-  background: #f6f7fb;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.left {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.card {
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
-  padding: 20px;
-}
-
-.title {
-  margin: 0 0 10px;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.field {
-  margin-bottom: 12px;
-}
-
-.label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #444;
-}
-
-.input {
-  width: 100%;
-  height: 40px;
-  border: 1px solid #e4e6ef;
-  border-radius: 10px;
-  padding: 0 12px;
-  outline: none;
-}
-
-.input:focus {
-  border-color: #4f46e5;
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-}
-
-.btn {
-  height: 40px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 10px;
-  background: #4f46e5;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.btn.ghost {
-  background: #eef2ff;
-  color: #4f46e5;
-}
-
-.btn.danger {
-  background: #ef4444;
-}
-
-.btn:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-}
-
-.msg {
-  margin-top: 10px;
-  font-size: 14px;
-  white-space: pre-wrap;
-}
-
-.ok {
-  color: #16a34a;
-}
-
-.err {
-  color: #dc2626;
-}
-
-.section {
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
-.section-title {
-  font-weight: 700;
-  margin: 10px 0;
-}
-
-.kv {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px dashed #eee;
-}
-
-.k {
-  color: #666;
-}
-
-.v {
-  font-weight: 600;
-}
-
-.kv-inline {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.dot {
-  width: 4px;
-  height: 4px;
-  background: #999;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.list {
-  margin-top: 8px;
-  display: grid;
-  gap: 10px;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.item-title {
-  font-weight: 700;
-}
-
-.item-sub {
-  margin-top: 4px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.chip {
-  font-size: 12px;
-  background: #eef2ff;
-  color: #4f46e5;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.code {
-  font-size: 12px;
-  color: #666;
-}
-
-.muted {
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.flex-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.gap8 {
-  display: flex;
-  gap: 8px;
-}
+/* 필요 시 추가 */
 </style>
