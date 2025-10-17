@@ -1,134 +1,121 @@
-<!-- src/views/SignUp.vue -->
+<!-- src/views/Signup.vue -->
 <template>
-  <div class="sg-wrap position-relative mx-auto bg-white">
-    <!-- 상단 웨이브: 화면 폭 끝까지 -->
-    <svg class="deco-top" viewBox="0 0 414 160" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0,0 H414 V95 C330,145 230,84 120,102 C70,110 28,132 0,160 Z" fill="rgba(74,98,221,0.85)" />
-    </svg>
+    <div class="container-sm py-3" style="max-width:414px">
+        <!-- 상단 헤더 (동작 없음) -->
+        <header class="border-bottom pb-2 mb-3 d-flex align-items-center">
+            <button type="button" class="btn btn-link text-body p-0 me-2">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </button>
+            <h5 class="fw-semibold mb-0">회원가입</h5>
+        </header>
 
-    <!-- 좌하단 블랍 (조금 더 보이게, 크게) -->
-    <svg class="deco-blob-left" viewBox="0 0 400 320" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
-      <path d="M 0 40
-           C 65 0, 135 25, 175 60
-           C 215 95, 208 145, 206 170
-           C 203 210, 245 235, 302 260
-           C 350 282, 400 300, 400 320
-           L 0 320 Z" fill="var(--brand-blob, rgba(126,136,255,.90))" />
-    </svg>
+        <!-- 로고/브랜드 (mama.png 표시) -->
+        <section class="text-center mb-3">
+            <div class="rounded-circle bg-primary-subtle d-inline-flex align-items-center justify-content-center mb-2"
+                style="width:80px;height:80px">
+                <img :src="mamaLogo" alt="맘마미아 로고" style="width:56px;height:56px;object-fit:contain" />
+            </div>
+            <h5 class="mb-1">맘마미아</h5>
+            <div class="text-secondary small">안전하고 편리한 실버 관리 서비스</div>
+        </section>
 
-    <!-- 타이틀 -->
-    <div class="text-center">
-      <h1 class="fw-bold sg-title">회원 가입</h1>
-    </div>
+        <!-- 폼 (정적, 이벤트/검증 없음) -->
+        <form novalidate>
+            <!-- 이름 -->
+            <div class="mb-3">
+                <label class="form-label">이름</label>
+                <input type="text" class="form-control" placeholder="이름을 입력해주세요">
+            </div>
 
-    <!-- 폼 -->
-    <form class="px-4 mt-2 form-offset" @submit.prevent="onSubmit">
-      <!-- 성함 -->
-      <div class="mb-4">
-        <div class="input-group input-group-lg sg-pill sg-shadow">
-          <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="8" r="4.5" stroke="#9A9A9A" stroke-width="1.6" />
-              <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#9A9A9A" stroke-width="1.6" />
-            </svg>
-          </span>
-          <input v-model.trim="form.name" type="text" class="form-control border-0 sg-pill-end" placeholder="성함"
-            autocomplete="name" required />
-        </div>
-      </div>
+            <!-- 아이디 + 중복확인 -->
+            <div class="mb-3">
+                <label class="form-label">아이디</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="아이디를 입력해주세요">
+                    <button type="button" class="btn btn-outline-primary">중복확인</button>
+                </div>
+            </div>
 
-      <!-- 아이디 + 중복체크 칩 -->
-      <div class="mb-4 position-relative">
-        <div class="input-group input-group-lg sg-pill sg-shadow">
-          <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="8" r="4.5" stroke="#9A9A9A" stroke-width="1.6" />
-              <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#9A9A9A" stroke-width="1.6" />
-            </svg>
-          </span>
-          <input v-model.trim="form.username" type="text" class="form-control border-0 sg-pill-end" placeholder="아이디"
-            autocomplete="username" @input="onUsernameChange" required />
-        </div>
-        <button type="button" class="btn rounded-pill id-chip shadow-sm" @click="checkDuplicate">
-          중복체크
-        </button>
-      </div>
+            <!-- 비밀번호 -->
+            <div class="mb-1">
+                <label class="form-label">비밀번호</label>
+                <input type="password" class="form-control" placeholder="비밀번호를 입력해주세요">
+            </div>
+            <div class="form-text mb-3">8자 이상, 영문+숫자 조합으로 입력해주세요</div>
 
-      <!-- 비밀번호 + 보기 토글 -->
-      <div class="mb-4">
-        <div class="input-group input-group-lg sg-pill sg-shadow">
-          <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="4" y="10" width="16" height="10" rx="2" stroke="#9A9A9A" stroke-width="1.6" />
-              <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9A9A9A" stroke-width="1.6" />
-            </svg>
-          </span>
-          <input :type="showPw ? 'text' : 'password'" v-model="form.password" class="form-control border-0"
-            placeholder="비밀번호" autocomplete="new-password" required />
-          <button type="button" class="btn btn-white border-0 pe-3" @click="showPw = !showPw" aria-label="비밀번호 보기">
-            <svg v-if="showPw" width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z" stroke="#6c757d" stroke-width="1.6" />
-              <circle cx="12" cy="12" r="3" stroke="#6c757d" stroke-width="1.6" />
-            </svg>
-            <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M3 3l18 18" stroke="#6c757d" stroke-width="1.6" />
-              <path d="M2 12s4-6 10-6a9.6 9.6 0 0 1 6 2" stroke="#6c757d" stroke-width="1.6" />
-              <path d="M20.7 15.5C18.7 17.6 15.7 18 12 18 6 18 2 12 2 12a19 19 0 0 1 4-4" stroke="#6c757d"
-                stroke-width="1.6" />
-            </svg>
-          </button>
-        </div>
-      </div>
+            <!-- 생년월일 -->
+            <div class="mb-3">
+                <label class="form-label">생년월일</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+                    <input type="date" class="form-control">
+                </div>
+            </div>
 
-      <!-- 생년월일 -->
-      <div class="mb-4">
-        <div class="input-group input-group-lg sg-pill sg-shadow">
-          <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="16" rx="2" stroke="#9A9A9A" stroke-width="1.6" />
-              <path d="M3 9h18" stroke="#9A9A9A" stroke-width="1.6" />
-              <path d="M8 3v4M16 3v4" stroke="#9A9A9A" stroke-width="1.6" />
-            </svg>
-          </span>
-          <input v-model="form.birth" type="date" class="form-control border-0 sg-pill-end" placeholder="연도-월-일"
-            required />
-        </div>
-      </div>
+            <!-- 전화번호 -->
+            <div class="mb-3">
+                <label class="form-label">전화번호</label>
+                <input type="tel" class="form-control" placeholder="010-0000-0000">
+            </div>
 
-      <!-- 전화번호 -->
-      <div class="mb-3">
-        <div class="input-group input-group-lg sg-pill sg-shadow">
-          <span class="input-group-text bg-white border-0 sg-pill-start">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6 2h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a3 3 0 0 1-3 3A17 17 0 0 1 3 5a3 3 0 0 1 3-3z"
-                stroke="#9A9A9A" stroke-width="1.6" />
-            </svg>
-          </span>
-          <input v-model.trim="form.phone" type="tel" inputmode="tel" class="form-control border-0 sg-pill-end"
-            placeholder="전화번호" required />
-        </div>
-      </div>
+            <!-- 사용자 구분 -->
+            <div class="mb-3">
+                <label class="form-label">사용자 구분</label>
 
-      <!-- 보호자 체크: 전화번호 바로 아래로 붙임 -->
-      <div class="form-check guardian-row ms-1">
-        <input class="form-check-input" type="checkbox" id="isGuardian" v-model="form.isGuardian" />
-        <label class="form-check-label" for="isGuardian">보호자일 경우 체크</label>
-      </div>
+                <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2 mb-2">
+                    <input class="form-check-input me-2" type="radio" name="role" value="patient">
+                    <i class="bi bi-person"></i>
+                    <span>환자입니다</span>
+                </label>
 
-      <!-- 하단 텍스트와 버튼 -->
-      <div class="mt-4 text-center">
-        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5">회원가입</button>
-        <p class="mt-3">
-          이미 계정이 있으신가요? 
-          <router-link to="/login" class="text-decoration-none text-primary">로그인</router-link>
+                <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2">
+                    <input class="form-check-input me-2" type="radio" name="role" value="guardian">
+                    <i class="bi bi-people"></i>
+                    <span>보호자/가족입니다</span>
+                </label>
+            </div>
+
+            <!-- 약관 -->
+            <div class="mb-3">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="agreeAll">
+                    <label class="form-check-label" for="agreeAll">전체 동의</label>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="tos">
+                        <label class="form-check-label" for="tos">서비스 이용약관 (필수)</label>
+                    </div>
+                    <button type="button" class="btn btn-link p-0 text-decoration-underline">보기</button>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="privacy">
+                        <label class="form-check-label" for="privacy">개인정보 처리방침 (필수)</label>
+                    </div>
+                    <button type="button" class="btn btn-link p-0 text-decoration-underline">보기</button>
+                </div>
+            </div>
+
+            <!-- 제출 (동작 없음) -->
+            <button type="button" class="btn btn-primary w-100 rounded-3 py-3"
+                style="background:#4A62DD;border-color:#4A62DD">
+                회원가입
+            </button>
+        </form>
+
+        <!-- 하단 링크 (정적) -->
+        <p class="text-center mt-3 mb-0">
+            <span class="text-secondary">이미 계정이 있으신가요?</span>
+            <a href="#" class="text-body text-decoration-underline ms-1">로그인</a>
         </p>
-      </div>
-    </form>
-  </div>
+    </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import mamaLogo from '@/assets/images/mama.png'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
