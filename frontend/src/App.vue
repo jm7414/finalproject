@@ -2,10 +2,10 @@
   <div class="mobile-frame">
     <div class="app-layout">
       <AppHeader v-if="!shouldHideHeader" />
-      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage || isMapMainPage }">
+      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage }">
         <RouterView />
       </main>
-      <AppFooter v-if="!isGDMainPage && !isDPMainPage" />
+      <AppFooter v-if="!shouldHideFooter" />
     </div>
   </div>
 </template>
@@ -36,9 +36,24 @@ const isMapMainPage = computed(() => {
   return route.name === 'map-main'
 })
 
+// Login 페이지인지 확인하는 computed 속성
+const isLoginPage = computed(() => {
+  return route.name === 'login'
+})
+
+// SignUp 페이지인지 확인하는 computed 속성
+const isSignUpPage = computed(() => {
+  return route.name === 'SignUp'
+})
+
 // 헤더를 숨겨야 하는 페이지들 확인
 const shouldHideHeader = computed(() => {
-  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD' || route.name === 'map-main'
+  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD' || route.name === 'map-main' || route.name === 'login' || route.name === 'SignUp'
+})
+
+// 푸터를 숨겨야 하는 페이지들 확인
+const shouldHideFooter = computed(() => {
+  return route.name === 'DP' || route.name === 'GD' || route.name === 'login' || route.name === 'SignUp'
 })
 </script>
 

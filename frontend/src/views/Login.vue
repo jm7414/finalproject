@@ -1,85 +1,90 @@
 <!-- src/views/Login.vue -->
 <template>
-    <div class="container-sm py-3" style="max-width:414px">
+    <div class="login-container">
         <!-- 헤더 -->
-        <header class="border-bottom pb-2 mb-3 position-relative">
-            <button type="button" class="btn btn-link text-body p-0 position-absolute start-0 top-0">
-                <i class="bi bi-arrow-left fs-5"></i>
-            </button>
+        <header class="border-bottom position-relative" style="padding: 12px 0 8px;">
             <h5 class="text-center m-0">로그인</h5>
         </header>
 
-        <!-- 브랜드 -->
-        <section class="text-center mb-4">
-            <div class="d-inline-flex align-items-center justify-content-center rounded-4 mb-2"
-                style="width:72px;height:72px;background:#E7EAFD">
-                <img :src="mamaLogo" alt="맘마미아 로고" style="width:44px;height:44px;object-fit:contain" />
-            </div>
-            <h4 class="fw-semibold mb-1">맘마미아</h4>
-            <div class="text-secondary">기술로 연결하고, 마음으로 돌보다</div>
-        </section>
-
-        <!-- 폼 (정적) -->
-        <form novalidate>
-            <!-- 아이디 -->
-            <div class="mb-3">
-                <label class="form-label">아이디</label>
-                <div class="input-group">
-                    <input type="text" class="form-control rounded-start-3 border-end-0" placeholder="아이디를 입력하세요"
-                        style="height:48px">
-                    <span class="input-group-text bg-white rounded-end-3 border-start-0" style="height:48px">
-                        <i class="bi bi-person"></i>
-                    </span>
+        <!-- 메인 컨텐츠 영역 -->
+        <div class="login-content">
+            <!-- 브랜드 -->
+            <section class="text-center" style="margin-bottom: 16px;">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-4"
+                    style="width:64px;height:64px;background:#E7EAFD;margin-bottom:8px;">
+                    <img :src="mamaLogo" alt="맘마미아 로고" style="width:40px;height:40px;object-fit:contain" />
                 </div>
-            </div>
+                <h4 class="fw-semibold" style="font-size: 1.3rem;margin-bottom:4px;">맘마미아</h4>
+                <div class="text-secondary" style="font-size: 0.85rem;">기술로 연결하고, 마음으로 돌보다</div>
+            </section>
 
-            <!-- 비밀번호 -->
-            <div class="mb-4">
-                <label class="form-label">비밀번호</label>
-                <div class="input-group">
-                    <input type="password" class="form-control rounded-start-3 border-end-0" placeholder="비밀번호를 입력하세요"
-                        style="height:48px">
-                    <span class="input-group-text bg-white rounded-end-3 border-start-0" style="height:48px">
-                        <i class="bi bi-eye-slash"></i>
-                    </span>
+            <!-- 폼 -->
+            <form @submit.prevent="onLogin">
+                <!-- 아이디 -->
+                <div style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 4px;">아이디</label>
+                    <div class="input-group">
+                        <input v-model.trim="form.username" type="text" class="form-control rounded-start-3 border-end-0" 
+                            placeholder="아이디를 입력하세요" autocomplete="username" required style="height:44px">
+                        <span class="input-group-text bg-white rounded-end-3 border-start-0" style="height:44px">
+                            <i class="bi bi-person"></i>
+                        </span>
+                    </div>
                 </div>
-            </div>
 
-            <!-- 로그인 버튼 -->
-            <button type="button" class="btn w-100 rounded-3 py-3 mb-3"
-                style="background:#6F74E9;border-color:#6F74E9;color:#fff">
-                로그인
-            </button>
+                <!-- 비밀번호 -->
+                <div style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 4px;">비밀번호</label>
+                    <div class="input-group">
+                        <input :type="showPw ? 'text' : 'password'" v-model="form.password" 
+                            class="form-control rounded-start-3 border-end-0" placeholder="비밀번호를 입력하세요"
+                            autocomplete="current-password" required style="height:44px">
+                        <button type="button" class="input-group-text bg-white rounded-end-3 border-start-0" 
+                            style="height:44px" @click="showPw = !showPw" aria-label="비밀번호 보기">
+                            <i :class="showPw ? 'bi bi-eye' : 'bi bi-eye-slash'"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <!-- 찾기 링크 -->
-            <div class="d-flex justify-content-center align-items-center text-secondary mb-3">
-                <a href="#" class="text-secondary text-decoration-none">아이디 찾기</a>
-                <span class="mx-3" style="color:#d0d0d0">|</span>
-                <a href="#" class="text-secondary text-decoration-none">비밀번호 찾기</a>
-            </div>
+                <!-- 로그인 버튼 -->
+                <button type="submit" class="btn w-100 rounded-3"
+                    style="background:#6F74E9;border-color:#6F74E9;color:#fff;padding:10px;margin-bottom:10px;">
+                    로그인
+                </button>
 
-            <!-- 또는 -->
-            <div class="d-flex align-items-center text-secondary mb-3">
-                <div class="flex-grow-1 border-top"></div>
-                <span class="px-3">또는</span>
-                <div class="flex-grow-1 border-top"></div>
-            </div>
+                <!-- 찾기 링크 -->
+                <div class="d-flex justify-content-center align-items-center text-secondary" style="margin-bottom:10px;">
+                    <a href="#" class="text-secondary text-decoration-none" style="font-size: 0.8rem;">아이디 찾기</a>
+                    <span class="mx-2" style="color:#d0d0d0">|</span>
+                    <a href="#" class="text-secondary text-decoration-none" style="font-size: 0.8rem;">비밀번호 찾기</a>
+                </div>
 
-            <!-- 회원가입 -->
-            <p class="text-center mb-3">아직 회원이 아니신가요?</p>
-            <button type="button" class="btn btn-outline-secondary w-100 rounded-3 py-3">회원가입</button>
-        </form>
+                <!-- 또는 -->
+                <div class="d-flex align-items-center" style="margin-bottom:10px;">
+                    <div class="flex-grow-1 border-top"></div>
+                    <span class="px-2" style="font-size: 0.8rem; color: #000;">또는</span>
+                    <div class="flex-grow-1 border-top"></div>
+                </div>
+
+                <!-- 회원가입 -->
+                <p class="text-center" style="font-size: 0.85rem;margin-bottom:8px;">아직 회원이 아니신가요?</p>
+                <router-link to="/SignUp" class="btn btn-outline-secondary w-100 rounded-3 text-decoration-none"
+                    style="padding:10px;">
+                    회원가입
+                </router-link>
+            </form>
+        </div>
 
         <!-- 푸터 -->
-        <div class="text-center mt-4">
-            <div class="small text-secondary d-flex justify-content-center align-items-center">
-                <a href="#" class="text-secondary text-decoration-none">이용약관</a>
-                <span class="mx-3" style="color:#d0d0d0">|</span>
-                <a href="#" class="text-secondary text-decoration-none">개인정보처리방침</a>
-                <span class="mx-3" style="color:#d0d0d0">|</span>
-                <a href="#" class="text-secondary text-decoration-none">고객센터</a>
+        <div class="login-footer">
+            <div class="small d-flex justify-content-center align-items-center">
+                <a href="#" class="text-decoration-none" style="font-size: 0.75rem; color: #000;">이용약관</a>
+                <span class="mx-2" style="color:#d0d0d0">|</span>
+                <a href="#" class="text-decoration-none" style="font-size: 0.75rem; color: #000;">개인정보처리방침</a>
+                <span class="mx-2" style="color:#d0d0d0">|</span>
+                <a href="#" class="text-decoration-none" style="font-size: 0.75rem; color: #000;">고객센터</a>
             </div>
-            <div class="small text-muted mt-2">© 2025 Mamamia. All rights reserved.</div>
+            <div class="small text-muted" style="font-size: 0.7rem; margin-top: 0.25rem;">© 2025 Mamamia. All rights reserved.</div>
         </div>
     </div>
 </template>
@@ -88,9 +93,6 @@
 import mamaLogo from '@/assets/images/mama.png'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import topWave from '@/assets/images/qwe.svg'
-import leftBlob from '@/assets/images/asd.svg'
-import rightBlob from '@/assets/images/zxc.svg'
 
 const router = useRouter()
 const form = reactive({ username: '', password: '' })
@@ -144,147 +146,28 @@ async function onLogin() {
   }
 }
 
-function goToForgotPassword() {
-  alert('준비 중인 기능입니다.') // 비밀번호 찾기 기능은 아직 구현하지 않음
-}
 </script>
 
 <style scoped>
-/* 기존 스타일 유지 */
-.lg-wrap {
-  width: 414px;
-  height: 896px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.deco-top-img {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 414px;
-  height: var(--topWaveH, 180px);
-  object-fit: cover;
-  object-position: var(--topWaveX, 0px) top;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .12));
-  z-index: 0;
-  pointer-events: none;
-}
-
-.lg-content {
-  position: relative;
-  z-index: 1;
-}
-
-.lg-title {
-  margin-top: calc(var(--topWaveH, 180px) + 36px);
-  margin-bottom: 8px;
-  font-size: 48px;
-  line-height: 1.1;
-  color: #262626;
-}
-
-.lg-sub {
-  color: #6b7280;
-}
-
-.lg-pill {
-  border-radius: 40px;
-  overflow: hidden;
-}
-
-.lg-pill-start {
-  border-radius: 40px 0 0 40px !important;
-}
-
-.lg-pill-end {
-  border-radius: 0 40px 40px 0 !important;
-}
-
-.lg-shadow {
-  box-shadow: 0 16px 28px rgba(0, 0, 0, .08);
-}
-
-.input-group-text,
-.form-control {
-  background: #fff;
-}
-
-/* CTA 행 */
-.cta-row {
+.login-container {
+  width: 100%;
+  height: 812px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.login-content {
+  flex: 1;
+  padding: 0 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  gap: 16px;
-  padding: 0 8px;
 }
 
-.cta-title {
-  font-weight: 700;
-  font-size: 32px;
-  color: #262626;
-  line-height: 1;
-}
-
-/* 로그인 버튼 */
-.lg-go {
-  height: var(--go-h);
-  min-width: var(--go-minw);
-  padding: 0 12px;
-  border-radius: var(--go-radius);
-  border: 0;
-  background: linear-gradient(135deg, #5A6BEE 0%, #7E88FF 100%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 12px 24px rgba(90, 107, 238, .22), 0 2px 6px rgba(0, 0, 0, .06);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.lg-go:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(90, 107, 238, .26), 0 3px 8px rgba(0, 0, 0, .08);
-}
-
-.lg-go:active {
-  transform: translateY(0);
-}
-
-/* 아이콘 크기 */
-.lg-go-icon {
-  width: var(--go-icon);
-  height: var(--go-icon);
-  display: block;
-}
-
-/* ===== 하단 블랍들: 좌/우 화면 끝에 맞춤 ===== */
-.deco-blob-left-img {
-  position: absolute;
-  left: var(--decoEdgeGap, 0);
-  /* ← 화면 왼쪽 끝 */
-  bottom: 24px;
-  width: var(--leftBlobW, 230px);
-  /* 카드 여백 계산 제거 */
-  height: auto;
-  object-fit: contain;
-  object-position: left bottom;
-  border-radius: 12px;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .09));
-  z-index: 0;
-  pointer-events: none;
-}
-
-.deco-blob-right-img {
-  position: absolute;
-  right: var(--decoEdgeGap, 0);
-  /* → 화면 오른쪽 끝 */
-  bottom: 24px;
-  width: var(--rightBlobW, 48px);
-  height: auto;
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .08));
-  z-index: 0;
-  pointer-events: none;
+.login-footer {
+  padding: 8px 20px 12px;
+  text-align: center;
 }
 </style>
