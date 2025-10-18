@@ -100,7 +100,7 @@
 </template>
 
 <script setup>
-import "./heartCare.css";
+import "./HeartCare.css";
 import { ref, onMounted } from 'vue';
 
 const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891';
