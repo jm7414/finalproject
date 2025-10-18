@@ -28,7 +28,7 @@ import BasicSafeZoneRadiusView from '@/views/BasicSafeZoneRadiusView.vue'
 import MapMain from '@/views/MapMain.vue'
 import Pr from '@/views/Pr.vue'
 import Game from '@/views/Game.vue'
-
+zz
 import Loan from '@/views/Loan.vue'
 import Insurance from '@/views/Insurance.vue'
 import HeartCare from '@/views/heartCare.vue'
