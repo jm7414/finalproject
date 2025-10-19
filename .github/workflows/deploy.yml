@@ -31,13 +31,20 @@ jobs:
 
           # 백엔드 빌드 및 재시작
           cd backend
+          chmod +x mvnw
           ./mvnw clean package -DskipTests
           sudo systemctl restart finalproject
 
           # 프론트엔드 빌드 및 배포
           cd ../frontend
-          npm install
+          # Node 버전 맞추기 (nvm 사용)
+          source ~/.nvm/nvm.sh
+          nvm install 18
+          nvm use 18
+
+          npm ci
           npm run build
+
           sudo rm -rf /var/www/finalproject/dist/*
           sudo cp -r dist/* /var/www/finalproject/dist/
           sudo chown -R www-data:www-data /var/www/finalproject/dist
