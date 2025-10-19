@@ -22,12 +22,15 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
+        timeout: 600
+        script_stop: false
         script: |
           # 프로젝트 디렉토리로 이동
           cd ~/finalproject
 
-          # 최신 코드 가져오기
-          git pull origin main
+          # 최신 코드 강제 동기화
+          git fetch --all
+          git reset --hard origin/main
 
           # 백엔드 빌드 및 재시작
           cd backend
