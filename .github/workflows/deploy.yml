@@ -7,9 +7,17 @@ on:
 
 jobs:
   build:
+    name: Build on GitHub Runner
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Build Backend
         working-directory: backend
@@ -20,7 +28,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Build Frontend
+      - name: Install & Build Frontend
         working-directory: frontend
         run: |
           npm ci
@@ -35,6 +43,7 @@ jobs:
             frontend/dist/**
 
   deploy:
+    name: Deploy to EC2
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -44,11 +53,6 @@ jobs:
           name: build-artifacts
           path: artifacts/build-artifacts
 
-      - name: "Debug: show downloaded artifacts structure"
-        run: |
-          echo "Contents of artifacts directory:"
-          ls -R artifacts
-
       - name: Copy build output to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
@@ -57,12 +61,12 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: |
-            artifacts/build-artifacts/dist/**
-            artifacts/build-artifacts/*.war
-          strip_components: 2
+            artifacts/build-artifacts/frontend/dist/**
+            artifacts/build-artifacts/backend/target/*.war
+          strip_components: 3
           target: ~/finalproject/deploy_tmp/
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -71,10 +75,15 @@ jobs:
           port: 22
           script: |
             cd ~/finalproject
+
+            # Replace WAR and restart backend
             sudo cp deploy_tmp/*.war backend/target/
+            sudo systemctl restart finalproject
+
+            # Replace frontend dist and restart Nginx
             sudo rm -rf /var/www/finalproject/dist/*
             sudo cp -r deploy_tmp/dist/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
-            sudo systemctl restart finalproject
             sudo systemctl reload nginx
+
             echo "Deployment completed successfully!"
