@@ -196,8 +196,8 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
     },        
     {
-      path: '/GD_shcedule',
-      name: 'GD_shcedule',
+      path: '/DP_schedule',
+      name: 'DP_schcedule',
       component: DP_schedule,
       meta: { requiresAuth: true, roles: [2] } // 환자 전용 (roleNo: 2)
     },        
