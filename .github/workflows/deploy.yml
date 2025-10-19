@@ -48,6 +48,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22 
         script: |
           # 프로젝트 디렉토리로 이동
           cd ~/finalproject
