@@ -36,7 +36,7 @@ jobs:
           npm run build
 
       - name: Archive Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: finalproject-artifacts
           path: |
@@ -65,19 +65,17 @@ jobs:
           script: |
             cd ~/finalproject
 
-            # 최신 코드 강제 동기화 (backend만 .war를 교체)
+            # 최신 코드 강제 동기화
             git fetch --all
             git reset --hard origin/main
 
             # 백엔드 배포
-            sudo cp /home/runner/work/finalproject/finalproject/artifacts/backend/target/*.war \
-              /home/ubuntu/finalproject/backend/target/
+            sudo cp artifacts/backend/target/*.war backend/target/
             sudo systemctl restart finalproject
 
             # 프론트엔드 배포
             sudo rm -rf /var/www/finalproject/dist/*
-            sudo cp -r /home/runner/work/finalproject/finalproject/artifacts/frontend/dist/* \
-              /var/www/finalproject/dist/
+            sudo cp -r artifacts/frontend/dist/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
 
             # Nginx 재로드
