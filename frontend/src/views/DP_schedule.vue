@@ -6,13 +6,9 @@
 <!-- 아직 안되는 부분 : 
     1. 음성인식으로 출발, 도착 지점 받아오는 부분
 -->
-
-
 <template>
     <div class="main-container">
         <div class="main-body">
-            <button @click="requestRoute"> 경로저장 테스트 처음 한번만 눌르고 버퍼테스트 누름됨다 </button>
-            <button @click="bufferTest"> 버퍼 테스트 (지금은 구로구청 - 짜장중학교 뒷골목 해놨음) </button>
             <div class="main-div">
                 <div class="map">
                     <div ref="mapContainer" class="sub-div">
@@ -147,7 +143,7 @@
                         <div class="button-div-15" @click="scheduleRegistration()">
                             <span class="span-schedule-save">일정 저장</span>
                         </div>
-                        <div class="button-div-14" @click="requestRoute">
+                        <div class="button-div-14" @click="cancle">
                             <span class="span-cancel">취소</span>
                         </div>
                     </div>
@@ -155,7 +151,10 @@
             </div>
         </div>
     </div>
-
+            
+                <button class="btn btn-primary" @click="requestRoute"> 경로저장 테스트</button>
+                <button class="btn btn-info" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
+            
 </template>
 
 <script setup>
@@ -452,7 +451,7 @@ function save() {
     }
 
     if (selectedAmpm1.value === '오후' && selectedAmpm2.value === '오전') {
-        alert('노노')
+        alert('오전과 오후가 바뀐걸까요?')
         return
     }
     const startHour = Number(selectedTime1.value.replace('시', ''))
@@ -622,6 +621,8 @@ function voiceSearchEnd() {
     /* z-index 값이 있다면 제거하거나 낮은 값으로 변경 */
     z-index: auto;
     /* 또는 1 정도로 */
+    right:4px;
+    top:-45px;
 }
 
 .bd {
