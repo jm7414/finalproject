@@ -53,17 +53,28 @@ jobs:
           name: build-artifacts
           path: artifacts/build-artifacts
 
-      - name: Copy build output to EC2
+      # 프론트엔드 dist 전송
+      - name: Copy Frontend Dist to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          source: |
-            artifacts/build-artifacts/frontend/dist/**
-            artifacts/build-artifacts/backend/target/*.war
+          source: artifacts/build-artifacts/frontend/dist/**
           strip_components: 3
+          target: ~/finalproject/deploy_tmp/dist/
+
+      # 백엔드 WAR 전송
+      - name: Copy Backend WAR to EC2
+        uses: appleboy/scp-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: artifacts/build-artifacts/backend/target/*.war
+          strip_components: 4
           target: ~/finalproject/deploy_tmp/
 
       - name: Deploy to EC2 via SSH
@@ -76,14 +87,16 @@ jobs:
           script: |
             cd ~/finalproject
 
-            # Replace WAR and restart backend
+            # 백엔드 WAR 배포
             sudo cp deploy_tmp/*.war backend/target/
             sudo systemctl restart finalproject
 
-            # Replace frontend dist and restart Nginx
+            # 프론트엔드 dist 배포
             sudo rm -rf /var/www/finalproject/dist/*
             sudo cp -r deploy_tmp/dist/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
+
+            # Nginx 재시작
             sudo systemctl reload nginx
 
             echo "Deployment completed successfully!"
