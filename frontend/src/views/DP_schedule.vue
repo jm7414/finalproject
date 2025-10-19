@@ -199,7 +199,8 @@ async function requestRoute() {
             searchOption: '0',
         }
 
-        const resp = await fetch('http://localhost:8080/api/route/pedestrian', {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+        const resp = await fetch(`${API_BASE_URL}/api/route/pedestrian`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -585,7 +586,8 @@ async function scheduleRegistration(userNo, startLoc, endLoc, date, startTime, e
         routeCoordinates: JSON.parse(routeCoordinates),
         bufferCoordinates: JSON.parse(bufferCoordinates)
     }
-    const response = await fetch('http://localhost:8080/api/schedule/create', {
+    const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080'
+    const response = await fetch(`${API_BASE_URL}/api/schedule/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
