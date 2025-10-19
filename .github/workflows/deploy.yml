@@ -53,7 +53,6 @@ jobs:
           name: build-artifacts
           path: artifacts/build-artifacts
 
-      # 프론트엔드 dist 전송
       - name: Copy Frontend Dist to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
@@ -62,10 +61,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: artifacts/build-artifacts/frontend/dist/**
-          strip_components: 3
-          target: ~/finalproject/deploy_tmp/dist/
+          strip_components: 4
+          target: ~/finalproject/deploy_tmp/
 
-      # 백엔드 WAR 전송
       - name: Copy Backend WAR to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
@@ -87,16 +85,16 @@ jobs:
           script: |
             cd ~/finalproject
 
-            # 백엔드 WAR 배포
+            # Deploy backend WAR
             sudo cp deploy_tmp/*.war backend/target/
             sudo systemctl restart finalproject
 
-            # 프론트엔드 dist 배포
+            # Deploy frontend dist
             sudo rm -rf /var/www/finalproject/dist/*
-            sudo cp -r deploy_tmp/dist/* /var/www/finalproject/dist/
+            sudo cp -r deploy_tmp/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
 
-            # Nginx 재시작
+            # Reload Nginx
             sudo systemctl reload nginx
 
             echo "Deployment completed successfully!"
