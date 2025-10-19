@@ -100,5 +100,3 @@ jobs:
             sudo cp -r deploy_tmp/dist/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
             sudo systemctl reload nginx
-
-            echo "Deployment completed successfully!"
