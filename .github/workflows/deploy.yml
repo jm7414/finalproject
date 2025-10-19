@@ -22,7 +22,7 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
-        timeout: 600
+        timeout: 600s           # 시간 단위를 포함해야 함
         script_stop: false
         script: |
           # 프로젝트 디렉토리로 이동
