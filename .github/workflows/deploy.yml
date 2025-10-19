@@ -3,79 +3,87 @@ name: CI/CD Pipeline for Final Project
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build:
-    name: Build on GitHub Runner
     runs-on: ubuntu-latest
+    outputs:
+      war-path: backend/target/dementia-care-0.0.1-SNAPSHOT.war
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+      - uses: actions/checkout@v4
 
       - name: Build Backend
         working-directory: backend
         run: mvn clean package -DskipTests
 
-      - name: Set up Node.js
+      - name: Set up Node.js 20
         uses: actions/setup-node@v3
         with:
-          node-version: '20'          # 18에서 20으로 변경
+          node-version: '20'
 
-      - name: Install & Build Frontend
+      - name: Build Frontend
         working-directory: frontend
         run: |
           npm ci
           npm run build
 
-      - name: Archive Build Artifacts
+      - name: Upload Frontend Dist as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: finalproject-artifacts
-          path: |
-            backend/target/*.war
-            frontend/dist/
+          name: frontend-dist
+          path: frontend/dist/
+
+      - name: Upload Backend WAR as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-war
+          path: backend/target/*.war
 
   deploy:
-    name: Deploy to EC2
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4      # v3에서 v4로 통일
+      - name: Download frontend-dist
+        uses: actions/download-artifact@v4
         with:
-          name: finalproject-artifacts
-          path: artifacts
+          name: frontend-dist
+          path: artifacts/frontend
 
-      - name: Deploy to EC2 via SSH
+      - name: Download backend-war
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-war
+          path: artifacts/backend
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: |
+            artifacts/frontend/dist/*
+            artifacts/backend/*.war
+          target: ~/finalproject/deploy_tmp/
+
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          timeout: 10m
           script: |
             cd ~/finalproject
 
-            # 최신 코드 강제 동기화
-            git fetch --all
-            git reset --hard origin/main
-
-            # 백엔드 배포
-            sudo cp artifacts/backend/target/*.war backend/target/
+            # WAR 교체
+            sudo cp deploy_tmp/*.war backend/target/
             sudo systemctl restart finalproject
 
-            # 프론트엔드 배포
+            # Dist 교체
             sudo rm -rf /var/www/finalproject/dist/*
-            sudo cp -r artifacts/frontend/dist/* /var/www/finalproject/dist/
+            sudo cp -r deploy_tmp/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
 
             # Nginx 재로드
