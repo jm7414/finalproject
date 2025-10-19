@@ -7,17 +7,11 @@ on:
 
 jobs:
   build:
-    name: Build on GitHub Runner
     runs-on: ubuntu-latest
+    outputs:
+      war-path: backend/target/dementia-care-0.0.1-SNAPSHOT.war
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+      - uses: actions/checkout@v4
 
       - name: Build Backend
         working-directory: backend
@@ -28,49 +22,36 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install & Build Frontend
+      - name: Build Frontend
         working-directory: frontend
         run: |
           npm ci
           npm run build
 
-      - name: Upload Frontend Dist Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-dist
-          path: frontend/dist/
-
-      - name: Upload Backend WAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-war
-          path: backend/target/*.war
+          name: build-artifacts
+          path: |
+            backend/target/*.war
+            frontend/dist/**
 
   deploy:
-    name: Deploy to EC2
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download Frontend Artifact
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: frontend-dist
-          path: artifacts/frontend
+          name: build-artifacts
+          path: artifacts
 
-      - name: Download Backend Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-war
-          path: artifacts/backend
-
-      - name: "Debug: List Artifacts"
+      - name: Debug: list artifacts
         run: |
-          echo "=== Frontend files ==="
-          ls -R artifacts/frontend
-          echo "=== Backend files ==="
-          ls -R artifacts/backend
+          echo "ARTIFACTS DIR:"
+          ls -R artifacts
 
-      - name: Copy Files to EC2 via SCP
+      - name: Copy build output to EC2
         uses: appleboy/scp-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -78,11 +59,12 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: |
-            artifacts/frontend/dist/**
+            artifacts/frontend/dist
             artifacts/backend/*.war
+          strip_components: 2
           target: ~/finalproject/deploy_tmp/
 
-      - name: Deploy to EC2 via SSH
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -91,15 +73,9 @@ jobs:
           port: 22
           script: |
             cd ~/finalproject
-
-            # Replace WAR and restart backend
             sudo cp deploy_tmp/*.war backend/target/
-            sudo systemctl restart finalproject
-
-            # Replace frontend dist and restart Nginx
             sudo rm -rf /var/www/finalproject/dist/*
             sudo cp -r deploy_tmp/dist/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
+            sudo systemctl restart finalproject
             sudo systemctl reload nginx
-
-            echo "Deployment completed successfully!"
