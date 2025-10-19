@@ -1,11 +1,11 @@
 <template>
   <div class="mobile-frame">
     <div class="app-layout">
-      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isGDMainPage || isMapMainPage || isLoginPage || isSignUpPage)" />
-      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage }">
+      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage)" />
+      <main class="main-content" :class="{ 'no-padding':  isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage }">
         <RouterView />
       </main>
-      <AppFooter v-if="!(isDPMainPage || isGDMainPage || isLoginPage || isSignUpPage)" />
+      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage)" />
     </div>
   </div>
 </template>
@@ -24,11 +24,6 @@ const route = useRoute()
 // AddSchedule 페이지인지 확인하는 computed 속성
 const isAddSchedulePage = computed(() => {
   return route.name === 'add-schedule'
-})
-
-// GD_main 페이지인지 확인하는 computed 속성
-const isGDMainPage = computed(() => {
-  return route.name === 'GD'
 })
 
 // DP_main 페이지인지 확인하는 computed 속성

@@ -171,7 +171,8 @@ async function requestRoute() {
       searchOption: '0',
     }
 
-    const resp = await fetch('http://localhost:8080/api/route/pedestrian', {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const resp = await fetch(`${API_BASE_URL}/api/route/pedestrian`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
