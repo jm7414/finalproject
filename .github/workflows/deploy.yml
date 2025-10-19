@@ -2,7 +2,8 @@ name: CI/CD Pipeline for Final Project
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
@@ -62,7 +63,7 @@ jobs:
           name: backend-war
           path: artifacts/backend
 
-      - name: Debug: List Artifacts
+      - name: "Debug: List Artifacts"
         run: |
           echo "=== Frontend files ==="
           ls -R artifacts/frontend
@@ -100,3 +101,5 @@ jobs:
             sudo cp -r deploy_tmp/dist/* /var/www/finalproject/dist/
             sudo chown -R www-data:www-data /var/www/finalproject/dist
             sudo systemctl reload nginx
+
+            echo "Deployment completed successfully!"
