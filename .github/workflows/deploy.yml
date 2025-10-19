@@ -1,4 +1,4 @@
-ame: CI/CD Pipeline for Final Project
+name: CI/CD Pipeline for Final Project
 
 on:
   push:
