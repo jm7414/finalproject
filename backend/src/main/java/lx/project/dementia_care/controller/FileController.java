@@ -45,7 +45,7 @@ public class FileController {
             
             Path filePath = uploadPath.resolve(uniqueFileName);
             file.transferTo(filePath.toFile());
-
+            
             String webPath = "/images/" + uniqueFileName;
 
             System.out.println("'src' 폴더에 저장 성공: " + filePath.toString());
