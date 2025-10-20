@@ -1,6 +1,6 @@
 <!-- src/views/GD_Connect.vue -->
 <template>
-  <div class="container-sm px-3">
+  <div class="container-sm px-3 gd-connect-page">
 
     <!-- 연결 전: 완전 중앙 & 스크롤 없음 -->
     <div
@@ -304,3 +304,17 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+/* 이 화면 글자색을 컴포넌트 수준에서 강제 */
+.gd-connect-page { color:#171717; }
+.gd-connect-page .text-secondary { color:#6c757d !important; }
+.gd-connect-page a { color: inherit !important; }
+
+/* 플레이스홀더를 좀더 연한 회색으로 */
+.gd-connect-page .form-control::placeholder {
+  color: #BFC6CF !important;  /* 원하는 만큼 더 연하게 조절해도 OK */
+  opacity: 1;                  /* Safari/Firefox 대비 */
+}
+
+</style>
