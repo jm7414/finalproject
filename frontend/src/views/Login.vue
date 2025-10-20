@@ -125,17 +125,17 @@ async function onLogin() {
       
       if (userResponse.ok) {
         const userData = await userResponse.json()
-        // 역할에 따라 다른 페이지로 이동
-        if (userData.roleNo === 1 || userData.roleNo === 3) {
-          // 보호자(1) 또는 구독자(3) -> MapMain 페이지
-          router.push('/map-main')
-        } else if (userData.roleNo === 2) {
-          // 환자(2) -> DP 페이지
-          router.push('/DP')
-        } else {
-          // 기본값 (예외 처리)
-          router.push('/login')
-        }
+         // 역할에 따라 다른 페이지로 이동
+         if (userData.roleNo === 1) {
+           // 보호자(1) -> GD 페이지
+           router.push('/GD')
+         } else if (userData.roleNo === 2 || userData.roleNo === 3) {
+           // 환자(2) 또는 구독자(3) -> DP 페이지
+           router.push('/DP')
+         } else {
+           // 기본값 (예외 처리)
+           router.push('/login')
+         }
       }
     } else {
       alert('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.')
