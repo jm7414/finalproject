@@ -40,9 +40,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
                 // 회원가입, 로그인 페이지 접근 허용
-                .requestMatchers("/login", "/logout", "/register", "/SignUp").permitAll()
+                .requestMatchers("/api/login", "/api/logout", "/api/register", "/SignUp").permitAll()
                 .requestMatchers("/api/user/check-duplicate").permitAll()
                 .requestMatchers("/api/route/**").permitAll()
+                .requestMatchers("/api/upload/**").authenticated()
                 .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**").permitAll()
                 //.requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
                 // 보호자/구독자 전용 페이지 및 API
@@ -65,7 +66,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(login -> login
                         .loginPage("https://localhost:5173/login") // Vue의 로그인 페이지로 리다이렉트
-                        .loginProcessingUrl("/login")
+                        .loginProcessingUrl("/api/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
                         .successHandler(authenticationSuccessHandler())
@@ -74,7 +75,7 @@ public class SecurityConfig {
                         })
                         .permitAll())
                 .logout(logout -> logout
-                        .logoutUrl("/logout")
+                        .logoutUrl("/api/logout")
                         .logoutSuccessHandler((request, response, authentication) -> {
                             response.setStatus(200);
                         })

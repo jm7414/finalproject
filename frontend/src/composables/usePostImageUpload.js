@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8080'; 
-
 export const usePostImageUpload = () => {
 
     const upload = async (selectedFile) => {
@@ -14,7 +12,7 @@ export const usePostImageUpload = () => {
                 formData.append("file", selectedFile);
             
                 const response = await axios.post(
-                    `${BASE_URL}/api/upload/post-image`,
+                    `/api/upload/post-image`,
                     formData, 
                     { withCredentials: true }
                 );

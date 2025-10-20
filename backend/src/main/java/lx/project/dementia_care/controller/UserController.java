@@ -45,7 +45,7 @@ public class UserController {
         }
     }
 
-    @PostMapping("/register")
+    @PostMapping("/api/register")
     public ResponseEntity<?> register(@RequestBody UserVO user) {
         try {
             // 중복 체크
