@@ -1,53 +1,83 @@
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal-content info-page container px-3 py-3">
-    <!-- 제목 -->
-    <h2 class="text-center fw-semibold title mb-4">내정보</h2>
-
-    <!-- 프로필 + 인사말 -->
-    <section class="d-flex align-items-center gap-3 mb-3">
-      <div class="avatar-ring rounded-circle">
-        <img :src="u('/figma/Rectangle107.png')" alt="아바타" class="avatar-img rounded-circle" />
-      </div>
-      <p class="greeting mb-0">아무개님 안녕하세요</p>
-    </section>
-
-    <hr class="divider" />
-
-    <!-- 카드 2x2 레이아웃 -->
-    <section class="cards-grid">
-      <!-- 일정 추가하기 (큰 카드) -->
-      <article class="card-tile tile-big bg-blue2">
-        <h3 class="tile-title">일정 추가하기</h3>
-        <div class="icon-wrap">
-          <img :src="u('/figma/Calendar.svg')" alt="일정 추가" class="tile-icon big" />
-          <img :src="u('/figma/Plus.svg')" alt="plus" class="tile-plus" />
+  <div class="my-info-page bg-light">
+    <!-- Header Section -->
+    <div class="header-section bg-white border-bottom">
+      <div class="container py-3">
+        <div class="d-flex align-items-center">
+          <div class="user-avatar me-3">
+            <i class="bi bi-person-circle text-secondary"></i>
+          </div>
+          <div>
+            <h5 class="mb-1">내 정보</h5>
+            <p class="text-secondary mb-0 small">{{ userName }}님 안녕하세요</p>
+          </div>
         </div>
-      </article>
+      </div>
+      <div class="divider mx-3"></div>
+    </div>
 
-      <!-- 내 정보 수정하기 -->
-      <article class="card-tile bg-blue3">
-        <h3 class="tile-title">내 정보 수정하기</h3>
-        <img :src="u('/figma/Edit.svg')" alt="내 정보 수정" class="tile-icon" />
-      </article>
+    <!-- Menu Grid Section -->
+    <div class="menu-section py-4">
+      <div class="container">
+        <div class="row g-3">
+          <!-- 일정 추가하기 - Large Card (Left) -->
+          <div class="col-7">
+            <div class="menu-card menu-card-large h-100" @click="addSchedule">
+              <div class="card-content">
+                <div class="icon-wrapper mb-3">
+                  <i class="bi bi-calendar-plus-fill"></i>
+                </div>
+                <h5 class="card-title">일정 추가<br/>하기</h5>
+              </div>
+            </div>
+          </div>
 
-      <!-- QR 코드 보기 -->
-      <article class="card-tile bg-blue1">
-        <h3 class="tile-title">QR코드 보기</h3>
-        <img :src="u('/figma/qr.svg')" alt="QR 코드" class="tile-icon" />
-      </article>
-    </section>
+          <!-- Right Column -->
+          <div class="col-5">
+            <div class="row g-3">
+              <!-- 내 정보 수정 -->
+              <div class="col-12">
+                <div class="menu-card menu-card-small" @click="editProfile">
+                  <div class="card-content">
+                    <div class="icon-wrapper mb-2">
+                      <i class="bi bi-person-fill-gear"></i>
+                    </div>
+                    <p class="card-title small mb-0">내 정보<br/>수정</p>
+                  </div>
+                </div>
+              </div>
 
-    <!-- 로그아웃 버튼 -->
-    <section class="logout-section mt-4">
-      <button @click="handleLogout" class="btn-logout w-100">
-        로그아웃
-      </button>
-    </section>
+              <!-- 보호자 연결코드 -->
+              <div class="col-12">
+                <div class="menu-card menu-card-small" @click="showGuardianCode">
+                  <div class="card-content">
+                    <div class="icon-wrapper mb-2">
+                      <i class="bi bi-link-45deg"></i>
+                    </div>
+                    <p class="card-title small mb-0">보호자<br/>연결코드</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 로그아웃 버튼 -->
+        <div class="logout-section mt-3">
+          <button class="btn btn-logout w-100" @click="logout">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-box-arrow-right me-3"></i>
+                <span>로그아웃</span>
+              </div>
+              <i class="bi bi-chevron-right"></i>
+            </div>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { logout } from '@/utils/auth'
@@ -71,189 +101,129 @@ const handleLogout = async () => {
   }
 }
 </script>
-
 <style scoped>
-/* ===== Modal Styles ===== */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+.my-info-page {
+  height: 672px;
+  max-width: 480px;
+  margin: 0 auto;
+  font-size: 0.9rem;
+  transform: scale(0.9);
+  transform-origin: top center;
+  overflow: hidden;
 }
 
-.modal-content {
-  background: white;
-  border-radius: 20px;
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  animation: modal-fade-in 0.3s ease-out;
+.header-section {
+  background-color: white;
+  border-bottom: 1px solid #E5E5E5;
 }
 
-@keyframes modal-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ===== Layout ===== */
-@media (min-width: 576px) {
-  .info-page.container {
-    max-width: 480px;
-  }
-}
-
-.title {
-  font-size: 1.7rem;
-  line-height: 1.25;
+.user-avatar i {
+  font-size: 58px;
 }
 
 .divider {
-  border-top: 1px solid #D7D9E1;
-  opacity: .9;
-  margin: 12px 0;
+  height: 1px;
+  background-color: #E5E5E5;
 }
 
-/* ===== Profile ===== */
-.avatar-ring {
-  width: 92px;
-  height: 92px;
-  padding: 3px;
-  border: 5px solid #FDC300;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.menu-section {
+  padding-top: 1.8rem;
+  padding-bottom: 1.8rem;
 }
 
-.avatar-img {
-  width: 84px;
-  height: 84px;
-  object-fit: cover;
-  border-radius: 50%;
+.menu-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #E5E5E5;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
 }
 
-.greeting {
-  font-size: 1.18rem;
-  color: #111;
+.menu-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* ===== Cards (CSS Grid) ===== */
-.cards-grid {
-  --gap: 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
+.menu-card-large {
+  min-height: 370px;
 }
 
-/* 공통 카드 */
-.card-tile {
-  position: relative;
-  border-radius: 14px;
-  padding: 16px;
-  min-height: 170px;
-  color: #FFECCC;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
+.menu-card-small {
+  min-height: 178px;
+}
+
+.menu-card .card-content {
+  padding: 1.35rem;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-}
-
-.tile-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-/* 아이콘 */
-.icon-wrap {
-  position: relative;
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
-.tile-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  width: 85px;
-  height: 85px;
-  object-fit: contain;
+.menu-card-large .card-content {
+  padding: 2.7rem 1.8rem;
 }
 
-.tile-icon.big {
-  width: 150px;
-  height: 150px;
+.icon-wrapper {
+  color: rgba(74, 98, 221, 0.85);
 }
 
-/* 캘린더 plus 아이콘 */
-.tile-plus {
-  position: absolute;
-  top: 20%;
-  right: 10%;
-  width: 32px;
-  height: 32px;
+.menu-card-large .icon-wrapper i {
+  font-size: 54px;
 }
 
-/* 큰 카드 */
-.tile-big {
-  grid-row: span 2;
-  min-height: 360px;
+.menu-card-small .icon-wrapper i {
+  font-size: 43px;
 }
 
-.bg-blue1 {
-  background: #AAC1FD;
+.card-title {
+  color: #171717;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
-.bg-blue2 {
-  background: #7D88FF;
+.menu-card-large .card-title {
+  font-size: 1.35rem;
 }
 
-.bg-blue3 {
-  background: #4A62DD;
+.menu-card-small .card-title {
+  font-size: 1.13rem;
 }
 
-/* ===== Logout Button ===== */
 .logout-section {
-  margin-top: 1.5rem;
-  padding: 0 0.5rem;
+  margin-top: 1.35rem;
 }
 
 .btn-logout {
-  background: #FF6B6B;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 14px 20px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  background-color: rgba(170, 194, 254, 0.91);
+  border: 1px solid #E5E5E5;
+  border-radius: 16px;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 1.35rem;
+  color: #737373;
+  font-size: 1.13rem;
+  transition: all 0.2s;
 }
 
 .btn-logout:hover {
-  background: #FF5252;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  background-color: rgba(170, 194, 254, 1);
+  transform: translateY(-1px);
+  box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
 }
 
-.btn-logout:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.2);
+.btn-logout i {
+  font-size: 1.35rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1.35rem;
+    padding-right: 1.35rem;
+  }
 }
 </style>

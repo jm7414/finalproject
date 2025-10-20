@@ -19,6 +19,7 @@ import Report from '@/views/Report.vue'
 import GdMypageView from '@/views/GdMypageView.vue'
 import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
+import Payment from '@/views/Payment.vue'
 import Calender from '@/views/Calender.vue'
 import AddSchedule from '@/views/AddSchedule.vue'
 import DP_Connect from '@/views/DP_Connect.vue'
@@ -32,6 +33,13 @@ import Game from '@/views/Game.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+  {
+    path: '/payment',
+    name: 'payment',
+    component: Payment,
+    meta: { requiresAuth: true, roles: [1, 3] }
+  },
+
     {
       path: '/',
       name: 'home',
