@@ -9,6 +9,10 @@ backend/src/main/resources/*.p12
 # (선택) 루트 CA 개인키 금지
 certs/rootCA-key.pem
 
+### 업로드된 파일 ###
+# 사용자가 업로드한 이미지 파일 무시
+backend/src/main/resources/uploads/
+
 ### 기존 .gitignore 내용 유지 ###
 ### Java ###
 *.class

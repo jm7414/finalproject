@@ -231,7 +231,7 @@ async function onSubmit() {
     console.log('회원가입 요청 데이터:', requestData)
     console.log('form.isGuardian 값:', form.isGuardian, '타입:', typeof form.isGuardian)
 
-    const response = await fetch(`/register`, {
+    const response = await fetch(`/api/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
