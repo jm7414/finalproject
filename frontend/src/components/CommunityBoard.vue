@@ -134,8 +134,8 @@ async function fetchPosts() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get('http://localhost:8080/api/posts', {
-      withCredentials: true
+    const response = await axios.get(`/api/posts`, {
+      withCredentials: true // 여기에 입장권(쿠키)을 챙겨달라는 옵션 추가. 없으면 프론트 - 백 연결 불가. 시큐리티와 인덱스에서 롤 설정으로 막혀있는듯
     });
     posts.value = response.data;
   } catch (err) {

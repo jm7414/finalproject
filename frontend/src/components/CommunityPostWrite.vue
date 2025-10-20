@@ -33,8 +33,7 @@ onMounted(() => {
 
 async function fetchPostForEdit() {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.get(`${API_BASE_URL}/api/posts/${postId.value}`, {
+    const response = await axios.get(`/api/posts/${postId.value}`, {
       withCredentials: true
     });
     title.value = response.data.title;
@@ -100,13 +99,15 @@ async function submitPost() {
     };
 
     if (isEditMode.value) {
-      await axios.put(`http://localhost:8080/api/posts/${postId.value}`, postData, {
+      // 2. 글 수정할 때
+      await axios.put(`/api/posts/${postId.value}`, postData, {
         withCredentials: true
       });
       alert('게시글이 성공적으로 수정되었습니다!');
       router.push(`/post/${postId.value}`);
     } else {
-      const response = await axios.post('http://localhost:8080/api/posts', postData, {
+      // 3. 새 글 작성할 때
+      const response = await axios.post(`/api/posts`, postData, {
         withCredentials: true
       });
       // createPost API는 이제 생성된 postId를 숫자(Integer)로 반환합니다.

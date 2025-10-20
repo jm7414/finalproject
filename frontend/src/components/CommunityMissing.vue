@@ -16,8 +16,7 @@ async function fetchMissingPeople() {
   loading.value = true;
   error.value = null;
   try {
-    // API 엔드포인트는 실제 서버 주소에 맞게 조정해야 합니다.
-    const response = await axios.get('http://localhost:8080/api/missing-posts');
+    const response = await axios.get(`/api/missing-posts`);
     missingPeople.value = response.data;
   } catch (err) {
     console.error("실종자 목록을 불러오는 데 실패했습니다:", err);

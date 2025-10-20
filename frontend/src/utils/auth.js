@@ -1,13 +1,12 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 /**
  * 현재 사용자가 인증되어 있는지 확인
  */
 export async function isAuthenticated() {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/user/me`, {
+    const response = await axios.get(`/api/user/me`, {
       withCredentials: true
     })
     return response.status === 200
@@ -21,7 +20,7 @@ export async function isAuthenticated() {
  */
 export async function getCurrentUser() {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/user/me`, {
+    const response = await axios.get(`/api/user/me`, {
       withCredentials: true
     })
     return response.data
@@ -51,7 +50,7 @@ export function getDefaultRouteByRole(roleNo) {
  */
 export async function logout() {
   try {
-    await axios.post(`${API_BASE_URL}/logout`, {}, {
+    await axios.post(`/api/logout`, {}, {
       withCredentials: true
     })
     return true
