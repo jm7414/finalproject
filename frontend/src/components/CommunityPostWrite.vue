@@ -26,7 +26,8 @@ onMounted(() => {
 // 수정할 게시물 데이터를 불러오는 함수
 async function fetchPostForEdit() {
   try {
-    const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`, {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const response = await axios.get(`${API_BASE_URL}/api/posts/${postId.value}`, {
       withCredentials: true
     });
     title.value = response.data.title;
@@ -52,15 +53,17 @@ async function submitPost() {
     };
 
     if (isEditMode.value) {
-      // 2. 글 수정할 때 
-      await axios.put(`http://localhost:8080/api/posts/${postId.value}`, postData, {
+      // 2. 글 수정할 때
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+      await axios.put(`${API_BASE_URL}/api/posts/${postId.value}`, postData, {
         withCredentials: true
       });
       alert('게시글이 성공적으로 수정되었습니다!');
       router.push(`/post/${postId.value}`);
     } else {
       // 3. 새 글 작성할 때
-      const response = await axios.post('http://localhost:8080/api/posts', postData, {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+      const response = await axios.post(`${API_BASE_URL}/api/posts`, postData, {
         withCredentials: true
       });
       const newPostId = response.data;

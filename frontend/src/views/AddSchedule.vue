@@ -351,9 +351,10 @@ async function saveSchedule() {
     }
 
     // 수정 모드인지 추가 모드인지에 따라 API 호출
-    const url = isEditMode.value 
-      ? `http://localhost:8080/api/schedule/update/${editScheduleNo.value}`
-      : 'http://localhost:8080/api/schedule/create'
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const url = isEditMode.value
+      ? `${API_BASE_URL}/api/schedule/update/${editScheduleNo.value}`
+      : `${API_BASE_URL}/api/schedule/create`
     
     const successMessage = isEditMode.value ? '일정이 성공적으로 수정되었습니다.' : '일정이 성공적으로 저장되었습니다.'
 
@@ -423,7 +424,8 @@ function formatTimeForDisplay(timeString) {
 async function loadScheduleForEdit(scheduleNo) {
   try {
     // 일정 기본 정보 가져오기
-    const scheduleResponse = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}`, {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const scheduleResponse = await fetch(`${API_BASE_URL}/api/schedule/${scheduleNo}`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -442,7 +444,7 @@ async function loadScheduleForEdit(scheduleNo) {
     scheduleForm.value.endTime = formatTimeForDisplay(schedule.endTime)
     
     // 위치 정보 가져오기
-    const locationsResponse = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}/locations`, {
+    const locationsResponse = await fetch(`${API_BASE_URL}/api/schedule/${scheduleNo}/locations`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -461,7 +463,7 @@ async function loadScheduleForEdit(scheduleNo) {
     }
     
     // 경로 정보 가져오기
-    const routeResponse = await fetch(`http://localhost:8080/api/schedule/${scheduleNo}/route`, {
+    const routeResponse = await fetch(`${API_BASE_URL}/api/schedule/${scheduleNo}/route`, {
       method: 'GET',
       credentials: 'include'
     })

@@ -1,3 +1,6 @@
+<!-- HeartCare와 145번째줄만 바뀌었습니다 
+ => // HeartCare랑 여기만 바꼈어요!
+ -->
 <template>
   <!-- 메인 컨테이너 -->
   <div class="main-container">
@@ -139,7 +142,7 @@ onMounted(() => {
         level: 6
       });
       infowindow = new window.kakao.maps.InfoWindow({ zIndex: 1 });
-      content.value = '상담소'
+      content.value = '병원'  // HeartCare랑 여기만 바꼈어요!
       searchNearby(content.value)
       content.value = ''
     });
