@@ -78,7 +78,7 @@
                     <div class="div-5">
                         <span class="span">언제 가세요?</span>
                         <div class="flex-row-bf">
-                            <div class="today" :class="{ active: selectedDay == 'today' }" @click="checkDay('today')">
+                            <div class="DP_today" :class="{ active: selectedDay == 'today' }" @click="checkDay('today')">
                                 <span class="span-6" :class="{ active: selectedDay == 'today' }">오늘</span>
                             </div>
 
@@ -629,7 +629,7 @@ function voiceSearchEnd() {
     border: dashed 2px violet;
 }
 
-.today.active,
+.DP_today.active,
 .tomorrow.active,
 .day-after-tomorrow.active,
 .other-date.active {
