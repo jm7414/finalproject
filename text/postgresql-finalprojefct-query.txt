@@ -242,7 +242,8 @@ CREATE TABLE record (
     content JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE
+    CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE,
+	CONSTRAINT uq_record_user_date UNIQUE (user_id, record_date)
 );
 
 -- === 샘플 데이터 삽입 ===
