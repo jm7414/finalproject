@@ -64,7 +64,7 @@
 
         <!-- 로그아웃 버튼 -->
         <div class="logout-section mt-3">
-          <button class="btn btn-logout w-100" @click="logout">
+          <button class="btn btn-logout w-100" @click="handleLogout">
             <div class="d-flex align-items-center justify-content-between">
               <div class="d-flex align-items-center">
                 <i class="bi bi-box-arrow-right me-3"></i>
@@ -78,15 +78,39 @@
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { logout } from '@/utils/auth'
 
-const u = (p: string) => encodeURI(p)
+const userName = ref('아무개')
 const router = useRouter()
 
 const emit = defineEmits(['close'])
 
+// 일정 추가하기
+const addSchedule = () => {
+  console.log('일정 추가하기')
+  // 일정 추가 로직 또는 라우팅
+  // router.push('/schedule/add')
+}
+
+// 내 정보 수정
+const editProfile = () => {
+  console.log('내 정보 수정')
+  // 프로필 수정 페이지로 이동
+  // router.push('/profile/edit')
+}
+
+// 보호자 연결코드
+const showGuardianCode = () => {
+  console.log('보호자 연결코드')
+  // 보호자 연결코드 페이지로 이동
+  // router.push('/guardian/code')
+}
+
+// 로그아웃 처리 (1번 코드 로직)
 const handleLogout = async () => {
   const success = await logout()
   
@@ -101,6 +125,7 @@ const handleLogout = async () => {
   }
 }
 </script>
+
 <style scoped>
 .my-info-page {
   height: 672px;
@@ -110,6 +135,7 @@ const handleLogout = async () => {
   transform: scale(0.9);
   transform-origin: top center;
   overflow: hidden;
+  color: #171717 !important; /* 전체 텍스트 검정색 강제 */
 }
 
 .header-section {
@@ -117,8 +143,17 @@ const handleLogout = async () => {
   border-bottom: 1px solid #E5E5E5;
 }
 
+.header-section h5 {
+  color: #171717 !important; /* 제목 검정색 */
+}
+
+.header-section p {
+  color: #6c757d !important; /* 부제목 회색 */
+}
+
 .user-avatar i {
   font-size: 58px;
+  color: #6c757d !important; /* 아이콘 회색 */
 }
 
 .divider {
@@ -169,7 +204,7 @@ const handleLogout = async () => {
 }
 
 .icon-wrapper {
-  color: rgba(74, 98, 221, 0.85);
+  color: rgba(74, 98, 221, 0.85) !important; /* 아이콘 파란색 유지 */
 }
 
 .menu-card-large .icon-wrapper i {
@@ -181,7 +216,7 @@ const handleLogout = async () => {
 }
 
 .card-title {
-  color: #171717;
+  color: #171717 !important; /* 카드 제목 검정색 강제 */
   font-weight: 400;
   line-height: 1.6;
 }
@@ -204,7 +239,7 @@ const handleLogout = async () => {
   border-radius: 16px;
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
   padding: 1.35rem;
-  color: #737373;
+  color: #737373 !important; /* 로그아웃 버튼 텍스트 회색 */
   font-size: 1.13rem;
   transition: all 0.2s;
 }
@@ -215,8 +250,13 @@ const handleLogout = async () => {
   box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
 }
 
+.btn-logout span {
+  color: #737373 !important; /* 로그아웃 텍스트 회색 */
+}
+
 .btn-logout i {
   font-size: 1.35rem;
+  color: #737373 !important; /* 로그아웃 아이콘 회색 */
 }
 
 /* Responsive adjustments */
@@ -227,3 +267,4 @@ const handleLogout = async () => {
   }
 }
 </style>
+

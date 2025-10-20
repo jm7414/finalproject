@@ -17,6 +17,7 @@ import TotalSupport from '@/views/TotalSupport.vue'
 import MoneySupport from '@/views/MoneySupport.vue'
 import Record from '@/views/Record.vue'
 import Report from '@/views/Report.vue'
+import DpMypageView from '@/views/DpMypageView.vue'
 import GdMypageView from '@/views/GdMypageView.vue'
 import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
@@ -35,16 +36,10 @@ import Insurance from '@/views/Insurance.vue'
 import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-  {
-    path: '/payment',
-    name: 'payment',
-    component: Payment,
-    meta: { requiresAuth: true, roles: [1, 3] }
-  },
-
     {
       path: '/',
       name: 'home',
@@ -94,7 +89,7 @@ const router = createRouter({
       component: Login,
       meta: { requiresGuest: true }
     },
-
+    
     // 병욱 게시판 시작
     {
       path: '/CommunityView',
@@ -143,7 +138,7 @@ const router = createRouter({
       component: CommunityPostWrite // PostWrite 재활용 가능
     },          
     // 병욱 게시판 끝
-
+    
     {
       path: '/geo-fencing',
       name: 'geo-fencing',
@@ -215,7 +210,13 @@ const router = createRouter({
       component: DP_schedule,
       meta: { requiresAuth: true, roles: [2] } // 환자 전용 (roleNo: 2)
     },
-
+    // 지현
+    {
+      path: '/dpmypage',
+      name: 'dpmypage',
+      component: DpMypageView,
+      meta: { requiresAuth: true, roles: [2] } // 환자 전용 (roleNo: 2)
+    },    
     // 주형 종합지원, 지원금안내페이지 수정 끝
     {
       path: '/gdmypage',
@@ -233,6 +234,12 @@ const router = createRouter({
       path: '/plusplan',
       name: 'plusplan',
       component: Plusplan,
+      meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
+    },
+    {
+      path: '/payment',
+      name: 'payment',
+      component: Payment,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
     },
     {
@@ -278,11 +285,13 @@ router.beforeEach(async (to, from, next) => {
   
   const isLoggedIn = await isAuthenticated()
 
+
   // 로그인이 필요한 페이지에 접근하는 경우
   if (to.meta.requiresAuth && !isLoggedIn) {
     next('/login')
     return
   }
+
 
   // 역할 기반 접근 제어
   if (to.meta.requiresAuth && to.meta.roles && isLoggedIn) {
@@ -309,7 +318,6 @@ router.beforeEach(async (to, from, next) => {
     next('/login')
     return
   }
-
   next()
 })
 
