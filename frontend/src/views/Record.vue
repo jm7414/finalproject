@@ -86,21 +86,24 @@
         <!-- 하단 네비게이션 -->
         <div class="d-flex gap-2 mt-3 mb-4">
             <button class="btn btn-outline-secondary flex-grow-1" :disabled="step === 0" @click="prevStep">이전</button>
-            <button class="btn flex-grow-1 text-white" :style="canProceed ? primaryStyle : disabledStyle"
-                :disabled="!canProceed" @click="nextOrSubmit">
+            <button class="btn flex-grow-1 text-white" :style="primaryStyle" @click="nextOrSubmit">
                 {{ step === tabs.length - 1 ? '완료' : '다음' }}
             </button>
         </div>
+
     </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'   // ✅ 추가
+
+const router = useRouter()               // ✅ 추가
 
 /* 팀 컬러 */
 const team = '#657AE2'
 const primaryStyle = { background: team, borderColor: team }
-const disabledStyle = { background: team, borderColor: team, opacity: .5 }
+const disabledStyle = { background: team, borderColor: team, opacity: .5 } // (현재 미사용)
 
 /* 탭 */
 const tabs = [
@@ -170,14 +173,8 @@ const stepCompleted = computed(() => {
 })
 const progressPct = computed(() => (stepCompleted.value / 5) * 100)
 
-const canProceed = computed(() => {
-    const arr = currentQuestions.value
-    return arr.some(q => {
-        if (q.type === 'text') return !!q.value
-        if (q.type === 'multi') return Array.isArray(q.value) && q.value.length > 0
-        return q.value !== null
-    })
-})
+/* 항상 ‘다음’ 가능하도록 */
+const canProceed = computed(() => true)
 
 /* helpers */
 function setAnswer(q, v) { q.value = v }
@@ -185,6 +182,37 @@ function toggleMulti(q, opt) {
     if (!Array.isArray(q.value)) q.value = []
     const i = q.value.indexOf(opt)
     if (i >= 0) q.value.splice(i, 1); else q.value.push(opt)
+}
+
+/* 기존 content를 폼에 반영 */
+function applyContentToForm(savedContent) {
+    for (const t of tabs) {
+        const section = savedContent?.[t.key]
+        if (!section) continue
+        for (const q of form[t.key]) {
+            const val = section[q.id]
+            if (val !== undefined) {
+                if (q.type === 'multi') {
+                    q.value = Array.isArray(val) ? [...val] : []
+                } else if (q.type === 'scale5') {
+                    q.value = typeof val === 'number' ? val : null
+                } else if (q.type === 'yesno') {
+                    q.value = (val === true || val === false) ? val : null
+                } else {
+                    q.value = val ?? null
+                }
+            }
+            if (q.type === 'yesno' && q.detail !== undefined) {
+                const detailKey = `${q.id}Detail`
+                const dval = section[detailKey]
+                if (q.value === true) {
+                    q.detail = (dval ?? '')
+                } else {
+                    q.detail = ''
+                }
+            }
+        }
+    }
 }
 
 /* 네비게이션 */
@@ -222,8 +250,30 @@ async function submit() {
         })
         if (!res.ok) throw new Error(`저장 실패(${res.status})`)
         alert('오늘의 기록이 저장되었습니다.')
+
+        // ✅ 저장 성공 시 홈으로 이동
+        router.push('/')   // 홈 경로가 다르면 이 부분 경로만 바꿔줘
     } catch (e) {
         alert('[저장 오류] ' + (e?.message || e))
     }
 }
+
+/* 오늘 기록이 있으면 자동 프리필 */
+onMounted(async () => {
+    try {
+        const me = await fetch('/api/user/my-patient', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+        const userId = me?.userNo ?? me?.id ?? me
+        if (!userId) return
+        const today = new Date().toISOString().slice(0, 10)
+
+        const res = await fetch(`/api/record/user/${userId}?date=${today}`, { credentials: 'include' })
+        if (!res.ok) return
+        const data = await res.json()
+        const saved = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
+        if (saved) applyContentToForm(saved)
+    } catch (e) {
+        console.warn('기존 기록 사전 로드 실패:', e)
+    }
+})
 </script>
