@@ -46,6 +46,21 @@ export default defineConfig({
           });
         },
       },
+      '/register': {
+        target: 'https://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/login': {
+        target: 'https://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/logout': {
+        target: 'https://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })
