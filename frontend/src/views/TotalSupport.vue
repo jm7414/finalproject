@@ -42,25 +42,25 @@
         <MoneyMarker class="func-icon" />
         <div class="func-title">지원금</div>
         <div class="func-desc">정부 및 지자체 지원금 안내</div>
-        <button class="func-link" @click="goToMoneySupport">확인하기 →</button>
+        <button class="func-link" @click="goBenefit">확인하기 →</button>
       </div>
       <div class="func-card">
         <BohumMarker class="func-icon" />
         <div class="func-title">보험금</div>
         <div class="func-desc">의료보험 및 생활보험 혜택</div>
-        <button class="func-link">확인하기 →</button>
+        <button class="func-link" @click="goLoan">확인하기 →</button>
       </div>
       <div class="func-card">
         <SangDamMarker class="func-icon" />
         <div class="func-title">상담소</div>
         <div class="func-desc">전문가 상담 및 심리 지원</div>
-        <button class="func-link">상담받기 →</button>
+        <button class="func-link" @click="goHeartCare">상담받기 →</button>
       </div>
       <div class="func-card">
         <HospitalMarker class="func-icon" />
         <div class="func-title">병원위치</div>
         <div class="func-desc">근처 병원 및 의료시설 찾기</div>
-        <button class="func-link">찾아보기 →</button>
+        <button class="func-link" @click="goHospitalCare">찾아보기 →</button>
       </div>
     </div>
   </div>
@@ -76,8 +76,17 @@ import ProfileMarker from '@/components/ProfileMarker.vue'
 
 const router = useRouter()
 
-function goToMoneySupport() {
-  router.push('/money-support')
+function goBenefit() {
+  router.push('/benefit')
+}
+function goLoan() {
+  router.push('/loan')
+}
+function goHeartCare() {
+  router.push('/heartCare')
+}
+function goHospitalCare() {
+  router.push('/hospitalCare')
 }
 </script>
 
