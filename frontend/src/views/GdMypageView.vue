@@ -32,7 +32,7 @@
               </div>
             </div>
 
-            <!-- 환자 초대코드 연결 -->
+            <!-- 환자 초대코드 연결 (수정됨) -->
             <div class="div-a" @click="goToGdc" style="cursor: pointer;">
               <div class="div-b">
                 <div class="div-c">
@@ -40,7 +40,7 @@
                 </div>
                 <span class="patient-invite-code-connection">환자 초대코드 연결</span>
               </div>
-              <div class="i">
+              <div class="icon-gdc">
                 <i class="bi bi-chevron-right chevron-bi"></i>
               </div>
             </div>
@@ -240,14 +240,19 @@ input, select, textarea, button { outline: 0; }
   color:#171717; font-size:16px; line-height:24px; white-space:nowrap;
 }
 
-/* 오른쪽 꺾쇠: 오른쪽 고정 + 수직 중앙정렬 (고정 너비/높이) */
-.icon-7, .i, .i-18, .i-21, .i-2a {
-  position: absolute; right: 16px; top: 50%;
-  transform: translateY(-50%);
-  width: 16px; height: 16px;
-  display:flex; align-items:center; justify-content:center;
+/* 오른쪽 꺾쇠: 오른쪽 고정 + 수직 중앙정렬 (수정됨 - icon-gdc 추가) */
+.icon-7, .icon-gdc, .i-18, .i-21, .i-2a {
+  position: absolute !important;
+  right: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 16px !important;
+  height: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
-.chevron-bi { font-size: 16px; color:#6c757d; }
+.chevron-bi { font-size: 16px !important; color:#6c757d !important; }
 
 /* =========== 로그아웃 스타일 추가 =========== */
 .div-logout {
