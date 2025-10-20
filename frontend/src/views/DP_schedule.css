@@ -354,7 +354,7 @@ button {
   margin: 5px 0 0 1px;
   z-index: 31;
 }
-.today {
+.DP_today {
   flex-shrink: 0;
   position: relative;
   width: 155.5px;

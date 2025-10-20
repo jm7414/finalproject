@@ -93,7 +93,7 @@ const emit = defineEmits(['close'])
 const addSchedule = () => {
   console.log('일정 추가하기')
   // 일정 추가 로직 또는 라우팅
-  // router.push('/schedule/add')
+  router.push('DP_schedule')
 }
 
 // 내 정보 수정
