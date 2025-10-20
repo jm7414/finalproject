@@ -3,6 +3,11 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
+// 뒤로가기
+function goBack() {
+  router.go(-1)
+}
+
 // 프로필 아이콘 클릭 시 마이페이지로 이동
 const goToMyPage = () => {
   router.push('/gdmypage');
@@ -11,8 +16,8 @@ const goToMyPage = () => {
 
 <template>
   <header class="app-header">
-    <div class="icon-wrapper">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path></svg>
+    <div class="icon-wrapper" @click="goBack">
+      <i class="icon bi bi-arrow-left"></i>
     </div>
 
     <div class="app-title">치매케어</div>

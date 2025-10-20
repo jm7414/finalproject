@@ -36,9 +36,9 @@ export async function getCurrentUser() {
 export function getDefaultRouteByRole(roleNo) {
   switch (roleNo) {
     case 1: // 보호자
-    case 3: // 구독자
-      return '/map-main'
+      return '/GD'
     case 2: // 환자
+    case 3: // 구독자
       return '/DP'
     default:
       return '/login'
