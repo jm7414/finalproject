@@ -1,326 +1,229 @@
+<!-- src/views/DailyRecord.vue -->
 <template>
-    <div class="container">
-        <div class="title-section">
-            <h2>{{ currentDate }}</h2>
-            <h2>{{ userName }}홍길동님의 오늘의 기록</h2>
-            <!-- 이 부분에서 userName을 사용자의 아이디로 가져올 생각이라서 일단 반응형으로 넣어놓고 나중에 홍길동은 지우면 됩니다-->
-            <!-- 저기서 보호자로 로그인했을 때 환자의 아이디를 가져오는 방법도 있는데 일단은 userName으로 남겨둘게요-->
+    <div class="container-sm" style="max-width:414px;">
+
+        <!-- 진행률 -->
+        <div class="px-1">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small text-dark">진행률</span>
+                <span class="small text-dark">{{ stepCompleted }}/5 완료</span>
+            </div>
+            <div class="progress" style="height:6px;">
+                <div class="progress-bar" role="progressbar"
+                    :style="{ width: progressPct + '%', backgroundColor: team }"></div>
+            </div>
         </div>
 
-        <div class="survey-wrapper">
-            <!-- 식사 섹션 -->
-            <div class="survey-section">
-                <h3 class="section-title">식사</h3>
-                <div v-for="(question, index) in mealSurvey" :key="index" class="question-item">
-                    <div class="question-text">
-                        <MealMarker />
-                        {{ question.question }}
-                    </div>
-                    <div class="answer-buttons">
-                        <button v-for="(ans, ansIdx) in question.ans" :key="ansIdx"
-                            :class="['answer-btn', { selected: isSelected('meal', index, ansIdx) }]"
-                            @click="answerQuestion('meal', index, ansIdx)">
-                            {{ ans }}
-                        </button>
-                    </div>
+        <!-- 탭(스텝 라벨) -->
+        <div class="d-flex gap-3 px-2 mt-3 border-bottom">
+            <button v-for="(tab, i) in tabs" :key="tab.key" class="btn btn-link px-0 pb-2 text-body fw-normal"
+                :class="{ 'fw-semibold': step === i }" @click="goStep(i)" style="text-decoration:none;">
+                <div class="d-flex flex-column align-items-center">
+                    <span>{{ tab.label }}</span>
+                    <span v-if="step === i" class="w-100"
+                        :style="{ height: '2px', backgroundColor: team, marginTop: '8px' }"></span>
                 </div>
-            </div>
+            </button>
+        </div>
 
-            <!-- 약 복용 섹션 -->
-            <div class="survey-section">
-                <h3 class="section-title">약 복용</h3>
-                <div v-for="(question, index) in mediSurvey" :key="index" class="question-item">
-                    <div class="question-text">
-                        <MediMarker />
-                        {{ question.question }}
-                    </div>
-                    <div class="answer-buttons">
-                        <button v-for="(ans, ansIdx) in question.ans" :key="ansIdx"
-                            :class="['answer-btn', { selected: isSelected('medi', index, ansIdx) }]"
-                            @click="answerQuestion('medi', index, ansIdx)">
-                            {{ ans }}
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <!-- 질문 카드 -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body">
+                <template v-for="q in currentQuestions" :key="q.id">
+                    <div class="mb-2 fw-semibold" style="line-height:1.35">{{ q.text }}</div>
 
-            <!-- 행동 섹션 -->
-            <div class="survey-section">
-                <h3 class="section-title">행동</h3>
-                <div v-for="(question, index) in acitivySurvey" :key="index" class="question-item">
-                    <div class="question-text">
-                        <ActivityMarker />
-                        {{ question.question }}
+                    <!-- 예/아니오 -->
+                    <div v-if="q.type === 'yesno'" class="mb-2 d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm rounded-pill"
+                            :class="q.value === true ? 'btn-primary' : 'btn-outline-secondary'"
+                            :style="q.value === true ? primaryStyle : null" @click="setAnswer(q, true)">예</button>
+                        <button class="btn btn-sm rounded-pill"
+                            :class="q.value === false ? 'btn-primary' : 'btn-outline-secondary'"
+                            :style="q.value === false ? primaryStyle : null" @click="setAnswer(q, false)">아니오</button>
                     </div>
-                    <div class="answer-buttons">
-                        <button v-for="(ans, ansIdx) in question.ans" :key="ansIdx"
-                            :class="['answer-btn', { selected: isSelected('activity', index, ansIdx) }]"
-                            @click="answerQuestion('activity', index, ansIdx)">
-                            {{ ans }}
-                        </button>
-                    </div>
-                </div>
-            </div>
 
-            <!-- 감정 섹션 -->
-            <div class="survey-section">
-                <h3 class="section-title">감정</h3>
-                <div v-for="(question, index) in feelSurvey" :key="index" class="question-item">
-                    <div class="question-text">
-                        <HappyMarker />
-                        {{ question.question }}
+                    <!-- 예/아니오 + 상세입력 -->
+                    <div v-if="q.type === 'yesno' && q.value === true && q.detail !== undefined" class="mb-3">
+                        <input v-if="q.detailKind === 'number'" class="form-control" type="number" step="0.1"
+                            :placeholder="q.detailPlaceholder || '입력'" v-model.trim="q.detail" />
+                        <input v-else-if="q.detailKind === 'textline'" class="form-control" type="text"
+                            :placeholder="q.detailPlaceholder || '입력'" v-model.trim="q.detail" />
+                        <textarea v-else class="form-control" rows="3"
+                            :placeholder="q.detailPlaceholder || '상세 내용을 입력하세요'" v-model.trim="q.detail"></textarea>
                     </div>
-                    <div class="answer-buttons">
-                        <button v-for="(ans, ansIdx) in question.ans" :key="ansIdx"
-                            :class="['answer-btn', { selected: isSelected('feel', index, ansIdx) }]"
-                            @click="answerQuestion('feel', index, ansIdx)">
-                            {{ ans }}
-                        </button>
-                    </div>
-                </div>
-            </div>
 
-            <!-- 특이사항 섹션 -->
-            <div class="survey-section">
-                <h3 class="section-title">특이사항</h3>
-                <div v-for="(question, index) in specialSurvey" :key="index" class="question-item">
-                    <div class="question-text">
-                        <AlertMarker />
-                        {{ question.question }}
+                    <!-- 단일선택 -->
+                    <div v-else-if="q.type === 'single'" class="mb-3 d-flex flex-wrap gap-2">
+                        <button v-for="opt in q.options" :key="opt" class="btn btn-sm rounded-pill"
+                            :class="q.value === opt ? 'btn-primary' : 'btn-outline-secondary'"
+                            :style="q.value === opt ? primaryStyle : null" @click="setAnswer(q, opt)">{{ opt }}</button>
                     </div>
-                    <div class="answer-buttons">
-                        <button v-for="(ans, ansIdx) in question.ans" :key="ansIdx"
-                            :class="['answer-btn', { selected: isSelected('special', index, ansIdx) }]"
-                            @click="answerQuestion('special', index, ansIdx)">
-                            {{ ans }}
-                        </button>
+
+                    <!-- 복수선택 -->
+                    <div v-else-if="q.type === 'multi'" class="mb-3 d-flex flex-wrap gap-2">
+                        <button v-for="opt in q.options" :key="opt" class="btn btn-sm rounded-pill"
+                            :class="q.value?.includes(opt) ? 'btn-primary' : 'btn-outline-secondary'"
+                            :style="q.value?.includes(opt) ? primaryStyle : null" @click="toggleMulti(q, opt)">{{ opt
+                            }}</button>
                     </div>
-                </div>
+
+                    <!-- 1~5 척도 -->
+                    <div v-else-if="q.type === 'scale5'" class="mb-3 d-flex gap-2">
+                        <button v-for="n in [1, 2, 3, 4, 5]" :key="n" class="btn btn-sm rounded-pill"
+                            :class="q.value === n ? 'btn-primary' : 'btn-outline-secondary'"
+                            :style="q.value === n ? primaryStyle : null" @click="setAnswer(q, n)">{{ n }}</button>
+                    </div>
+
+                    <!-- 텍스트 -->
+                    <div v-else-if="q.type === 'text'" class="mb-3">
+                        <textarea class="form-control" rows="3" :placeholder="q.placeholder || '내용을 입력하세요'"
+                            v-model.trim="q.value"></textarea>
+                    </div>
+                </template>
             </div>
-            <div class="btn-group">
-                <button class="btn-back" @click="goBack">돌아가기</button>
-                <button class="btn-submit" @click="handleSubmit">제출하기</button>
-            </div>
+        </div>
+
+        <!-- 하단 네비게이션 -->
+        <div class="d-flex gap-2 mt-3 mb-4">
+            <button class="btn btn-outline-secondary flex-grow-1" :disabled="step === 0" @click="prevStep">이전</button>
+            <button class="btn flex-grow-1 text-white" :style="canProceed ? primaryStyle : disabledStyle"
+                :disabled="!canProceed" @click="nextOrSubmit">
+                {{ step === tabs.length - 1 ? '완료' : '다음' }}
+            </button>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import MealMarker from '@/components/MealMarker.vue' //
-import MediMarker from '@/components/MediMarker.vue' // 
-import ActivityMarker from '@/components/ActivityMarker.vue' //
-import HappyMarker from '@/components/HappyMarker.vue'
-import AlertMarker from '@/components/AlertMarker.vue' //
+import { computed, reactive, ref } from 'vue'
 
+/* 팀 컬러 */
+const team = '#657AE2'
+const primaryStyle = { background: team, borderColor: team }
+const disabledStyle = { background: team, borderColor: team, opacity: .5 }
 
-const currentDate = ref('')
-let intervalId = null
+/* 탭 */
+const tabs = [
+    { key: 'meal', label: '식사' },
+    { key: 'med', label: '약 복용' },
+    { key: 'act', label: '행동' },
+    { key: 'feel', label: '감정' },
+    { key: 'note', label: '특이사항' },
+]
 
-function updateDateTime() {
-    const now = new Date()
-    const yyyy = now.getFullYear()
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
-    currentDate.value = `${yyyy}년 ${mm}월 ${dd}일`
-
-
-}
-onMounted(() => {
-    updateDateTime()
-    intervalId = setInterval(updateDateTime, 1000)
+/* 질문 세트 */
+const form = reactive({
+    meal: [
+        { id: 'skipMeal', type: 'single', text: '식사를 거르신 적이 있나요?', options: ['아침', '점심', '저녁', '없음'], value: null },
+        { id: 'snack', type: 'yesno', text: '오늘 간식을 드셨나요?', value: null },
+        { id: 'water', type: 'single', text: '오늘 물을 충분히 마셨나요?', options: ['충분', '보통', '적음'], value: null },
+    ],
+    med: [
+        { id: 'medMiss', type: 'multi', text: '약 복용을 잊으신 적이 있나요?', options: ['아침', '점심', '저녁'], value: [] },
+        { id: 'extraMed', type: 'yesno', text: '추가로 복용한 약(수면제·진통제 등)이 있나요?', value: null, detail: '', detailPlaceholder: '약 종류를 입력하세요', detailKind: 'textline' },
+    ],
+    act: [
+        { id: 'missAppt', type: 'single', text: '잊은 약속 횟수는 몇 번인가요?', options: ['0', '1–2회', '3회 이상'], value: null },
+        { id: 'lostItems', type: 'single', text: '물건을 잃어버린 횟수는 몇 번인가요?', options: ['0', '1–2회', '3회 이상'], value: null },
+        { id: 'lostWay', type: 'yesno', text: '외출 중 길을 잃은 적이 있나요?', value: null },
+        { id: 'knowDate', type: 'yesno', text: '날짜를 올바르게 알고 있나요?', value: null },
+        { id: 'toilet', type: 'single', text: '화장실을 혼자 사용하셨나요?', options: ['혼자', '도움 필요'], value: null },
+        { id: 'dress', type: 'single', text: '옷 입기를 혼자 하셨나요?', options: ['혼자', '도움 필요'], value: null },
+        { id: 'fall', type: 'yesno', text: '넘어지거나 비틀거린 적이 있나요?', value: null },
+        { id: 'appliance', type: 'single', text: '스토브·전기제품 등을 사용할 때 위험한 상황은 없었나요?', options: ['문제 없음', '주의 필요'], value: null },
+    ],
+    feel: [
+        { id: 'moodScore', type: 'scale5', text: '전반적인 기분 상태는 어떠셨나요? (1 매우 나쁨 ~ 5 매우 좋음)', value: null },
+        { id: 'depress', type: 'single', text: '우울감을 느끼셨나요?', options: ['없음', '경미', '심함'], value: null },
+        { id: 'anxiety', type: 'single', text: '불안감을 느끼셨나요?', options: ['없음', '경미', '심함'], value: null },
+        { id: 'irritate', type: 'single', text: '초조하거나 짜증을 느끼셨나요?', options: ['없음', '경미', '심함'], value: null },
+        { id: 'apathy', type: 'single', text: '무관심한 기분이 들었나요?', options: ['없음', '경미', '심함'], value: null },
+        { id: 'conversation', type: 'single', text: '대화에 얼마나 적극적으로 참여하셨나요?', options: ['적극', '보통', '소극'], value: null },
+    ],
+    note: [
+        { id: 'nightWander', type: 'yesno', text: '밤중에 배회하거나 돌아다닌 적이 있나요?', value: null },
+        { id: 'repeatAct', type: 'yesno', text: '같은 행동을 반복한 적이 있나요?', value: null },
+        { id: 'pain', type: 'yesno', text: '통증을 호소한 부분이 있나요?', value: null, detail: '', detailPlaceholder: '통증 부위를 입력하세요', detailKind: 'textline' },
+        { id: 'temp', type: 'yesno', text: '체온이 평소와 달랐나요?', value: null, detail: '', detailPlaceholder: '체온 수치를 입력하세요 (예: 37.8)', detailKind: 'number' },
+        { id: 'emergency', type: 'yesno', text: '응급 상황이 발생한 적이 있나요?', value: null, detail: '', detailPlaceholder: '무슨 상황이었는지 입력하세요', detailKind: 'text' },
+        { id: 'support', type: 'yesno', text: '특별히 지원이 필요했던 상황이 있나요?', value: null, detail: '', detailPlaceholder: '내용을 입력하세요', detailKind: 'text' },
+    ],
 })
 
-// 컴포넌트 언마운트 시 타이머 정리
-onUnmounted(() => {
-    clearInterval(intervalId)
+/* 스텝/진행률 */
+const step = ref(0)
+const currentKey = computed(() => tabs[step.value].key)
+const currentQuestions = computed(() => form[currentKey.value])
+
+const stepCompleted = computed(() => {
+    let done = 0
+    for (const t of tabs) {
+        const arr = form[t.key]
+        const hasAny = arr.some(q => {
+            if (q.type === 'text') return !!q.value
+            if (q.type === 'multi') return Array.isArray(q.value) && q.value.length > 0
+            return q.value !== null
+        })
+        if (hasAny) done++
+    }
+    return done
+})
+const progressPct = computed(() => (stepCompleted.value / 5) * 100)
+
+const canProceed = computed(() => {
+    const arr = currentQuestions.value
+    return arr.some(q => {
+        if (q.type === 'text') return !!q.value
+        if (q.type === 'multi') return Array.isArray(q.value) && q.value.length > 0
+        return q.value !== null
+    })
 })
 
-
-
-const selectedAnswers = ref({
-    meal: { 0: 0, 1: 0, 2: 0 },
-    medi: { 0: 0, 1: 0 },
-    activity: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    feel: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
-    special: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
-})
-
-function answerQuestion(category, qIdx, ansIdx) {
-    selectedAnswers.value[category][qIdx] = ansIdx
+/* helpers */
+function setAnswer(q, v) { q.value = v }
+function toggleMulti(q, opt) {
+    if (!Array.isArray(q.value)) q.value = []
+    const i = q.value.indexOf(opt)
+    if (i >= 0) q.value.splice(i, 1); else q.value.push(opt)
 }
 
-function isSelected(category, qIdx, ansIdx) {
-    return selectedAnswers.value[category][qIdx] === ansIdx
+/* 네비게이션 */
+function goStep(i) { step.value = i }
+function prevStep() { if (step.value > 0) step.value-- }
+async function nextOrSubmit() {
+    if (step.value < tabs.length - 1) { step.value++; return }
+    await submit()
 }
 
-const mealSurvey = [
-    { question: '식사를 거르신 적이 있나요?', ans: ['없음', '아침', '점심', '저녁'] },
-    { question: '간식을 드셨나요?', ans: ['예', '아니요'] },
-    { question: '물을 충분히 마셨나요?', ans: ['많이 먹음', '보통 먹음', '적게 먹음'] }
-]
+/* 제출 */
+async function submit() {
+    const content = {}
+    for (const t of tabs) {
+        content[t.key] = {}
+        for (const q of form[t.key]) {
+            content[t.key][q.id] = q.value
+            if (q.type === 'yesno' && q.detail !== undefined) {
+                content[t.key][`${q.id}Detail`] = (q.value === true ? (q.detail ?? '') : '')
+            }
+        }
+    }
+    try {
+        const me = await fetch('/api/user/my-patient', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+        const userId = me?.userNo ?? me?.id ?? me
+        if (!userId) throw new Error('연결된 환자 없음')
 
-const mediSurvey = [
-    { question: '약 복용을 잊으신 적이 있나요?', ans: ['없음', '아침', '점심', '저녁'] },
-    { question: '추가로 복용한 약(수면제, 진통제 등)이 있나요?', ans: ['예', '아니요'] }
-]
-
-const acitivySurvey = [
-    { question: '잊은 약속 횟수는 몇 번인가요?', ans: ['0회', '1~2회', '3회 이상'] },
-    { question: '물건을 잃어버린 횟수는 몇 번인가요?', ans: ['0회', '1~2회', '3회 이상'] },
-    { question: '외출 중 길을 잃어버린 적이 있나요?', ans: ['예', '아니요'] },
-    { question: '오늘 날짜를 올바르게 알고 있나요?', ans: ['예', '아니요'] },
-    { question: '화장실을 혼자 이용하셨나요?', ans: ['예', '도움 필요'] },
-    { question: '넘어지거나 비틀거린 적이 있나요?', ans: ['예', '아니요'] }
-]
-
-const feelSurvey = [
-    { question: '전반적인 기분 상태는 어떠셨나요?', ans: ['매우 좋음', '좋음', '보통', '나쁨', '매우 나쁨'] },
-    { question: '우울감을 느끼셨나요?', ans: ['없음', '경미', '심함'] },
-    { question: '불안감을 느끼셨나요?', ans: ['없음', '경미', '심함'] },
-    { question: '초조하거나 짜증을 느끼셨나요?', ans: ['없음', '경미', '심함'] },
-    { question: '대화에 얼마나 적극적으로 참여하셨나요?', ans: ['적극', '보통', '소극'] }
-]
-
-const specialSurvey = [
-    { question: '밤 중에 배회하거나 돌아다닌 적이 있나요?', ans: ['예', '아니요'] },
-    { question: '같은 행동을 반복한 적이 있나요?', ans: ['예', '아니요'] },
-    { question: '통증을 호소한 부분이 있나요?', ans: ['예', '아니요'] },
-    { question: '체온이 평소와 달랐나요?', ans: ['예', '아니요'] },
-    { question: '응급 상황이 발생한 적이 있나요?', ans: ['예', '아니요'] }
-]
+        const body = { userId, recordDate: new Date().toISOString().slice(0, 10), content }
+        const res = await fetch('/api/record/upsert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(body)
+        })
+        if (!res.ok) throw new Error(`저장 실패(${res.status})`)
+        alert('오늘의 기록이 저장되었습니다.')
+    } catch (e) {
+        alert('[저장 오류] ' + (e?.message || e))
+    }
+}
 </script>
-
-<style scoped>
-.container {
-    width: 450px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #f8f9fa;
-}
-
-.title-section {
-    margin-bottom: 30px;
-}
-
-.title-section h2 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #333;
-    margin: 5px 0;
-}
-
-.survey-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 0;
-}
-
-.survey-section {
-    background: white;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.section-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: 10px;
-}
-
-.question-item {
-    margin-bottom: 24px;
-}
-
-.question-item:last-child {
-    margin-bottom: 0;
-}
-
-.question-text {
-    display: flex;
-    align-items: center;
-    font-size: 18px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 12px;
-    gap: 8px;
-}
-
-.answer-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.answer-btn {
-    padding: 8px 16px;
-    border: 2px solid #e9ecef;
-    border-radius: 20px;
-    background: white;
-    color: #444444;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.answer-btn:hover {
-    border-color: #007bff;
-    color: #007bff;
-}
-
-.answer-btn.selected {
-    background: #7E88FF;
-    border-color: #7E88FF;
-    color: #FFFF;
-}
-
-.btn-group {
-    display: flex;
-    justify-content: flex-end;
-    /* 오른쪽 정렬 */
-    gap: 12px;
-    margin-top: 0;
-    padding-top: 12px;
-    border-top: 1px solid #e9ecef;
-}
-
-/* 돌아가기 버튼 */
-.btn-back {
-    padding: 8px 16px;
-    background: white;
-    color: #666;
-    border: 2px solid #e9ecef;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-back:hover {
-    color: #333;
-    background-color: #999;
-}
-
-/* 제출하기 버튼 */
-.btn-submit {
-    padding: 8px 16px;
-    background: #007bff;
-    color: white;
-    border: 2px solid #007bff;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-submit:hover {
-    background: #0056b3;
-    border-color: #0056b3;
-}
-
-
-</style>

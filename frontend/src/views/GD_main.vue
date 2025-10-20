@@ -1,17 +1,46 @@
 <!-- src/views/Pr.vue -->
 <template>
-  <div class="container-sm py-3" style="max-width:414px">
-    <!-- 상단: 테스트 버튼은 항상 표시, 헤더는 이벤트 있을 때만 -->
-    <div class="d-flex align-items-center mb-3">
-      <h5 v-if="missingEvent" class="fw-bold m-0 me-auto">
-        <span class="text-dark">{{ (connected ? patient.name : '환자') || '환자' }}</span>의 이웃을 찾아요
-      </h5>
-      <button class="btn btn-sm btn-outline-danger rounded-pill ms-auto" @click="toggleTestEvent">
-        테스트 이벤트 {{ missingEvent ? '해제' : '발생' }}
-      </button>
+  <div class="container-sm py-3" style="max-width:414px; position:relative;">
+
+    <!-- 🔴 히든 토글: 아주 작은 동그라미(우상단) -->
+    <button class="position-absolute rounded-circle border-0" @click="toggleTestEvent" aria-label="테스트 이벤트 토글"
+      title="테스트 이벤트" style="
+        top:6px; right:6px; width:18px; height:18px;
+        background:#ff4d4f; opacity:.65; z-index:50;
+        box-shadow:0 0 0 1px rgba(0,0,0,.08);
+      ">
+    </button>
+
+    <!-- (요청) 실종 제보 카드: 상태 문구보다 위로 이동 -->
+    <div v-if="missingEvent" class="card border-0 shadow-sm mb-3">
+      <div class="row g-3 align-items-center p-3">
+        <div class="col-auto">
+          <img v-if="missingEvent.avatarUrl" :src="missingEvent.avatarUrl" alt="face" class="rounded"
+            style="width:56px;height:56px;object-fit:cover">
+          <div v-else class="rounded-circle d-flex align-items-center justify-content-center bg-light border"
+            style="width:56px;height:56px;font-size:28px;line-height:1">👤</div>
+        </div>
+        <div class="col">
+          <div class="small fw-semibold">
+            {{ missingEvent.name }} <span v-if="missingEvent.age">({{ missingEvent.age }})</span>
+          </div>
+          <div class="small text-secondary" v-if="missingEvent.location">실종 위치 : {{ missingEvent.location }}</div>
+          <div class="small text-secondary" v-if="missingEvent.time">실종 시간 : {{ missingEvent.time }}</div>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-outline-dark w-100 rounded-pill" @click="goToMapMain">지도에서 보기</button>
+        </div>
+      </div>
     </div>
 
-    <!-- 상태 문구(문구만 변경, 화면은 그대로 유지) -->
+    <!-- 상단 헤더: 이벤트 발생시에만 노출 -->
+    <div class="d-flex align-items-center mb-2" v-if="missingEvent">
+      <h5 class="fw-bold m-0 me-auto">
+        <span class="text-dark">{{ patient.name || '환자' }}</span>의 이웃을 찾아요
+      </h5>
+    </div>
+
+    <!-- 상태 문구 -->
     <div class="my-3">
       <template v-if="connected">
         <div class="fs-5 fw-semibold mb-1">
@@ -29,33 +58,12 @@
       </template>
     </div>
 
-    <!-- 실종 제보 카드 (이벤트 있을 때만) -->
-    <div v-if="missingEvent" class="card border-0 shadow-sm mb-3">
-      <div class="row g-3 align-items-center p-3">
-        <div class="col-auto">
-          <img v-if="missingEvent.avatarUrl" :src="missingEvent.avatarUrl" alt="face" class="rounded"
-            style="width:56px;height:56px;object-fit:cover">
-          <div v-else class="rounded-circle d-flex align-items-center justify-content-center bg-light border"
-            style="width:56px;height:56px;font-size:28px;line-height:1">👤</div>
-        </div>
-        <div class="col">
-          <div class="small fw-semibold">
-            {{ missingEvent.name }} <span v-if="missingEvent.age">({{ missingEvent.age }})</span>
-          </div>
-          <div class="small text-secondary" v-if="missingEvent.location">실종 위치 : {{ missingEvent.location }}</div>
-          <div class="small text-secondary" v-if="missingEvent.time">실종 시간 : {{ missingEvent.time }}</div>
-        </div>
-        <div class="col-12">
-          <button class="btn btn-outline-dark w-100 rounded-pill" @click="goToMapPage">지도에서 보기</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Kakao 지도 프리뷰(연결 X이면 기본 좌표만) -->
+    <!-- Kakao 지도 프리뷰 -->
     <div class="card border-0 shadow-sm position-relative overflow-hidden mb-4 rounded-4">
       <div ref="mapEl" class="w-100" style="height:280px;"></div>
-      <button class="btn btn-light rounded-pill position-absolute start-50 translate-middle-x" style="bottom:12px"
-        @click="goToMapPage">
+      <!-- 항상 노출 -->
+      <button class="btn btn-light rounded-pill position-absolute start-50 translate-middle-x"
+        style="bottom:12px; z-index:10; pointer-events:auto" @click="goToMapMain">
         지도 자세히 보기
       </button>
     </div>
@@ -369,8 +377,9 @@ const nextSchedule = computed(() => {
 function toggleTestEvent() {
   if (missingEvent.value) { missingEvent.value = null }
   else {
+    // 이벤트 발생 시 이름은 연결된 환자명 우선 사용
     missingEvent.value = {
-      name: (connected.value ? patient.value.name : '사용자') || '사용자',
+      name: (patient.value.name || '환자'),
       age: 71,
       location: '청주 동남지구',
       time: tsToLocal(new Date().toISOString()),
@@ -378,14 +387,14 @@ function toggleTestEvent() {
     }
   }
 }
-function goToMapPage() { router.push('/predict-location') }
+function goToMapMain() { router.push('/map-main') }
 
 /* ===== 초기화 ===== */
 onMounted(async () => {
   try {
     const userNo = await getMyPatientNoAndProfile()
     if (!userNo) {
-      await initMap() // 연결 없어도 기본 지도는 보여줌
+      await initMap()
       return
     }
     await Promise.all([
