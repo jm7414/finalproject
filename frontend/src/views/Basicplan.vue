@@ -1,20 +1,10 @@
 <template>
   <div class="subscription-page bg-white">
-    <!-- Header -->
-    <div class="header border-bottom">
-      <div class="container-fluid d-flex align-items-center py-2">
-        <button class="btn btn-link text-dark p-0 me-2" @click="goBack">
-          <i class="bi bi-chevron-left fs-5"></i>
-        </button>
-        <h6 class="mb-0 flex-grow-1 text-center">구독 정보</h6>
-        <div style="width: 30px;"></div>
-      </div>
-    </div>
 
     <!-- Profile Section -->
-    <div class="profile-section bg-light py-2">
+    <div class="profile-section bg-light py-2 mt-0">
       <div class="profile-container">
-        <img :src="logoPath" alt="Logo" class="logo-icon mb-2" />
+        <img :src="logoPath" alt="Logo" class="logo-icon mb-0" />
         <div class="d-flex align-items-center justify-content-center">
           <div class="user-avatar me-2">
             <i class="bi bi-person-circle text-secondary"></i>
@@ -30,15 +20,11 @@
     <!-- Pricing Plans Section -->
     <div class="pricing-section py-3">
       <div class="container">
-        <h6 class="mb-3">구독 요금제</h6>
+        <h6 class="mb-3 fw-bold">구독 요금제</h6>
 
         <!-- Basic Monthly Plan -->
-        <div
-          class="card mb-2 border"
-          :class="{ 'border-primary border-3': selectedPlan === 'monthly' }"
-          @click="selectPlan('monthly')"
-          style="cursor: pointer;"
-        >
+        <div class="card mb-2 border-primary" :class="{ 'border-primary border-3': selectedPlan === 'monthly' }"
+          @click="selectPlan('monthly')" style="cursor: pointer;">
           <div class="card-body p-3">
             <p class="card-title mb-2 small">플러스 플랜 1개월</p>
             <div class="d-flex align-items-baseline mb-2">
@@ -54,16 +40,14 @@
         </div>
 
         <!-- Annual Plan (Most Popular) -->
-        <div
-          class="card border-primary border-2 position-relative"
-          :class="{ 'border-3': selectedPlan === 'yearly' }"
-          @click="selectPlan('yearly')"
-          style="cursor: pointer; margin-bottom: 8px;"
-        >
+        <div class="card border-primary border-2 position-relative mt-3"
+          :class="{ 'border-3': selectedPlan === 'yearly' }" @click="selectPlan('yearly')"
+          style="cursor: pointer; margin-bottom: 3px;">
           <span class="badge badge-popular position-absolute top-0 translate-middle-y ms-2" style="left: 0;">
             가장 인기
           </span>
-          <span class="badge bg-light text-secondary position-absolute top-0 end-0 m-2 py-0 px-2" style="font-size: 0.7rem;">
+          <span class="badge bg-light text-secondary position-absolute top-0 end-0 m-2 py-0 px-2"
+            style="font-size: 0.7rem;">
             추천
           </span>
           <div class="card-body p-3 pt-4">
@@ -114,7 +98,7 @@ export default {
   data() {
     return {
       userName: '아무개',
-      logoPath: '/mamaicon.png',
+      logoPath: '/mammamialogo.png',
       /** UI 값 (front_test 규격) */
       selectedPlan: '', // 'monthly' | 'yearly'
       /** 백엔드 연동용 */
@@ -146,11 +130,11 @@ export default {
       try {
         if (!this.guardianNo) return
         const headers = { 'X-Mock-User': String(this.guardianNo) }
-        const res = await fetch('/api/subscriptions/summary', { method:'GET', credentials:'include', headers })
-        const s = await res.json().catch(()=> ({}))
+        const res = await fetch('/api/subscriptions/summary', { method: 'GET', credentials: 'include', headers })
+        const s = await res.json().catch(() => ({}))
         const plus = s?.plus === true || s?.subscriptionActive === true
         if (plus) this.$router.replace('/plusplan')
-      } catch {/* ignore */}
+      } catch {/* ignore */ }
     }
   },
   async mounted() {
@@ -162,38 +146,109 @@ export default {
 
 <style scoped>
 /* ===== 색상 강제 (전역 초록색 무력화) ===== */
-.subscription-page { color:#171717; }
-.subscription-page a { color: inherit !important; }
-.subscription-page .text-secondary { color:#6c757d !important; }
+.subscription-page {
+  color: #171717;
+}
+
+.subscription-page a {
+  color: inherit !important;
+}
+
+.subscription-page .text-secondary {
+  color: #6c757d !important;
+}
 
 /* ===== 레이아웃 ===== */
 .subscription-page {
-  min-height: 100vh;
+  min-height: 50vh;
   display: flex;
   flex-direction: column;
   max-width: 480px;
   margin: 0 auto;
   font-size: 0.9rem;
 }
-.header { background-color: white; border-bottom: 1px solid #E5E5E5; }
-.profile-section { background-color: #FAFAFA; padding-top: .5rem !important; padding-bottom: .5rem !important; width: 100%; }
-.profile-container { width: 100%; text-align: center; padding: 0; margin: 0; }
-.logo-icon { width: 40px; height: 40px; object-fit: contain; }
-.user-avatar i { font-size: 40px; }
-.user-avatar { border-radius: 50%; overflow: hidden; }
+
+.header {
+  background-color: white;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.profile-section {
+  background-color: #FAFAFA;
+  padding-top: .5rem !important;
+  padding-bottom: .5rem !important;
+  margin-top: -18px !important; /* 값을 조정하여 원하는 만큼 공간 제거 */
+  width: 100%;
+}
+
+.profile-container {
+  width: 100%;
+  text-align: center;
+  padding: 0;
+  margin: 0;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.user-avatar i {
+  font-size: 40px;
+}
+
+.user-avatar {
+  border-radius: 50%;
+  overflow: hidden;
+}
 
 /* 카드 섹션 아래 여백 줄이기 → 버튼이 멀리 내려가지 않도록 */
-.pricing-section { flex: 1; padding-bottom: 0.5rem; }
-.card { border-radius: 8px; transition: all .2s; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,.1); }
+.pricing-section {
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
 
-.badge { border-radius: 4px; }
-.badge-popular { background: rgba(170,194,254,.91); color:#fff; font-size:.75rem; padding: 3px 14px; }
+.card {
+  border-radius: 8px;
+  transition: all .2s;
+}
 
-.btn-primary { background: rgba(74, 98, 221, .85); border: none; border-radius: 8px; font-size: .9rem; }
-.btn-primary:hover { background: rgba(74, 98, 221, 1); }
-.border-primary { border-color: rgba(170,193,254,.91) !important; }
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, .1);
+}
+
+.badge {
+  border-radius: 4px;
+}
+
+.badge-popular {
+  background: rgba(170, 194, 254, .91);
+  color: #fff;
+  font-size: .75rem;
+  padding: 3px 14px;
+}
+
+.btn-primary {
+  background: rgba(74, 98, 221, .85);
+  border: none;
+  border-radius: 8px;
+  font-size: .9rem;
+}
+
+.btn-primary:hover {
+  background: rgba(74, 98, 221, 1);
+}
+
+.border-primary {
+  border-color: rgba(170, 193, 254, .91) !important;
+}
 
 /* 시작하기 버튼 영역을 화면 하단에 sticky */
-.footer-section { position: sticky; bottom: 0; background: #fff; }
+.footer-section {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+}
 </style>

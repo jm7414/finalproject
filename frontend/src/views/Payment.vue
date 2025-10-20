@@ -142,7 +142,7 @@
               <div class="d-flex align-items-start mb-2">
                 <span class="text-danger me-1">*</span>
                 <strong class="small">서비스 이용약관</strong>
-                <span class="text-danger ms-auto">*</span>
+                <span class="text-danger ms-1">*</span>
               </div>
               <div class="terms-content p-3 mb-2 rounded-3">
                 <p class="small text-secondary mb-0">
@@ -171,7 +171,7 @@
               <div class="d-flex align-items-start mb-2">
                 <span class="text-danger me-1">*</span>
                 <strong class="small">개인정보 처리방침</strong>
-                <span class="text-danger ms-auto">*</span>
+                <span class="text-danger ms-1">*</span>
               </div>
               <div class="terms-content p-3 mb-2 rounded-3">
                 <p class="small text-secondary mb-0">
@@ -181,7 +181,7 @@
                 </p>
               </div>
               <div class="d-flex align-items-center gap-3 mb-3">
-                <label class="small mb-0">개인정보 처리방침 동의<span class="text-danger">*</span></label>
+                <label class="small mb-0" style="letter-spacing: -0.5px;">개인정보 처리방침 동의<span class="text-danger">*</span></label>
                 <div class="d-flex gap-3 ms-auto">
                   <div class="form-check">
                     <input class="form-check-input" type="radio" name="modalPrivacyAgree" id="modalPrivacyYes" v-model="modalTerms.privacy" :value="true">
@@ -257,7 +257,7 @@ import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
-const logoPath = '/mamaicon.png'
+const logoPath = '/mammamialogo.png'
 
 /** 상태 */
 const agreeAll = ref(false)
@@ -419,6 +419,7 @@ const submitPayment = async () => {
 @media (min-width: 576px) {
   .payment-page.container {
     max-width: 600px;
+    max-height: 1050px;
     transform: scale(0.9);
     transform-origin: top center;
   }
@@ -568,9 +569,9 @@ const submitPayment = async () => {
 /* 약관 모달 */
 .modal-content-terms {
   position: relative;
-  width: 90%;
-  max-width: 340px;
-  max-height: 700px;
+  width: 95%;
+  max-width: 95%;
+  max-height: 85vh;
   overflow-y: auto;
   border-radius: 14px;
   background: #D6DEFF;
