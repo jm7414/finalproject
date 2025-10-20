@@ -1,11 +1,11 @@
 <template>
   <div class="mobile-frame">
     <div class="app-layout">
-      <AppHeader v-if="!shouldHideHeader" />
-      <main class="main-content" :class="{ 'no-padding': isGDMainPage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage }">
+      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage)" />
+      <main class="main-content" :class="{ 'no-padding':  isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage }">
         <RouterView />
       </main>
-      <AppFooter v-if="!shouldHideFooter" />
+      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage)" />
     </div>
   </div>
 </template>
@@ -21,9 +21,9 @@ import 'bootstrap-vue-3/dist/bootstrap-vue-3.css'
 
 const route = useRoute()
 
-// GD_main 페이지인지 확인하는 computed 속성
-const isGDMainPage = computed(() => {
-  return route.name === 'GD'
+// AddSchedule 페이지인지 확인하는 computed 속성
+const isAddSchedulePage = computed(() => {
+  return route.name === 'add-schedule'
 })
 
 // DP_main 페이지인지 확인하는 computed 속성
@@ -44,16 +44,6 @@ const isLoginPage = computed(() => {
 // SignUp 페이지인지 확인하는 computed 속성
 const isSignUpPage = computed(() => {
   return route.name === 'SignUp'
-})
-
-// 헤더를 숨겨야 하는 페이지들 확인
-const shouldHideHeader = computed(() => {
-  return route.name === 'add-schedule' || route.name === 'DP' || route.name === 'GD' || route.name === 'map-main' || route.name === 'login' || route.name === 'SignUp'
-})
-
-// 푸터를 숨겨야 하는 페이지들 확인
-const shouldHideFooter = computed(() => {
-  return route.name === 'DP' || route.name === 'GD' || route.name === 'login' || route.name === 'SignUp'
 })
 </script>
 

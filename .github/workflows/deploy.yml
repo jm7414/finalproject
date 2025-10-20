@@ -1,0 +1,52 @@
+name: CI/CD Pipeline for Final Project
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        timeout: 600s           # 시간 단위를 포함해야 함
+        script_stop: false
+        script: |
+          # 프로젝트 디렉토리로 이동
+          cd ~/finalproject
+
+          # 최신 코드 강제 동기화
+          git fetch --all
+          git reset --hard origin/main
+
+          # 백엔드 빌드 및 재시작
+          cd backend
+          mvn clean package -DskipTests
+          sudo systemctl restart finalproject
+
+          # 프론트엔드 빌드 및 배포
+          cd ../frontend
+          npm ci
+          npm run build
+
+          sudo rm -rf /var/www/finalproject/dist/*
+          sudo cp -r dist/* /var/www/finalproject/dist/
+          sudo chown -R www-data:www-data /var/www/finalproject/dist
+
+          # Nginx 재로드
+          sudo systemctl reload nginx
+
+          echo "Deployment completed successfully!"
