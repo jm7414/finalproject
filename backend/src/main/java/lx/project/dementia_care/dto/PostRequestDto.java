@@ -20,6 +20,4 @@ public class PostRequestDto {
 
     // 어떤 유저가 작성했는지 식별하기 위한 ID
     private Integer userId;
-
-    // postId, createdAt, views 등은 서버에서 생성하므로 요청 DTO에는 포함하지 않습니다.
 }

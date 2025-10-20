@@ -3,27 +3,34 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
+// 이미지 업로드 가이드 1번
+import { usePostImageUpload } from '@/composables/usePostImageUpload';
+
 const route = useRoute();
 const router = useRouter();
 
-// URL에 id가 있으면 수정 모드, 없으면 생성 모드
+// 이미지 업로드 가이드 2번
+const { upload } = usePostImageUpload();
+
 const isEditMode = computed(() => !!route.params.id);
 const postId = ref(route.params.id || null);
 
 const title = ref('');
 const content = ref('');
 const contentLength = computed(() => content.value.length);
-const attachedFile = ref(null);
 
-// 컴포넌트가 마운트될 때 '수정 모드'인지 확인
+// 이미지 업로드 가이드 3번 - 이미지 관련 상태를 관리할 변수들을 추가
+const fileInput = ref(null);        // 숨겨진 <input type="file">에 접근하기 위한 변수
+const imagePreviewUrl = ref(null);  // 이미지 미리보기 URL
+const uploadedImageUrl = ref(null); // 서버에 업로드 후 받은 최종 이미지 경로
+const isUploading = ref(false);     // 업로드 중인지 상태를 관리
+
 onMounted(() => {
   if (isEditMode.value) {
-    // 수정 모드이면, 기존 게시물 데이터를 불러와서 폼에 채워넣습니다.
     fetchPostForEdit();
   }
 });
 
-// 수정할 게시물 데이터를 불러오는 함수
 async function fetchPostForEdit() {
   try {
     const response = await axios.get(`http://localhost:8080/api/posts/${postId.value}`, {
@@ -31,14 +38,52 @@ async function fetchPostForEdit() {
     });
     title.value = response.data.title;
     content.value = response.data.content;
+
+    // 이미지 업로드 가이드 4번 - 수정 모드일 때, 기존 이미지가 있다면 미리보기에 표시
+    if (response.data.image) {
+      imagePreviewUrl.value = response.data.image;
+      uploadedImageUrl.value = response.data.image;
+    }
+    
   } catch (error) {
     console.error('수정할 게시물 정보를 불러오는 데 실패했습니다:', error);
     alert('게시물 정보를 불러올 수 없습니다.');
-    router.push('/CommunityView');
+    router.back();
   }
 }
 
-// '글 작성하기' 또는 '수정하기' 버튼 클릭 시 실행될 함수
+// 이미지 업로드 가이드 5번 - '사진 추가' 버튼을 누르면 숨겨진 파일 입력창을 클릭시키는 함수
+function triggerFileInput() {
+  fileInput.value.click();
+}
+
+// 이미지 업로드 가이드 6번 - 파일이 선택되면 이미지를 서버에 업로드하고 미리보기를 보여주는 함수
+async function handleFileChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  imagePreviewUrl.value = URL.createObjectURL(file);
+  isUploading.value = true;
+
+  try {
+    const imageUrl = await upload(file);
+    uploadedImageUrl.value = imageUrl;
+    console.log("이미지 업로드 성공! 경로:", imageUrl);
+  } catch (error) {
+    alert("이미지 업로드에 실패했습니다. 파일을 다시 선택해주세요.");
+    removeImage();
+  } finally {
+    isUploading.value = false;
+  }
+}
+
+// 이미지 업로드 가이드 7번 - 선택된 이미지 미리보기를 제거하는 함수
+function removeImage() {
+  imagePreviewUrl.value = null;
+  uploadedImageUrl.value = null;
+  if(fileInput.value) fileInput.value.value = '';
+}
+
 async function submitPost() {
   if (!title.value.trim() || !content.value.trim()) {
     alert('제목과 내용을 모두 입력해주세요.');
@@ -46,24 +91,26 @@ async function submitPost() {
   }
 
   try {
+    // 이미지 업로드 가이드 8번 - 최종 전송할 데이터에 이미지 경로 포함
     const postData = {
       title: title.value,
       content: content.value,
+      image: uploadedImageUrl.value
     };
 
     if (isEditMode.value) {
-      // 2. 글 수정할 때 
       await axios.put(`http://localhost:8080/api/posts/${postId.value}`, postData, {
         withCredentials: true
       });
       alert('게시글이 성공적으로 수정되었습니다!');
       router.push(`/post/${postId.value}`);
     } else {
-      // 3. 새 글 작성할 때
       const response = await axios.post('http://localhost:8080/api/posts', postData, {
         withCredentials: true
       });
-      const newPostId = response.data;
+      // createPost API는 이제 생성된 postId를 숫자(Integer)로 반환합니다.
+      const newPostId = response.data; 
+      alert('게시글이 성공적으로 작성되었습니다!');
       router.push(`/post/${newPostId}`); 
     }
   } catch (error) {
@@ -72,136 +119,263 @@ async function submitPost() {
   }
 }
 
-// 사진
-function handleFileClick() {
-  alert('미완성 기능');
+function cancel() {
+  router.back();
 }
 </script>
 
 <template>
-  <div class="form-container">
-    <div class="form-group">
-      <label for="title">제목 <span class="required">*</span></label>
-      <input 
-        id="title"
-        type="text" 
-        v-model="title" 
-        placeholder="제목을 입력해 주세요" 
-        class="form-input"
-      />
+  <div class="page-container">
+    <div class="form-wrapper">
+      <section class="form-section">
+        <label for="title-input">제목</label>
+        <input 
+          id="title-input" 
+          type="text" 
+          class="title-input" 
+          placeholder="제목을 입력해주세요"
+          v-model="title"
+        >
+      </section>
+
+      <section class="form-section">
+        <label for="content-textarea">내용</label>
+        <div class="textarea-container">
+          <textarea 
+            id="content-textarea"
+            class="content-textarea"
+            placeholder="내용을 입력해주세요"
+            v-model="content"
+            maxlength="1000"
+          ></textarea>
+          <span class="char-counter">{{ contentLength }} / 1000자</span>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <label>사진 첨부</label>
+        <input type="file" ref="fileInput" @change="handleFileChange" accept="image/*" style="display: none;" />
+        
+        <div v-if="imagePreviewUrl" class="preview-area">
+          <img :src="imagePreviewUrl" alt="미리보기" class="image-preview" />
+          <button @click="removeImage" class="remove-image-button">X</button>
+        </div>
+        
+        <div v-else class="photo-uploader" @click="triggerFileInput">
+          <div class="upload-icon">📷</div>
+          <div class="upload-text-main">사진을 추가해보세요</div>
+          <div class="upload-text-sub">사진 선택하기</div>
+        </div>
+      </section>
     </div>
 
-    <div class="form-group">
-      <label for="content">내용 <span class="required">*</span></label>
-      <div class="textarea-wrapper">
-        <textarea 
-          id="content"
-          v-model="content" 
-          placeholder="내용을 입력해 주세요" 
-          class="form-textarea"
-          maxlength="500"
-        ></textarea>
-        <span class="char-counter">{{ contentLength }}/500</span>
-      </div>
-    </div>
-    
-    <div class="form-group">
-      <label for="photo">사진 추가</label>
-      <button 
-        id="photo"
-        @click="handleFileClick" 
-        class="file-input-button"
-      >
+    <div class="footer-buttons">
+      <button @click="submitPost" class="submit-btn" :disabled="isUploading">
+        {{ isUploading ? '이미지 업로드 중...' : (isEditMode ? '수정하기' : '게시물 작성하기') }}
       </button>
+      <button @click="cancel" class="cancel-btn">취소하기</button>
     </div>
-
-    <button @click="submitPost" class="submit-button">
-      {{ isEditMode ? '수정하기' : '글 작성하기' }}
-    </button>
   </div>
 </template>
 
+
 <style scoped>
-.form-container {
+/* 전체 페이지 레이아웃 */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 465px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background-color: #FAFAFA;
+  font-family: 'Inter', sans-serif;
+}
+
+.form-wrapper {
+  flex-grow: 1;
+  padding: 17px 16px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  width: 100%;
-  max-width: 500px;
-  margin: 24px auto;
-  padding: 24px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* 사진 첨부 섹션 */
+.form-section {
+  margin-bottom: 24px;
+}
+.form-section label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
-.form-group label {
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.required {
-  color: #8E97FD;
-}
-
-.form-input, .file-input-button, .form-textarea {
-  width: 100%;
-  background-color: #F2F3F7;
-  border-radius: 15px;
-  border: 1px solid transparent;
-  padding: 50px;
-  font-size: 16px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.form-input::placeholder, .file-input-button, .form-textarea::placeholder {
-  color: #A1A4B2;
-}
-.form-input:focus, .form-textarea:focus {
-  outline: none;
-  border-color: #8E97FD;
-  box-shadow: 0 0 0 3px rgba(142, 151, 253, 0.2);
-}
-
-.file-input-button {
-  text-align: left;
+/* 사진 선택 영역 스타일 */
+.photo-uploader {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 30px 20px; 
+  text-align: center;
   cursor: pointer;
+  background-color: #f9f9f9;
+}
+.upload-icon { font-size: 32px; color: #aaa; margin-bottom: 8px;}
+.upload-text-main { font-weight: 600; color: #555;}
+.upload-text-sub { font-size: 14px; color: #888; }
+
+.preview-area {
+  position: relative;
+  /* 크기를 원하는 대로 조절 */
+  width: 100%; 
+  height: 100%;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.remove-image-button {
+  position: absolute;
+  top: 5px; 
+  right: 5px; 
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px; 
+  line-height: 24px;
+  text-align: center;
+  padding: 0;
 }
 
-.textarea-wrapper {
+.form-section label {
+  font-size: 14px;
+  color: #404040;
+  font-weight: 500;
+}
+
+/* 제목 입력 */
+.title-input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid #D4D4D4;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+.title-input::placeholder {
+  color: #ADAEBC;
+}
+.title-input:focus {
+  outline: 1px solid #8E97FD;
+}
+
+/* 내용 입력 */
+.textarea-container {
   position: relative;
 }
 
-.form-textarea {
-  height: 280px;
-  resize: none; /* 사용자가 크기 조절 못하게 */
+.content-textarea {
+  width: 100%;
+  height: 186px;
+  border: 1px solid #D4D4D4;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  resize: none;
+}
+.content-textarea::placeholder {
+  color: #ADAEBC;
+}
+.content-textarea:focus {
+  outline: 1px solid #8E97FD;
 }
 
 .char-counter {
   position: absolute;
-  bottom: 12px;
-  right: 16px;
-  color: #A1A4B2;
-  font-size: 14px;
+  bottom: 8px;
+  right: 12px;
+  font-size: 12px;
+  color: #737373;
 }
 
-.submit-button {
+/* 사진 첨부 */
+.photo-uploader {
   width: 100%;
-  padding: 18px;
-  border-radius: 38px;
-  background-color: #8E97FD;
-  color: white;
-  font-size: 20px;
-  font-weight: 700;
+  height: 132px;
+  border: 2px dashed #D4D4D4;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.upload-icon {
+  font-size: 24px;
+}
+
+.upload-text-main {
+  font-size: 14px;
+  color: #737373;
+}
+
+.upload-text-sub {
+  font-size: 14px;
+  color: #525252;
+  font-weight: 500;
+}
+
+.preview-area {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+/* (이미지 미리보기 관련 스타일은 추후 추가) */
+
+
+/* 하단 버튼 */
+.footer-buttons {
+  background: #FFFFFF;
+  padding: 17px 16px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.submit-btn, .cancel-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s;
+}   
+.submit-btn:hover, .cancel-btn:hover {
+  opacity: 0.8;
 }
-.submit-button:hover {
-  background-color: #7b85f8;
-  transform: translateY(-2px);
+
+.submit-btn {
+  background: #8E97FD;
+  color: #FFFFFF;
+}
+
+.cancel-btn {
+  background: #FFFFFF;
+  color: #404040;
+  border: 1px solid #D4D4D4;
 }
 </style>
-

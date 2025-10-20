@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/login", "/logout", "/register", "/SignUp").permitAll()
                 .requestMatchers("/api/user/check-duplicate").permitAll()
                 .requestMatchers("/api/route/**").permitAll()
-                .requestMatchers("/index.html", "/favicon.ico", "/assets/**").permitAll()
+                .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**").permitAll()
                 //.requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
                 // 보호자/구독자 전용 페이지 및 API
                 .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
