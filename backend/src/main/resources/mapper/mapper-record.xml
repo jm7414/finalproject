@@ -1,74 +1,65 @@
-<!-- src/main/resources/mapper/mapper-record.xml -->
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="lx.project.dementia_care.dao.RecordMapper">
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lx.project.dementia_care.dao.RecordDAO">
 
-	<!-- record 테이블 -> DailyRecordResponseDTO 매핑 -->
-	<resultMap id="RecordResult"
-		type="lx.project.dementia_care.dto.DailyRecordResponseDTO">
-		<id column="record_id" property="id" />
-		<result column="user_id" property="userId" />
-		<result column="record_date" property="recordDate" />
+  <!-- record → DailyRecordResponseDTO -->
+  <resultMap id="DailyRecordMap" type="lx.project.dementia_care.dto.DailyRecordResponseDTO">
+    <id     property="id"         column="record_id"/>
+    <result property="userId"     column="user_id"/>
+    <result property="recordDate" column="record_date"/>
+    <!-- jsonb를 문자열로 반환 -->
+    <result property="content"    column="content"    javaType="java.lang.String"/>
+    <!-- timestamptz ↔ OffsetDateTime -->
+    <result property="createdAt"  column="created_at" javaType="java.time.OffsetDateTime"/>
+    <result property="updatedAt"  column="updated_at" javaType="java.time.OffsetDateTime"/>
+  </resultMap>
 
-		<!-- JSON -> 문자열로만 수신 (의존성 없이 동작) -->
-		<result column="content" property="content"
-			javaType="java.lang.String" />
+  <!-- 업서트 -->
+  <select id="upsert" resultMap="DailyRecordMap">
+    INSERT INTO record (user_id, record_date, content)
+    VALUES (#{userId}, #{recordDate}, CAST(#{contentJson} AS JSONB))
+    ON CONFLICT (user_id, record_date) DO UPDATE
+      SET content    = EXCLUDED.content,
+          updated_at = NOW()
+    RETURNING
+      record_id,
+      user_id,
+      record_date,
+      content::text AS content,
+      created_at,
+      updated_at
+  </select>
 
-		<result column="created_at" property="createdAt" />
-		<result column="updated_at" property="updatedAt" />
-	</resultMap>
+  <!-- 단건 조회 -->
+  <select id="getOne" resultMap="DailyRecordMap">
+    SELECT
+      record_id,
+      user_id,
+      record_date,
+      content::text AS content,
+      created_at,
+      updated_at
+    FROM record
+    WHERE user_id = #{userId}
+      AND record_date = #{date}
+    LIMIT 1
+  </select>
 
-	<!-- 단건 조회 -->
-	<select id="findByUserIdAndDate" resultMap="RecordResult">
-		SELECT
-		record_id,
-		user_id,
-		record_date,
-		content::text AS content,
-		created_at,
-		updated_at
-		FROM record
-		WHERE user_id = #{userId}
-		AND record_date = #{recordDate}
-	</select>
-
-	<!-- 기간 조회 -->
-	<select id="findByRange" resultMap="RecordResult">
-		SELECT
-		record_id,
-		user_id,
-		record_date,
-		content::text AS content,
-		created_at,
-		updated_at
-		FROM record
-		WHERE user_id = #{userId}
-		AND record_date BETWEEN #{start} AND #{end}
-		ORDER BY record_date
-	</select>
-
-	<!-- 업서트: contentJson(문자열)로 받아 jsonb로 캐스팅 -->
-	<select id="upsert" resultMap="RecordResult" parameterType="map">
-		INSERT INTO record (user_id, record_date, content, created_at,
-		updated_at)
-		VALUES (
-		#{userId},
-		#{recordDate},
-		CAST(#{contentJson} AS jsonb),
-		NOW(), NOW()
-		)
-		ON CONFLICT (user_id, record_date)
-		DO UPDATE SET
-		content = CAST(#{contentJson} AS jsonb),
-		updated_at = NOW()
-		RETURNING
-		record_id,
-		user_id,
-		record_date,
-		content::text AS content,
-		created_at,
-		updated_at
-	</select>
+  <!-- 기간 조회 -->
+  <select id="getRange" resultMap="DailyRecordMap">
+    SELECT
+      record_id,
+      user_id,
+      record_date,
+      content::text AS content,
+      created_at,
+      updated_at
+    FROM record
+    WHERE user_id = #{userId}
+      AND record_date BETWEEN #{start} AND #{end}
+    ORDER BY record_date ASC
+  </select>
 
 </mapper>

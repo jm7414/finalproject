@@ -33,6 +33,9 @@ import Insurance from '@/views/Insurance.vue'
 import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
+//
+import test from'@/views/GdMypageView copy.vue'
+//
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -249,7 +252,13 @@ const router = createRouter({
       name: 'map-main',
       component: MapMain,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    }
+    },
+    {
+      path: '/my-info',
+      name: 'my-info',
+      component: test,
+      meta: { requiresAuth: true, roles: [2] } // 보호자, 구독자 전용
+    },
   ],
 })
 
