@@ -1,14 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 
+const router = useRouter();
 const missingPeople = ref([]);
 const loading = ref(true);
 const error = ref(null);
-
-// 모달(팝업) 관련 상태
-const isModalVisible = ref(false);
-const selectedPerson = ref(null);
 
 onMounted(() => {
   fetchMissingPeople();
@@ -18,38 +16,22 @@ async function fetchMissingPeople() {
   loading.value = true;
   error.value = null;
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.get(`${API_BASE_URL}/api/missing-posts`);
+    // API 엔드포인트는 실제 서버 주소에 맞게 조정해야 합니다.
+    const response = await axios.get('http://localhost:8080/api/missing-posts');
     missingPeople.value = response.data;
   } catch (err) {
     console.error("실종자 목록을 불러오는 데 실패했습니다:", err);
-    error.value = "데이터를 불러올 수 없습니다.";
+    error.value = "데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.";
   } finally {
     loading.value = false;
   }
 }
 
-// 지도 버튼 클릭 시 모달 열기
-function openMap(person) {
-  selectedPerson.value = person;
-  isModalVisible.value = true;
-}
 
-// 모달 닫기
-function closeModal() {
-  isModalVisible.value = false;
-  selectedPerson.value = null;
-}
-
-// 함께하기 버튼 클릭
-async function joinSearch(person) {
-  try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    await axios.post(`${API_BASE_URL}/api/missing-posts/${person.id}/join`);
-    alert(person.name + ' 님 찾기에 함께합니다!');
-  } catch (err) {
-    alert('참여 처리 중 오류가 발생했습니다.');
-  }
+// 상세 정보 페이지로 이동하는 함수
+function goToDetail(personId) {
+    // 실제 실종자 상세 페이지의 경로로 수정해야 합니다.
+    router.push(`/missing/${personId}`);
 }
 
 // 상대 시간 계산 함수
@@ -58,228 +40,210 @@ function formatTimeAgo(dateString) {
   const postDate = new Date(dateString);
   const seconds = Math.floor((now - postDate) / 1000);
 
-  let interval = seconds / 3600;
-  if (interval > 1) return Math.floor(interval) + "시간 전";
-  interval = seconds / 60;
-  if (interval > 1) return Math.floor(interval) + "분 전";
+  const hours = Math.floor(seconds / 3600);
+  if (hours > 0) return `${hours}시간 전`;
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes > 0) return `${minutes}분 전`;
+  
   return "방금 전";
+}
+
+// 날짜와 시간을 포맷팅하는 함수
+function formatDateTime(dateString) {
+    if (!dateString) return '정보 없음';
+    const date = new Date(dateString);
+    return date.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 </script>
 
 <template>
-  <div class="list-container">
-    <div v-if="loading">실종자 목록을 불러오는 중입니다...</div>
-    <div v-else-if="error">{{ error }}</div>
+  <div class="missing-page-container">
+    <section class="urgent-notice">
+      <div class="notice-icon">📢</div>
+      <div class="notice-text">
+        <p class="main-text">긴급 실종신고</p>
+        <p class="sub-text">실종신고 {{ missingPeople.length }}건이 등록되었습니다</p>
+      </div>
 
-    <div v-else v-for="person in missingPeople" :key="person.id" class="detail-card">
-      <div class="card-header">
-        <img v-if="person.photoPath" :src="person.photoPath" :alt="person.name" class="profile-image">
-        <div v-else class="profile-image-placeholder">사진</div>
-        <div class="info-summary">
-          <p><strong>성함 :</strong> {{ person.name }}</p>
-          <p><strong>나이 :</strong> {{ person.age }}</p>
-          <p><strong>실종 시간 :</strong> {{ formatTimeAgo(person.reportedAt) }}</p>
-          <p class="timestamp">{{ new Date(person.reportedAt).toLocaleString('ko-KR') }}</p>
+    </section>
+
+    <main class="missing-list">
+      <div v-if="loading" class="status-message">실종자 목록을 불러오는 중입니다...</div>
+      <div v-else-if="error" class="status-message error">{{ error }}</div>
+      
+      <div v-else-if="missingPeople.length === 0" class="status-message">등록된 실종신고가 없습니다.</div>
+
+      <div v-else v-for="person in missingPeople" :key="person.missingId" class="card" @click="goToDetail(person.missingId)">
+        <div class="card-main-info">
+          <img :src="person.image || '/default-person.png'" :alt="person.name" class="person-image">
+          <div class="person-details">
+            <h3>{{ person.name }} ({{ person.age }}세)</h3>
+            <span>{{ formatTimeAgo(person.missingTime) }}</span>
+            <p>실종일시: {{ formatDateTime(person.missingTime) }}</p>
+            <p>실종장소: {{ person.missingLocation }}</p>
+          </div>
         </div>
-        <div class="view-count">
-          <span class="eye-icon">👁️</span> {{ person.viewCount }}
+        <div class="card-extra-info">
+          <div class="info-item">
+            <span class="tag">신체 특징</span>
+            <p>{{ person.physicalFeatures }}</p>
+          </div>
+          <div class="info-item">
+            <span class="tag">착의사항</span>
+            <p>{{ person.clothing }}</p>
+          </div>
         </div>
+        <button class="map-button" @click.stop="goToDetail(person.missingId)">
+          📍 마지막 위치 보기
+        </button>
       </div>
-
-      <div class="card-actions">
-        <button class="action-button" @click="openMap(person)">지도</button>
-        <button class="action-button primary" @click="joinSearch(person)">함께하기</button>
-      </div>
-    </div>
-  </div>
-
-  <div v-if="isModalVisible" class="modal-overlay" @click="closeModal">
-    <div class="modal-content" @click.stop>
-      <button class="modal-close-button" @click="closeModal">X</button>
-      <h2 v-if="selectedPerson">{{ selectedPerson.name }}님 상세 정보</h2>
-      <div v-if="selectedPerson">
-        <p><strong>나이:</strong> {{ selectedPerson.age }}</p>
-        <p><strong>실종 시각:</strong> {{ new Date(selectedPerson.reportedAt).toLocaleString('ko-KR') }}</p>
-        <p><strong>특이사항:</strong> 실종자 특이사항</p>
-        <button class="action-button primary" style="width:100%; margin-top:20px;">지도로 이동</button>
-      </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.list-container {
+/* 전체 레이아웃 */
+.missing-page-container {
+  width: 100%;
+  background: #FAFAFA;
+  font-family: 'Inter', sans-serif;
+}
+
+/* 긴급 알림 섹션 */
+.urgent-notice {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  /* 카드 사이 간격 */
-}
-
-.sort-selector-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
-}
-
-.sort-selector {
-  border: none;
-  background: transparent;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.detail-card {
-  background: #FFFFFF;
-  border: 1px solid #808AFF;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
-  border-radius: 20px;
-  padding: 24px;
-}
-
-.card-header {
-  display: flex;
-  gap: 20px;
-  position: relative;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.profile-image,
-.profile-image-placeholder {
-  width: 135px;
-  height: 135px;
-  border-radius: 15px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.profile-image-placeholder {
-  background-color: #f0f0f0;
-  display: flex;
-  justify-content: center;
   align-items: center;
-  color: #ccc;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #F5F5F5;
+  border-bottom: 1px solid #E5E5E5;
+}
+.notice-icon {
+  font-size: 20px;
+}
+.notice-text {
+  flex-grow: 1;
+}
+.notice-text p {
+  margin: 0;
+}
+.main-text {
+  font-size: 14px;
+  color: #262626;
   font-weight: bold;
 }
-
-.info-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 18px;
+.sub-text {
+  font-size: 12px;
+  color: #525252;
 }
 
-.info-summary p {
+/* 실종자 목록 */
+.missing-list {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.status-message {
+  padding: 40px;
+  text-align: center;
+  color: #737373;
+}
+.error {
+  color: red;
+}
+
+/* 실종자 카드 */
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 17px;
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-main-info {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.person-image {
+  width: 106px;
+  height: 106px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #D4D4D4;
+  flex-shrink: 0;
+}
+.person-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.person-details h3 {
+  font-size: 16px;
+  font-weight: bold;
+  color: #171717;
+  margin: 0;
+}
+.person-details span {
+  font-size: 14px;
+  color: #525252;
+}
+.person-details p {
+  font-size: 14px;
+  color: #525252;
   margin: 0;
 }
 
-.info-summary .timestamp {
-  font-size: 16px;
-  color: #888;
+.card-extra-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
 }
-
-.view-count {
-  position: absolute;
-  top: 0;
-  right: 0;
+.info-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-weight: 600;
+  gap: 8px;
 }
-
-.card-body {
-  padding: 24px 0;
-}
-
-.section-title {
-  font-size: 30px;
-  margin-top: 0;
-  margin-bottom: 16px;
-  
-}
-
-.detail-item {
-  display: flex;
-  margin-bottom: 12px;
-  font-size: 16px;
-}
-
-.detail-key {
-  width: 200px;
-  font-weight: 600;
-  font-size: 20px;
-  color: #555;
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #DCDCDC;
+  border-radius: 9999px;
+  font-size: 12px;
+  color: #262626;
   flex-shrink: 0;
 }
-
-.detail-value {
-  color: #333;
-  font-weight: 600;
-  font-size: 18px;
-  margin: 4px;
+.info-item p {
+  margin: 0;
+  font-size: 14px;
+  color: #525252;
 }
 
-.card-actions {
-  display: flex;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.action-button {
-  flex: 1;
-  padding: 16px;
-  border-radius: 30px;
-  border: none;
-  background-color: #f0f2ff;
-  color: #808AFF;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-button.primary {
-  background-color: #808AFF;
-  color: #FFFFFF;
-  box-shadow: 0px 4px 10px rgba(128, 138, 255, 0.4);
-}
-
-.action-button:hover {
-  transform: translateY(-2px);
-}
-
-/* 모달(팝업) 스타일 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
+.map-button {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 15px;
-  width: 90%;
-  max-width: 500px;
-  position: relative;
-}
-.modal-close-button {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: none;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  background: #8E97FD;
+  border-radius: 8px;
   border: none;
-  font-size: 24px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: bold;
   cursor: pointer;
 }
-
 </style>

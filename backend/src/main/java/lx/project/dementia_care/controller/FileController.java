@@ -1,62 +1,60 @@
-// package lx.project.dementia_care.controller;
+package lx.project.dementia_care.controller;
 
-// import java.io.File;
-// import java.io.IOException;
-// import java.util.Map;
-// import java.util.UUID;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
+import java.util.UUID;
 
-// import org.springframework.beans.factory.annotation.Value;
-// import org.springframework.http.ResponseEntity;
-// import org.springframework.web.bind.annotation.PostMapping;
-// import org.springframework.web.bind.annotation.RequestMapping;
-// import org.springframework.web.bind.annotation.RequestParam;
-// import org.springframework.web.bind.annotation.RestController;
-// import org.springframework.web.multipart.MultipartFile;
+// import org.springframework.core.io.ClassPathResource; // 이 부분은 이제 필요 없습니다.
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
-// @RestController
-// @RequestMapping("/api")
-// public class FileController {
+@RestController
+@RequestMapping("/api/upload")
+public class FileController {
 
-//     // application.properties 파일에서 파일 저장 경로를 읽어옵니다.
-//     @Value("${file.upload-dir}")
-//     private String uploadDir;
+    @PostMapping("/post-image")
+    public ResponseEntity<?> uploadPostImage(@RequestParam("file") MultipartFile file) {
+        
+        System.out.println("=== 'src' 폴더에 직접 저장 시도 ===");
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "업로드할 파일을 선택해주세요."));
+        }
 
-//     /**
-//      * 게시물 이미지 업로드를 처리하는 API
-//      * @param file 프론트엔드에서 'file'이라는 이름으로 보낸 이미지 파일
-//      * @return 저장된 이미지의 웹 경로 (예: /images/uuid_파일명.jpg)
-//      */
-//     @PostMapping("/posts/upload-image")
-//     public ResponseEntity<?> uploadPostImage(@RequestParam("file") MultipartFile file) {
-//         // 1. 파일이 비어있는지 확인
-//         if (file.isEmpty()) {
-//             return ResponseEntity.badRequest().body("업로드할 파일을 선택해주세요.");
-//         }
+        try {
+            // 1. 프로젝트의 루트 경로를 가져옵니다. (예: C:\Study\lastProject\backend)
+            String projectPath = new File("").getAbsolutePath();
 
-//         try {
-//             // 2. 다른 파일과 이름이 겹치지 않도록 고유한 파일명 생성
-//             String originalFileName = file.getOriginalFilename();
-//             String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+            // 2. 루트 경로에 'src' 이하 경로를 직접 문자열로 조합합니다.
+            Path uploadPath = Paths.get(projectPath + "/src/main/resources/uploads/images/");
+            
+            String originalFileName = file.getOriginalFilename();
+            String uniqueFileName = UUID.randomUUID().toString() + "_" + originalFileName;
 
-//             // 3. 파일을 저장할 전체 경로 설정 (예: C:/uploads/uuid_파일명.jpg)
-//             String filePath = uploadDir + File.separator + uniqueFileName;
-//             File dest = new File(filePath);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            
+            Path filePath = uploadPath.resolve(uniqueFileName);
+            file.transferTo(filePath.toFile());
 
-//             // (선택사항) 저장할 폴더가 없으면 생성
-//             dest.getParentFile().mkdirs();
+            String webPath = "/images/" + uniqueFileName;
 
-//             // 4. 파일을 지정된 경로에 저장
-//             file.transferTo(dest);
+            System.out.println("'src' 폴더에 저장 성공: " + filePath.toString());
 
-//             // 5. 프론트엔드에서 접근할 수 있는 웹 경로 생성
-//             String webPath = "/images/" + uniqueFileName;
+            return ResponseEntity.ok(Map.of("success", true, "imageUrl", webPath));
 
-//             // 6. 성공 응답으로 웹 경로를 반환 (JSON 형태)
-//             return ResponseEntity.ok(Map.of("imageUrl", webPath));
-
-//         } catch (IOException e) {
-//             e.printStackTrace();
-//             return ResponseEntity.internalServerError().body("파일 업로드 중 오류가 발생했습니다.");
-//         }
-//     }
-// }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "파일 업로드 중 오류가 발생했습니다."));
+        }
+    }
+}

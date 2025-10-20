@@ -1,4 +1,15 @@
+### 인증서/키 관리 ###
+# 인증서 및 개인키 모두 무시 (.pem, .key.pem)
+backend/src/main/resources/*.pem
+backend/src/main/resources/*.key.pem
 
+# PKCS12 키스토어 금지 (비밀번호 포함 가능)
+backend/src/main/resources/*.p12
+
+# (선택) 루트 CA 개인키 금지
+certs/rootCA-key.pem
+
+### 기존 .gitignore 내용 유지 ###
 ### Java ###
 *.class
 *.log
@@ -16,7 +27,6 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-
 ### Spring Boot ###
 HELP.md
 mvnw
@@ -26,27 +36,19 @@ application-*.yml
 application-*.properties
 
 ### Vuejs ###
-
 node_modules/
-/dist/
-/build/
+dist/
+build/
 npm-debug.log
 yarn-error.log
 
-# Eclipse IDE
+# IDE/에디터 설정
 .classpath
 .factorypath
 .project
 .settings/
-
-# Eclipse workspace metadata
 .metadata/
-backend/.metadata/
-
-# IntelliJ IDEA settings
 .idea/
-
-# VSCode settings
 .vscode/
 
 # 빌드 결과물

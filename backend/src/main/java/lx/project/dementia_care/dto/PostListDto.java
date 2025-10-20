@@ -2,7 +2,7 @@ package lx.project.dementia_care.dto;
 
 import java.time.OffsetDateTime;
 import lombok.Getter;
-import lombok.Setter;         // ◀ Setter 추가
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -29,5 +29,6 @@ public class PostListDto {
     // 작성 시간
     private OffsetDateTime createdAt;
     
-    // 목록에서는 'content'나 'image' 같은 무거운 데이터는 제외합니다.
+    // 이미지
+    private String imageUrl;
 }

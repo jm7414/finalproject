@@ -75,7 +75,8 @@
         UPDATE post
         SET
             title = #{dto.title},
-            content = #{dto.content}
+            content = #{dto.content},
+            image_path = #{dto.image}
         WHERE
             post_id = #{postId}
     </update>

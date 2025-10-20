@@ -36,28 +36,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .exceptionHandling(exceptionHandling -> exceptionHandling.accessDeniedPage("/login"))
-                .authorizeHttpRequests(authz -> authz
-                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR)
-                        .permitAll()
-                        // 회원가입, 로그인 페이지 접근 허용
-                        .requestMatchers("/login", "/logout", "/register", "/SignUp").permitAll()
-                        .requestMatchers("/api/user/check-duplicate").permitAll()
-                        .requestMatchers("/api/route/**").permitAll()
-                        .requestMatchers("/index.html", "/favicon.ico", "/assets/**").permitAll()
-                        // .requestMatchers(HttpMethod.GET, "/login", "/logout", "/register",
-                        // "/SignUp").permitAll()
-                        // 보호자/구독자 전용 페이지 및 API
-                        .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**")
-                        .hasAnyRole("GUARDIAN", "SUBSCRIBER")
-                        // 일정 관리 API (보호자/구독자 전용)
-                        .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
-                        // 보호자가 관리하는 환자 조회 API
-                        .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "SUBSCRIBER")
-                        // 환자 전용 페이지 및 API
-                        .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
-                        // 공통 페이지들 (로그인한 사용자만 접근 가능)
-                        .requestMatchers("/calendar", "/add-schedule", "/CommunityView", "/geo-fencing",
+            .exceptionHandling(exceptionHandling -> exceptionHandling.accessDeniedPage("/login"))
+            .authorizeHttpRequests(authz -> authz
+                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
+                // 회원가입, 로그인 페이지 접근 허용
+                .requestMatchers("/login", "/logout", "/register", "/SignUp").permitAll()
+                .requestMatchers("/api/user/check-duplicate").permitAll()
+                .requestMatchers("/api/route/**").permitAll()
+                .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**").permitAll()
+                //.requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
+                // 보호자/구독자 전용 페이지 및 API
+                .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+                // 일정 관리 API (보호자/구독자 전용)
+                .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+                // 보호자가 관리하는 환자 조회 API
+                .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+                // 환자 전용 페이지 및 API
+                .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
+                // 공통 페이지들 (로그인한 사용자만 접근 가능)
+                .requestMatchers("/calendar", "/add-schedule", "/CommunityView", "/geo-fencing", 
                                 "/search-route", "/predict-location", "/total-support", "/money-support",
                                 "/record", "/report", "/gdmypage", "/dpmypage", "/basicplan", "/plusplan")
                         .authenticated()

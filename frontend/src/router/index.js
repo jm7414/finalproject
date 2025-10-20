@@ -10,6 +10,7 @@ import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
+import CommunityMissingDetail from '@/components/CommunityMissingDetail.vue'
 import CommunityPost from '@/components/CommunityPost.vue'
 import CommunityEvent from '@/components/CommunityEvent.vue'
 import TotalSupport from '@/views/TotalSupport.vue'
@@ -114,6 +115,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
     },
     {
+      path: '/CommunityMissingDetail',
+      name: 'CommunityMissingDetail',
+      component: CommunityMissingDetail,
+      meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용      
+    },     
+    {
       path: '/post/:id',
       name: 'CommunityPost',
       component: CommunityPost,
@@ -134,7 +141,7 @@ const router = createRouter({
       path: '/post/edit/:id', // '/post/edit/1' 과 같은 개념
       name: 'PostEdit',
       component: CommunityPostWrite // PostWrite 재활용 가능
-    },    
+    },          
     // 병욱 게시판 끝
 
     {
