@@ -211,7 +211,7 @@ async function deleteComment(commentId) {
       <p class="post-content">{{ post.content }}</p>
       
       <div v-if="post.image" class="post-image-container">
-        <img :src="`http://localhost:8080${post.image}`" alt="게시물 이미지" class="post-image">
+        <img :src="post.image" alt="게시물 이미지" class="post-image">
       </div>
       
       <div class="post-footer">
