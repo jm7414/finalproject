@@ -515,8 +515,7 @@ function formatLocation(scheduleNo) {
 // 보호자가 관리하는 환자 정보 가져오기
 async function fetchPatientInfo() {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/user/my-patient`, {
+    const response = await fetch(`/api/user/my-patient`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -543,8 +542,7 @@ async function fetchPatientInfo() {
 // 일정 목록 가져오기
 async function fetchSchedules(userNo) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/schedule/list/${userNo}`, {
+    const response = await fetch(`/api/schedule/list/${userNo}`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -564,8 +562,7 @@ async function fetchSchedules(userNo) {
 // 특정 일정의 위치 목록 가져오기
 async function fetchScheduleLocations(scheduleNo) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/schedule/${scheduleNo}/locations`, {
+    const response = await fetch(`/api/schedule/${scheduleNo}/locations`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -657,8 +654,7 @@ function getCurrentSchedule() {
 // 일정의 안심존(버퍼) 가져오기
 async function fetchScheduleSafeZone(scheduleNo) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/schedule/${scheduleNo}/route`, {
+    const response = await fetch(`/api/schedule/${scheduleNo}/route`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -678,8 +674,7 @@ async function fetchScheduleSafeZone(scheduleNo) {
 // 기본 안심존 가져오기
 async function fetchBasicSafeZone(userNo) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/schedule/basic-safe-zone/${userNo}`, {
+    const response = await fetch(`/api/schedule/basic-safe-zone/${userNo}`, {
       method: 'GET',
       credentials: 'include'
     })

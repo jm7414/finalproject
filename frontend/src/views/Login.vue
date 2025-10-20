@@ -105,8 +105,7 @@ async function onLogin() {
   }
 
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`/api/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -120,7 +119,7 @@ async function onLogin() {
 
     if (response.ok) {
       // 로그인 성공 시 사용자 정보 조회
-      const userResponse = await fetch(`${API_BASE_URL}/api/user/me`, {
+      const userResponse = await fetch(`/api/user/me`, {
         credentials: 'include',
       })
       

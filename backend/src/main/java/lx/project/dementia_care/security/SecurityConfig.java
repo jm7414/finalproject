@@ -67,7 +67,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(login -> login
-                        .loginPage("http://localhost:5173/login") // Vue의 로그인 페이지로 리다이렉트
+                        .loginPage("https://localhost:5173/login") // Vue의 로그인 페이지로 리다이렉트
                         .loginProcessingUrl("/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
@@ -116,7 +116,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
+                "https://localhost:5173",
+                "https://localhost:5173",
                 "https://lx12mammamia.xyz",
                 "https://www.lx12mammamia.xyz"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));

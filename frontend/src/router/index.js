@@ -255,6 +255,12 @@ const router = createRouter({
 
 // 라우터 가드 설정
 router.beforeEach(async (to, from, next) => {
+  // 게스트 페이지(로그인, 회원가입)는 인증 체크 없이 통과
+  if (to.meta.requiresGuest) {
+    next()
+    return
+  }
+  
   const isLoggedIn = await isAuthenticated()
   
   // 로그인이 필요한 페이지에 접근하는 경우
@@ -270,17 +276,6 @@ router.beforeEach(async (to, from, next) => {
       // 접근 권한이 없으면 해당 역할의 기본 페이지로 리다이렉트
       const defaultRoute = getDefaultRouteByRole(user.roleNo)
       alert('접근 권한이 없습니다.')
-      next(defaultRoute)
-      return
-    }
-  }
-  
-  // 게스트만 접근 가능한 페이지(로그인, 회원가입)에 로그인된 상태로 접근하는 경우
-  if (to.meta.requiresGuest && isLoggedIn) {
-    // 사용자 정보를 가져와서 역할에 따른 기본 페이지로 리다이렉트
-    const user = await getCurrentUser()
-    if (user) {
-      const defaultRoute = getDefaultRouteByRole(user.roleNo)
       next(defaultRoute)
       return
     }

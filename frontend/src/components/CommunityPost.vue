@@ -26,8 +26,7 @@ onMounted(() => {
 // --- 데이터 로딩 함수들 ---
 async function fetchCurrentUser() {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.get(`${API_BASE_URL}/api/user/me`, {
+    const response = await axios.get(`/api/user/me`, {
       withCredentials: true
     });
     currentUser.value = response.data;
@@ -41,8 +40,7 @@ async function fetchPost() {
   loading.value = true;
   error.value = null;
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.get(`${API_BASE_URL}/api/posts/${postId.value}`, {
+    const response = await axios.get(`/api/posts/${postId.value}`, {
       withCredentials: true
     });
     post.value = response.data;
@@ -56,8 +54,7 @@ async function fetchPost() {
 
 async function fetchComments() {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.get(`${API_BASE_URL}/api/posts/${postId.value}/comments`, {
+    const response = await axios.get(`/api/posts/${postId.value}/comments`, {
       withCredentials: true
     });
     comments.value = response.data;
@@ -78,8 +75,7 @@ function editPost() {
 async function deletePost() {
   if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      await axios.delete(`${API_BASE_URL}/api/posts/${postId.value}`, {
+      await axios.delete(`/api/posts/${postId.value}`, {
         withCredentials: true
       });
       alert('게시물이 삭제되었습니다.');
@@ -99,9 +95,8 @@ function sharePost() {
 async function toggleLike() {
   if (!post.value) return;
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
     const response = await axios.post(
-      `${API_BASE_URL}/api/posts/${post.value.postId}/like`,
+      `/api/posts/${post.value.postId}/like`,
       null,
       { withCredentials: true }
     );
@@ -123,9 +118,8 @@ async function submitComment() {
     return;
   }
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
     const response = await axios.post(
-      `${API_BASE_URL}/api/posts/${postId.value}/comments`,
+      `/api/posts/${postId.value}/comments`,
       { content: newCommentContent.value },
       { withCredentials: true }
     );
@@ -141,8 +135,7 @@ async function submitComment() {
 async function deleteComment(commentId) {
   if (confirm("정말로 이 댓글을 삭제하시겠습니까?")) {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      await axios.delete(`${API_BASE_URL}/api/comments/${commentId}`, {
+      await axios.delete(`/api/comments/${commentId}`, {
         withCredentials: true
       });
       comments.value = comments.value.filter(comment => comment.commentId !== commentId);

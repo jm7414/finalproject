@@ -179,8 +179,7 @@ async function saveSettings() {
     }
 
     // 백엔드 API 호출
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/schedule/basic-safe-zone`, {
+    const response = await fetch(`/api/schedule/basic-safe-zone`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

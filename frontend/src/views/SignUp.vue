@@ -171,8 +171,7 @@ async function checkDuplicate() {
   }
 
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/user/check-duplicate?userId=${form.username}`, {
+    const response = await fetch(`/api/user/check-duplicate?userId=${form.username}`, {
       credentials: 'include'
     })
     const data = await response.json()
@@ -232,8 +231,7 @@ async function onSubmit() {
     console.log('회원가입 요청 데이터:', requestData)
     console.log('form.isGuardian 값:', form.isGuardian, '타입:', typeof form.isGuardian)
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/register`, {
+    const response = await fetch(`/api/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

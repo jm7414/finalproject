@@ -103,8 +103,7 @@ onMounted(async () => {
 async function checkExistingBasicSafeZone() {
   try {
     // 환자 번호 가져오기
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const patientResponse = await fetch(`${API_BASE_URL}/api/user/my-patient`, {
+    const patientResponse = await fetch(`/api/user/my-patient`, {
       method: 'GET',
       credentials: 'include'
     })
@@ -121,7 +120,7 @@ async function checkExistingBasicSafeZone() {
     }
     
     // 기본 안심존 조회
-    const zoneResponse = await fetch(`${API_BASE_URL}/api/schedule/basic-safe-zone/${patient.userNo}`, {
+    const zoneResponse = await fetch(`/api/schedule/basic-safe-zone/${patient.userNo}`, {
       method: 'GET',
       credentials: 'include'
     })

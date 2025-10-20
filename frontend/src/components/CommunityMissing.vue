@@ -18,8 +18,7 @@ async function fetchMissingPeople() {
   loading.value = true;
   error.value = null;
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    const response = await axios.get(`${API_BASE_URL}/api/missing-posts`);
+    const response = await axios.get(`/api/missing-posts`);
     missingPeople.value = response.data;
   } catch (err) {
     console.error("실종자 목록을 불러오는 데 실패했습니다:", err);
@@ -44,8 +43,7 @@ function closeModal() {
 // 함께하기 버튼 클릭
 async function joinSearch(person) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    await axios.post(`${API_BASE_URL}/api/missing-posts/${person.id}/join`);
+    await axios.post(`/api/missing-posts/${person.id}/join`);
     alert(person.name + ' 님 찾기에 함께합니다!');
   } catch (err) {
     alert('참여 처리 중 오류가 발생했습니다.');
