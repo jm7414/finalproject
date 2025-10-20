@@ -56,12 +56,12 @@
             </button>
           </div>
 
-          <!-- 2) 내 정보 : 작 -->
+          <!-- 2) 내 정보 : 작 (경로 수정됨) -->
           <div class="col-6">
             <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
               style="height:180px;background-image:linear-gradient(135deg,#FF9C86 0%, #FF7A63 60%, #FF5C46 100%);
                      background-size:100% 100%;background-repeat:no-repeat;box-shadow:0 8px 20px rgba(16,24,40,.08);"
-              @click="go('/my-info')">
+              @click="go('/dpmypage')">
               <div class="position-absolute top-0 start-0 end-0" style="bottom:40px">
                 <div class="h-100 d-flex align-items-center justify-content-center">
                   <img :src="imgInfo" alt="" class="img-fluid"
@@ -204,7 +204,10 @@ const nextSchedule = computed(() => {
 })
 
 /** ====== 네비게이션 ====== */
-function go(path) { router.push(path) }
+function go(path) { 
+  console.log('네비게이션:', path) // 디버깅용
+  router.push(path) 
+}
 
 /** ====== 초기 로드 ====== */
 onMounted(async () => {

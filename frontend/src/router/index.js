@@ -16,6 +16,7 @@ import TotalSupport from '@/views/TotalSupport.vue'
 import MoneySupport from '@/views/MoneySupport.vue'
 import Record from '@/views/Record.vue'
 import Report from '@/views/Report.vue'
+import DpMypageView from '@/views/DpMypageView.vue'
 import GdMypageView from '@/views/GdMypageView.vue'
 import Basicplan from '@/views/Basicplan.vue'
 import Plusplan from '@/views/Plusplan.vue'
@@ -34,16 +35,10 @@ import Insurance from '@/views/Insurance.vue'
 import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-  {
-    path: '/payment',
-    name: 'payment',
-    component: Payment,
-    meta: { requiresAuth: true, roles: [1, 3] }
-  },
-
     {
       path: '/',
       name: 'home',
@@ -54,7 +49,7 @@ const router = createRouter({
       name: 'gdc',
       component: GD_Connect,
     },
-     {
+    {
       path: '/pr',
       name: 'pr',
       component: Pr,
@@ -64,7 +59,7 @@ const router = createRouter({
       name: 'game',
       component: Game,
     },
-     {
+    {
       path: '/dpc',
       name: 'dpc',
       component: DP_Connect,
@@ -93,7 +88,7 @@ const router = createRouter({
       component: Login,
       meta: { requiresGuest: true }
     },
-
+    
     // 병욱 게시판 시작
     {
       path: '/CommunityView',
@@ -124,7 +119,7 @@ const router = createRouter({
       name: 'CommunityPostWrite',
       component: CommunityPostWrite,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },    
+    },
     {
       path: '/CommunityEvent',
       name: 'CommunityEvent',
@@ -134,9 +129,9 @@ const router = createRouter({
       path: '/post/edit/:id', // '/post/edit/1' 과 같은 개념
       name: 'PostEdit',
       component: CommunityPostWrite // PostWrite 재활용 가능
-    },    
+    },
     // 병욱 게시판 끝
-
+    
     {
       path: '/geo-fencing',
       name: 'geo-fencing',
@@ -148,21 +143,21 @@ const router = createRouter({
       name: 'search-route',
       component: SearchRouteView,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },     
-
+    },
+    
     // 주형 종합지원, 지원금안내페이지, 기록, 리포트 수정 시작
     {
       path: '/total-support',
       name: 'totalSupport',
       component: TotalSupport,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
+    },
     {
       path: '/money-support',
       name: 'moneySupport',
       component: MoneySupport,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
+    },
     {
       path: '/record',
       name: 'record',
@@ -174,43 +169,48 @@ const router = createRouter({
       name: 'report',
       component: Report,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
-
-
-
+    },
+    
+    
+    
     {
       path: '/loan',
       name: 'loan',
       component: Loan,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
+    },
     {
       path: '/benefit',
       name: 'benefit',
       component: Benefit,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
+    },
     {
       path: '/insurance',
       name: 'insurance',
       component: Insurance,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
+    },
     {
       path: '/heartCare',
       name: 'heartCare',
       component: HeartCare,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
-    },        
+    },
     {
       path: '/DP_schedule',
       name: 'DP_schcedule',
       component: DP_schedule,
       meta: { requiresAuth: true, roles: [2] } // 환자 전용 (roleNo: 2)
-    },        
-
-    // 주형 종합지원, 지원금안내페이지 수정 끝
-        {
+    },
+    // 지현
+    {
+      path: '/dpmypage',
+      name: 'dpmypage',
+      component: DpMypageView,
+      meta: { requiresAuth: true, roles: [2] } // 환자 전용 (roleNo: 2)
+    },    
+    {
       path: '/gdmypage',
       name: 'gdmypage',
       component: GdMypageView,
@@ -226,6 +226,12 @@ const router = createRouter({
       path: '/plusplan',
       name: 'plusplan',
       component: Plusplan,
+      meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
+    },
+    {
+      path: '/payment',
+      name: 'payment',
+      component: Payment,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
     },
     {
@@ -264,13 +270,13 @@ const router = createRouter({
 // 라우터 가드 설정
 router.beforeEach(async (to, from, next) => {
   const isLoggedIn = await isAuthenticated()
-  
+
   // 로그인이 필요한 페이지에 접근하는 경우
   if (to.meta.requiresAuth && !isLoggedIn) {
     next('/login')
     return
   }
-  
+
   // 역할 기반 접근 제어
   if (to.meta.requiresAuth && to.meta.roles && isLoggedIn) {
     const user = await getCurrentUser()
@@ -282,7 +288,7 @@ router.beforeEach(async (to, from, next) => {
       return
     }
   }
-  
+
   // 게스트만 접근 가능한 페이지(로그인, 회원가입)에 로그인된 상태로 접근하는 경우
   if (to.meta.requiresGuest && isLoggedIn) {
     // 사용자 정보를 가져와서 역할에 따른 기본 페이지로 리다이렉트
@@ -293,7 +299,7 @@ router.beforeEach(async (to, from, next) => {
       return
     }
   }
-  
+
   // 루트 경로 접근 시 로그인 상태에 따라 리다이렉트
   if (to.path === '/') {
     if (isLoggedIn) {
@@ -307,7 +313,7 @@ router.beforeEach(async (to, from, next) => {
     next('/login')
     return
   }
-  
+
   next()
 })
 
