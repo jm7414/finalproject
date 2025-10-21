@@ -56,12 +56,12 @@
             </button>
           </div>
 
-          <!-- 2) 내 정보 : 작 (경로 수정됨) -->
+          <!-- 2) 내 정보 : 작 (모달로 변경) -->
           <div class="col-6">
             <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
               style="height:180px;background-image:linear-gradient(135deg,#FF9C86 0%, #FF7A63 60%, #FF5C46 100%);
                      background-size:100% 100%;background-repeat:no-repeat;box-shadow:0 8px 20px rgba(16,24,40,.08);"
-              @click="go('/dpmypage')">
+              @click="openMyInfoModal">
               <div class="position-absolute top-0 start-0 end-0" style="bottom:40px">
                 <div class="h-100 d-flex align-items-center justify-content-center">
                   <img :src="imgInfo" alt="" class="img-fluid"
@@ -118,12 +118,20 @@
     </div>
 
     <div class="py-3"></div>
+
+    <!-- 내 정보 모달 -->
+    <MyInfoModal 
+      v-model="isMyInfoModalOpen" 
+      :user-name="userName"
+      @close="handleMyInfoModalClose"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import MyInfoModal from '@/components/MyInfoModal.vue'
 
 import imgZone from '@/assets/images/My zone.svg'
 import imgInfo from '@/assets/images/Myinfo.svg'
@@ -138,6 +146,7 @@ const err = ref('')
 const userName = ref('')
 const patientUserNo = ref(null)
 const allSchedules = ref([])
+const isMyInfoModalOpen = ref(false)
 
 /** ====== 공통 fetch ====== */
 async function request(url, options = {}) {
@@ -205,8 +214,19 @@ const nextSchedule = computed(() => {
 
 /** ====== 네비게이션 ====== */
 function go(path) { 
-  console.log('네비게이션:', path) // 디버깅용
+  console.log('네비게이션:', path)
   router.push(path) 
+}
+
+/** ====== 모달 관리 ====== */
+function openMyInfoModal() {
+  console.log('내 정보 모달 열기')
+  isMyInfoModalOpen.value = true
+}
+
+function handleMyInfoModalClose() {
+  console.log('내 정보 모달 닫힘')
+  isMyInfoModalOpen.value = false
 }
 
 /** ====== 초기 로드 ====== */

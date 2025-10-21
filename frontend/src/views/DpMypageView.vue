@@ -49,7 +49,7 @@
 
               <!-- 보호자 연결코드 -->
               <div class="col-12">
-                <div class="menu-card menu-card-small" @click="showGuardianCode">
+                <div class="menu-card menu-card-small" @click="showConnectCode">
                   <div class="card-content">
                     <div class="icon-wrapper mb-2">
                       <i class="bi bi-link-45deg"></i>
@@ -104,10 +104,10 @@ const editProfile = () => {
 }
 
 // 보호자 연결코드
-const showGuardianCode = () => {
+const showConnectCode = () => {
   console.log('보호자 연결코드')
   // 보호자 연결코드 페이지로 이동
-  // router.push('/guardian/code')
+   router.push('/dpc')
 }
 
 // 로그아웃 처리 (1번 코드 로직)
