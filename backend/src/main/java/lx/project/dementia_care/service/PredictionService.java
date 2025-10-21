@@ -19,7 +19,7 @@ public class PredictionService {
 	public List<PredictionResponseDTO> getPredLocation(PredictionRequestDTO dto) throws Exception{
 		LocationDataVO vo = new LocationDataVO();
 		vo.setUserNo(dto.getUserNo());
-		vo.setMissingTime(dto.getMissingTime());
+		vo.setRecordTime(dto.getMissingTime());
 		return predDAO.getLocationData(vo);
 	}
 	
