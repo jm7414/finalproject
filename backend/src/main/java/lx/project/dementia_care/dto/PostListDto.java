@@ -17,6 +17,9 @@ public class PostListDto {
     // 작성자 닉네임
     private String author;
 
+    // 내용
+    private String content;
+
     // 댓글 수
     private int comments;
 
@@ -30,5 +33,5 @@ public class PostListDto {
     private OffsetDateTime createdAt;
     
     // 이미지
-    private String imageUrl;
+    private String image;
 }

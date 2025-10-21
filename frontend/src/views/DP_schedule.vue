@@ -100,43 +100,49 @@
                     </div>
                     <DatePickerModal :isVisible="showModal" @close="closeModal" @confirm="handleDateConfirm" />
                 </div>
+                
+                <!-- 몇 시에 가세요? -->
                 <div class="going-time">
                     <span class="how-many-go">몇 시에 가세요?</span>
                     <div class="div-a">
-                        <select id="ampm" v-model="selectedAmpm1" class="select" style="font-size: 28px;">
-                            <option value="" disabled selected hidden style="color: #999;">오전/오후</option>
-                            <option v-for="(item, index) in ampm" :key="index" :value="item" class="am">
+                        <select id="ampm1" v-model="selectedAmpm1" class="form-select custom-time-select">
+                            <option value="" disabled selected hidden>오전/오후</option>
+                            <option v-for="(item, index) in ampm" :key="index" :value="item">
                                 {{ item }}
                             </option>
                         </select>
 
-                        <select id="time_" v-model="selectedTime1" class="select-c" style="font-size: 28px;"
+                        <select id="time1" v-model="selectedTime1" class="form-select custom-time-select"
                             @change="onTime1Change">
                             <option value="" disabled selected hidden>시간</option>
-                            <option v-for="(item, index) in time_" :key="index" :value="item" class="span-time">
+                            <option v-for="(item, index) in time_" :key="index" :value="item">
                                 {{ item }}
                             </option>
                         </select>
                     </div>
                 </div>
+                
+                <!-- 몇 시에 돌아오세요? -->
                 <div class="return-time">
                     <span class="how-many-come-back">몇 시에 돌아오세요?</span>
                     <div class="div-e">
-                        <select id="ampm" v-model="selectedAmpm2" class="select-f" style="font-size: 28px;">
+                        <select id="ampm2" v-model="selectedAmpm2" class="form-select custom-time-select">
                             <option value="" disabled selected hidden>오전/오후</option>
-                            <option v-for="(item, index) in ampm" :key="index" :value="item" class="am">
+                            <option v-for="(item, index) in ampm" :key="index" :value="item">
                                 {{ item }}
                             </option>
                         </select>
-                        <select id="time_" v-model="selectedTime2" class="select-12" style="font-size: 28px;"
+                        
+                        <select id="time2" v-model="selectedTime2" class="form-select custom-time-select"
                             @change="onTime2Change">
                             <option value="" disabled selected hidden>시간</option>
-                            <option v-for="(item, index) in time_" :key="index" :value="item" class="span-time">
+                            <option v-for="(item, index) in time_" :key="index" :value="item">
                                 {{ item }}
                             </option>
                         </select>
                     </div>
                 </div>
+                
                 <!-- 저장취소 버튼 -->
                 <div class="save-cancel">
                     <div class="div-element">
@@ -152,8 +158,8 @@
         </div>
     </div>
             
-                <button class="btn btn-primary" @click="requestRoute"> 경로저장 테스트</button>
-                <button class="btn btn-info" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
+    <button class="btn btn-primary" @click="requestRoute"> 경로저장 테스트</button>
+    <button class="btn btn-info" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
             
 </template>
 
@@ -251,7 +257,6 @@ const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
 onMounted(() => {
     loadKakaoMap(mapContainer.value)
 })
-
 
 function loadKakaoMap(container) {
     const script = document.createElement('script')
@@ -351,7 +356,6 @@ function drawRouteOnKakaoMap(map, coords) {
     map.setBounds(bounds)
 }
 
-
 /**
  * Turf.js를 사용해 경로 주변에 버퍼를 생성하고 카카오맵에 폴리곤으로 그립니다.
  */
@@ -412,8 +416,6 @@ function createBuffer(map, coords) {
 // ==========================================================
 // 출발장소 도착장소 로직 끝
 
-
-
 // 시간설정 로직 부분
 // ==========================================================
 const selectedDay = ref('')
@@ -438,6 +440,14 @@ function checkDay(s) {
 
 function cancle() {
     alert(`취소`)
+}
+
+function onTime1Change() {
+    console.log('시간1 변경:', selectedTime1.value)
+}
+
+function onTime2Change() {
+    console.log('시간2 변경:', selectedTime2.value)
 }
 
 // 
@@ -553,7 +563,6 @@ function closeModal() {
     showModal.value = false
 }
 
-
 // 모달에서 오늘보다 전 일정 선택 방지
 function handleDateConfirm(date) {
     const pickedDate = new Date(date)
@@ -601,7 +610,6 @@ async function scheduleRegistration(userNo, startLoc, endLoc, date, startTime, e
     console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 성공:`, result)
 }
 
-
 // 장소입력 출발~도착
 function voiceSearchStart() {
     alert(`시작`)
@@ -613,7 +621,6 @@ function voiceSearchEnd() {
 
 </script>
 
-
 <style scoped>
 .main-container,
 .main-body,
@@ -623,6 +630,9 @@ function voiceSearchEnd() {
     /* 또는 1 정도로 */
     right:4px;
     top:-45px;
+     overflow-x: hidden;  /* 이 줄 추가 */
+    width: 120%;
+    max-width: 100vw;  /* 뷰포트 너비 초과 방지 */
 }
 
 .bd {
@@ -648,9 +658,7 @@ function voiceSearchEnd() {
     color: #FFFFFF !important;
 }
 
-
-/** modal
- */
+/** modal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -726,5 +734,64 @@ function voiceSearchEnd() {
 .cancel-btn {
     background: #ddd;
     color: #333;
+}
+
+/* ===== Bootstrap 5 기반 커스텀 select 스타일 ===== */
+.custom-time-select {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #516578 !important; /* Bootstrap의 진한 회색 */
+    padding: 0.5rem 2.5rem 0.5rem 0.75rem !important;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    height: 100px !important;    
+    /* Bootstrap 5의 form-select 화살표 유지 */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 16px 20px;
+}
+
+/* placeholder 색상 (선택 안 된 상태) */
+.custom-time-select option[disabled] {
+    color: #6c757d !important;
+}
+
+/* 선택된 값 색상 */
+.custom-time-select:not([value=""]) {
+    color: #5d656d !important;
+}
+
+/* focus 시 스타일 */
+.custom-time-select:focus {
+    border-color: rgba(74, 98, 221, 0.85);
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(74, 98, 221, 0.25);
+}
+
+/* option 스타일 */
+.custom-time-select option {
+    color: #212529;
+    background-color: #fff;
+    padding: 0.5rem;
+    font-size: 22px;
+}
+
+/* div 레이아웃 */
+.div-a,
+.div-e {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* 시간 관련 라벨 */
+.how-many-go,
+.how-many-come-back {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #212529;
 }
 </style>

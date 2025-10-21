@@ -94,6 +94,7 @@ const router = createRouter({
     {
       path: '/CommunityView',
       name: 'CommunityView',
+      
       component: CommunityView,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
@@ -206,7 +207,7 @@ const router = createRouter({
     },
     {
       path: '/DP_schedule',
-      name: 'DP_schcedule',
+      name: 'DP_schedule',
       component: DP_schedule,
       meta: { requiresAuth: true, roles: [2, 3] } // 환자(2), 구독자(3) 전용
     },

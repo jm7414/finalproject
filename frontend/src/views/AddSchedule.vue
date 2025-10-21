@@ -205,12 +205,25 @@
       </div>
     </div>
 
+    <!-- 확인 모달 -->
+    <ConfirmModal
+      :show="showConfirmModal"
+      :title="confirmModalConfig.title"
+      :message="confirmModalConfig.message"
+      :confirm-text="confirmModalConfig.confirmText"
+      :cancel-text="confirmModalConfig.cancelText"
+      @confirm="handleConfirmCancel"
+      @cancel="handleCancelCancel"
+      @close="closeConfirmModal"
+    />
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 const router = useRouter()
 
@@ -249,6 +262,15 @@ const locationData = ref([])
 
 // 위치 데이터가 있는지 확인
 const hasLocationData = computed(() => locationData.value.length > 0)
+
+// 확인 모달 관련
+const showConfirmModal = ref(false)
+const confirmModalConfig = ref({
+  title: '확인',
+  message: '',
+  confirmText: '확인',
+  cancelText: '취소'
+})
 
 // 폼 유효성 검사
 const isFormValid = computed(() => {
@@ -396,9 +418,28 @@ async function saveSchedule() {
 
 // 일정 취소
 function cancelSchedule() {
-  if (confirm('작성 중인 내용이 사라집니다. 정말 취소하시겠습니까?')) {
-    router.push({ name: 'calendar' })
+  confirmModalConfig.value = {
+    title: '일정 취소',
+    message: '작성 중인 내용이 사라집니다. 정말 취소하시겠습니까?',
+    confirmText: '취소',
+    cancelText: '계속 작성'
   }
+  showConfirmModal.value = true
+}
+
+// 확인 모달에서 확인 버튼 클릭 시
+function handleConfirmCancel() {
+  router.push({ name: 'calendar' })
+}
+
+// 확인 모달에서 취소 버튼 클릭 시
+function handleCancelCancel() {
+  // 아무것도 하지 않음 (모달만 닫힘)
+}
+
+// 확인 모달 닫기
+function closeConfirmModal() {
+  showConfirmModal.value = false
 }
 
 // 시간을 "오전/오후 HH:MM" 형식으로 변환

@@ -67,7 +67,7 @@
             </div>
             <!-- 텍스트 정보 -->
             <div class="flex-grow-1" style="min-width: 0;">
-              <div class="fw-bold text-dark" style="font-size: 1.05rem; line-height: 1.3;">할머니 김순자</div>
+              <div class="fw-bold text-dark" style="font-size: 1.05rem; line-height: 1.3;">김순자 님</div>
               <div class="text-muted" style="font-size: 0.8125rem; line-height: 1.3;">온라인 • 2분 전</div>
             </div>
             <!-- 아이콘 -->
