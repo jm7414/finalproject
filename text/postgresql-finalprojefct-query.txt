@@ -245,6 +245,43 @@ CREATE TABLE record (
     CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE
 );
 
+-- === 환자 위치 저장 테이블 === 
+CREATE TABLE user_location (
+	location_no SERIAL PRIMARY KEY,
+	user_no INTEGER NOT NULL,
+	latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude DECIMAL(11,8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+	record_time TIMESTAMP NOT NULL, -- GPS정보가 찍힌 시간
+	
+	FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+-- ASC가 기본 값
+CREATE INDEX idx_user_location_user_time ON user_location(user_no, record_time);
+
+-- SELECT * FROM user_location 
+-- WHERE user_no = 1 
+-- ORDER BY record_time;
+
+
+
+-- === 예측된 위치 저장 테이블 (heatMap 나타내기위함) ===
+CREATE TABLE predict_location (
+	predicted_no SERIAL PRIMARY KEY,
+	user_no INTEGER NOT NULL,
+	location_no INTEGER NOT NULL,
+	range_50_700 JSONB NOT NULL,
+	range_700_1500 JSONB NOT NULL,
+	range_1500_plus JSONB NOT NULL,
+	level_1_top3 JSONB NOT NULL,
+	level_2_top3 JSONB NOT NULL,
+	level_3_top3 JSONB NOT NULL,
+
+	FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
+	FOREIGN KEY (location_no) REFERENCES user_location(location_no) ON DELETE CASCADE
+);
+CREATE INDEX idx_predict_user ON predict_location(user_no);
+
 -- === 샘플 데이터 삽입 ===
 INSERT INTO users (user_id, user_pw, name, role_no) VALUES
 ('guardian_lee', 'password123', '이영희', 1),
