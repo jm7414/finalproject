@@ -95,7 +95,7 @@
       <!-- 1) 기본 안심존 설정 -->
       <div class="col-6">
         <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          @click="router.push('/geo-fencing')" style="height:220px;
+          @click="router.push({ name: 'basic-safe-zone-location' })" style="height:220px;
                        background-image:
                          linear-gradient(0deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.18) 45%, rgba(255,255,255,0) 75%),
                          linear-gradient(135deg,#6f82ff 0%,#576cff 55%,#475cff 100%);">

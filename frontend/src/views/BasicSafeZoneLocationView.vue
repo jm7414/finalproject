@@ -66,7 +66,6 @@
         <span>선택된 위치</span>
       </div>
       <div class="selected-name">{{ selectedLocation.place_name }}</div>
-      <div class="selected-addr">{{ selectedLocation.road_address_name || selectedLocation.address_name }}</div>
     </div>
 
     <!-- 액션 버튼 -->
@@ -145,7 +144,8 @@ async function checkExistingBasicSafeZone() {
         if (boundary.center) {
           selectedLocation.value = {
             place_name: boundary.locationName || '기존 설정 위치',
-            address_name: `위도: ${boundary.center.lat}, 경도: ${boundary.center.lng}`,
+            address_name: boundary.address || boundary.locationName || '기존 안심존 위치',
+            road_address_name: boundary.roadAddress || boundary.address || boundary.locationName,
             x: boundary.center.lng,
             y: boundary.center.lat
           }
@@ -425,10 +425,6 @@ input:focus {
   margin-bottom: 4px;
 }
 
-.selected-addr {
-  font-size: 14px;
-  color: #6b7280;
-}
 
 /* 액션 버튼 */
 .actions {

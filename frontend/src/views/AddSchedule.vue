@@ -124,7 +124,6 @@
                 <div class="step-number">{{ index + 1 }}</div>
                 <div class="step-content">
                   <div class="step-name">{{ location.name }}</div>
-                  <div class="step-address">{{ formatCoordinates(location.latitude, location.longitude) }}</div>
                 </div>
               </div>
               <div v-if="index < locationData.length - 1" class="route-arrow">
@@ -281,6 +280,34 @@ const isFormValid = computed(() => {
          hasLocationData.value
 })
 
+// 폼 초기화 함수
+function resetScheduleForm() {
+  // 폼 데이터 초기화
+  scheduleForm.value = {
+    title: '',
+    content: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+    location: null
+  }
+  
+  // 위치 데이터 초기화
+  locationData.value = []
+  
+  // 수정 모드 관련 상태 초기화
+  isEditMode.value = false
+  editScheduleNo.value = null
+  
+  // sessionStorage 정리
+  sessionStorage.removeItem('scheduleFormData')
+  sessionStorage.removeItem('editScheduleNo')
+  sessionStorage.removeItem('routeCoordinates')
+  sessionStorage.removeItem('bufferCoordinates')
+  sessionStorage.removeItem('scheduleLocations')
+  sessionStorage.removeItem('routeBufferPolygon')
+}
+
 // 뒤로 가기
 function goBack() {
   router.go(-1)
@@ -330,10 +357,6 @@ function confirmTime() {
   closeTimePicker()
 }
 
-// 좌표를 주소 형식으로 포맷팅
-function formatCoordinates(latitude, longitude) {
-  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-}
 
 // 경로 검색 페이지로 이동
 function goToSearchRoute() {
@@ -399,13 +422,8 @@ async function saveSchedule() {
     const result = await response.json()
     console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 성공:`, result)
 
-    // sessionStorage 정리
-    sessionStorage.removeItem('routeCoordinates')
-    sessionStorage.removeItem('bufferCoordinates')
-    sessionStorage.removeItem('scheduleLocations')
-    sessionStorage.removeItem('routeBufferPolygon')
-    sessionStorage.removeItem('scheduleFormData')
-    sessionStorage.removeItem('editScheduleNo')
+    // 폼 초기화
+    resetScheduleForm()
 
     alert(successMessage)
     router.push({ name: 'calendar' })
@@ -429,6 +447,8 @@ function cancelSchedule() {
 
 // 확인 모달에서 확인 버튼 클릭 시
 function handleConfirmCancel() {
+  // 폼 초기화 후 캘린더로 이동
+  resetScheduleForm()
   router.push({ name: 'calendar' })
 }
 
@@ -530,6 +550,9 @@ onMounted(async () => {
     await loadScheduleForEdit(editScheduleNo.value)
     return
   }
+  
+  // 수정 모드가 아닐 때는 폼 초기화
+  resetScheduleForm()
   
   // 캘린더에서 선택된 날짜가 있는지 확인
   const selectedDate = sessionStorage.getItem('selectedDate')
