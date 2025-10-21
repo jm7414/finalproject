@@ -31,8 +31,11 @@
             p.post_id,
             p.title,
             u.name AS author,
+            p.content,
+            u.profile_photo,
             p.view_count,
             p.created_at,
+            p.image_path AS "image",
             (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS likes,
             (SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id = p.post_id) AS comments
         FROM

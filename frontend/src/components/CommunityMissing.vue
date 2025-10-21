@@ -28,9 +28,8 @@ async function fetchMissingPeople() {
 
 
 // 상세 정보 페이지로 이동하는 함수
-function goToDetail(personId) {
-    // 실제 실종자 상세 페이지의 경로로 수정해야 합니다.
-    router.push(`/missing/${personId}`);
+function goToMissingDetail(personId) {
+    router.push(`/missingDetail/${personId}`);
 }
 
 // 상대 시간 계산 함수
@@ -73,7 +72,7 @@ function formatDateTime(dateString) {
       
       <div v-else-if="missingPeople.length === 0" class="status-message">등록된 실종신고가 없습니다.</div>
 
-      <div v-else v-for="person in missingPeople" :key="person.missingId" class="card" @click="goToDetail(person.missingId)">
+      <div v-else v-for="person in missingPeople" :key="person.missingId" class="card" @click="goToMissingDetail(person.missingId)">
         <div class="card-main-info">
           <img :src="person.image || '/default-person.png'" :alt="person.name" class="person-image">
           <div class="person-details">

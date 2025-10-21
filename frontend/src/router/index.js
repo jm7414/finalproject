@@ -94,6 +94,7 @@ const router = createRouter({
     {
       path: '/CommunityView',
       name: 'CommunityView',
+      
       component: CommunityView,
       meta: { requiresAuth: true, roles: [1, 3] } // 보호자, 구독자 전용
     },
