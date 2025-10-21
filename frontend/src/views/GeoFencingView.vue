@@ -4,15 +4,26 @@
     
     <!-- 안전존 범위 설정 UI -->
     <div class="controls">
-      <div class="control-row">
-        <span class="label">안전존 범위</span>
-        <select v-model="bufferLevel" @change="updateBuffer" class="level-select">
-          <option value="1">1단계</option>
-          <option value="2">2단계</option>
-          <option value="3">3단계</option>
-        </select>
-        <button class="confirm-btn" @click="updateBuffer">확인</button>
+      <div class="control-header">
+        <h3>안전존 범위 설정</h3>
+        <p>범위를 선택하면 지도에 안전존이 표시됩니다</p>
       </div>
+      
+      <div class="control-row">
+        <div class="level-options">
+          <button 
+            v-for="level in bufferLevels" 
+            :key="level.value"
+            class="level-btn"
+            :class="{ active: bufferLevel === level.value }"
+            @click="selectBufferLevel(level.value)"
+          >
+            <div class="level-name">{{ level.name }}</div>
+            <div class="level-desc">{{ level.desc }}</div>
+          </button>
+        </div>
+      </div>
+      
       <div class="action-row">
         <button class="set-btn" @click="saveSettings">설정</button>
         <button class="cancel-btn" @click="cancelSettings">취소</button>
@@ -35,6 +46,12 @@ let currentBuffer = null
 let currentSafetyZone = null
 let startMarker = null
 let endMarker = null
+
+const bufferLevels = [
+  { value: '1', name: '1단계', desc: '30m 범위' },
+  { value: '2', name: '2단계', desc: '60m 범위' },
+  { value: '3', name: '3단계', desc: '100m 범위' }
+]
 
 /* 카카오 지도 */
 const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
@@ -303,6 +320,14 @@ function createBuffer(map, coords) {
 }
 
 /**
+ * 버퍼 레벨 선택 시 호출
+ */
+function selectBufferLevel(level) {
+  bufferLevel.value = level
+  updateBuffer()
+}
+
+/**
  * 버퍼 레벨 변경 시 호출
  */
 function updateBuffer() {
@@ -360,147 +385,171 @@ function cancelSettings() {
 
 <style scoped>
 .page {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   z-index: 1;
 }
 
 .map-box {
-  height: 60vh;
   width: 100%;
-  min-height: 0;
-}
-
-.control-panel {
-  background: white;
-  padding: 16px;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.safety-zone-control {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  white-space: nowrap;
-}
-
-.dropdown-container {
-  position: relative;
   flex: 1;
-  max-width: 120px;
+  min-height: 300px;
+  max-height: 55vh; /* 지도 최대 높이를 화면의 50%로 제한 */
 }
 
-.range-selector {
-  width: 100%;
-  height: 800px; /* 지도 길이 조정 */
-}
-
+/* 컨트롤 패널 */
 .controls {
-  background: #fff;
-  padding: 16px;
+  flex-shrink: 0;
+  background: #ffffff;
   border-top: 1px solid #e5e7eb;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0; /* 축소 방지 */
+  padding: 24px 20px;
+  overflow-y: auto;
+  margin-bottom: 60px; /* 하단 네비게이션 여유 공간 */
+}
+
+.control-header {
+  margin-bottom: 20px;
+}
+
+.control-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.control-header p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
 }
 
 .control-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-.label {
-  font-size: 16px;
-  font-weight: 500;
-  color: #374151;
-  min-width: 100px;
-}
-
-.level-select {
-  padding: 12px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 16px;
-  color: #374151;
-  cursor: pointer;
-  min-width: 120px;
-  height: 48px;
-}
-
-.confirm-btn {
-  padding: 12px 20px;
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  height: 48px;
-  transition: background-color 0.2s;
-}
-
-.confirm-btn:hover {
-  background: #4f46e5;
-}
-
-.action-row {
-  display: flex;
-  flex-direction: column;
+/* 범위 선택 버튼 */
+.level-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
-.set-btn {
-  width: 100%;
-  padding: 12px 20px;
-  background: #6366f1;
-  color: #fff;
-  border: none;
+.level-btn {
+  padding: 16px 12px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
   border-radius: 12px;
-  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.level-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.level-btn.active {
+  background: #eef2ff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.level-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.level-btn.active .level-name {
+  color: #6366f1;
+}
+
+.level-desc {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.level-btn.active .level-desc {
+  color: #4f46e5;
+}
+
+/* 액션 버튼 */
+.action-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.set-btn, .cancel-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  height: 48px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+}
+
+.set-btn {
+  background: #6366f1;
+  color: #ffffff;
+  border: none;
 }
 
 .set-btn:hover {
   background: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .cancel-btn {
-  width: 100%;
-  padding: 12px 20px;
-  background: #fff;
-  color: #6B7280;
-  border: 1px solid #6366f1;
-  border-radius: 12px;
-  font-size: 18px;
-  font-weight: 500;
-  cursor: pointer;
-  height: 48px;
-  transition: all 0.2s;
+  background: #ffffff;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
 }
 
 .cancel-btn:hover {
   background: #f9fafb;
-  border-color: #4f46e5;
+  border-color: #9ca3af;
+}
+
+/* 반응형 */
+@media (max-width: 480px) {
+  .map-box {
+    max-height: 40vh; /* 모바일에서는 지도 높이를 더 줄임 */
+  }
+
+  .controls {
+    padding: 20px 16px;
+    margin-bottom: 60px;
+  }
+
+  .level-options {
+    grid-template-columns: 1fr;
+  }
+
+  .level-btn {
+    padding: 14px 12px;
+  }
+
+  .control-header h3 {
+    font-size: 18px;
+  }
+
+  .control-header p {
+    font-size: 13px;
+  }
 }
 </style>
 

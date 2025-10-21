@@ -203,6 +203,9 @@ const lastLocation = ref(null)
 const allSchedules = ref([])
 const scheduleLocationsMap = ref({})
 
+// 안심존 관련
+let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
+
 /* ===== 유틸 ===== */
 function fmtTime(hhmm) {
   if (!hhmm) return ''
@@ -344,6 +347,9 @@ async function initMap() {
     map = new kakao.maps.Map(mapEl.value, { center: c, level: 3 })
     marker = new kakao.maps.Marker({ position: c })
     marker.setMap(map)
+    
+    // 안심존 표시
+    await updateSafeZone(map)
   } catch (e) { console.error('[Pr] Kakao Map Error:', e?.message || e) }
 }
 function updateMarker() {
@@ -351,6 +357,233 @@ function updateMarker() {
   const kakao = window.kakao
   const c = new kakao.maps.LatLng(lastLocation.value.lat, lastLocation.value.lng)
   marker.setPosition(c); map.setCenter(c)
+  
+  // 마커 업데이트 시 안심존도 함께 업데이트
+  updateSafeZone(map)
+}
+
+/* ===== 안심존 관련 함수들 ===== */
+// 현재 진행 중인 일정 찾기
+function getCurrentSchedule() {
+  const now = new Date()
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  const todayKey = `${year}-${month}-${day}`
+  
+  // 오늘 일정만 필터링
+  const todaySchedules = allSchedules.value.filter(schedule => schedule.scheduleDate === todayKey)
+  
+  // 현재 시간
+  const currentHour = now.getHours()
+  const currentMinute = now.getMinutes()
+  const currentTimeInMinutes = currentHour * 60 + currentMinute
+  
+  // 현재 시간에 해당하는 일정들 모두 찾기
+  const currentSchedules = []
+  
+  for (const schedule of todaySchedules) {
+    const [startHour, startMinute] = schedule.startTime.split(':').map(Number)
+    const [endHour, endMinute] = schedule.endTime.split(':').map(Number)
+    
+    const startTimeInMinutes = startHour * 60 + startMinute
+    const endTimeInMinutes = endHour * 60 + endMinute
+    
+    // 현재 시간이 일정 시간 범위 안에 있는지 확인
+    if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) {
+      currentSchedules.push(schedule)
+    }
+  }
+  
+  // 일정이 없으면 null 반환
+  if (currentSchedules.length === 0) return null
+  
+  // 일정이 여러 개 겹치면 시작 시간이 가장 빠른 것 선택
+  if (currentSchedules.length > 1) {
+    console.warn(`⚠️ ${currentSchedules.length}개의 일정이 현재 시간에 겹칩니다. 가장 먼저 시작된 일정을 표시합니다.`)
+    currentSchedules.forEach(s => {
+      console.log(`  - ${s.scheduleTitle} (${s.startTime} ~ ${s.endTime})`)
+    })
+  }
+  
+  // 시작 시간 기준으로 정렬 후 첫 번째 반환
+  return currentSchedules.sort((a, b) => 
+    a.startTime.localeCompare(b.startTime)
+  )[0]
+}
+
+// 일정의 안심존(버퍼) 가져오기
+async function fetchScheduleSafeZone(scheduleNo) {
+  try {
+    const response = await fetch(`/api/schedule/${scheduleNo}/route`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      throw new Error('경로 정보를 가져올 수 없습니다.')
+    }
+    
+    const route = await response.json()
+    return route.bufferCoordinates ? JSON.parse(route.bufferCoordinates) : null
+  } catch (error) {
+    console.error('일정 안심존 조회 오류:', error)
+    return null
+  }
+}
+
+// 기본 안심존 가져오기
+async function fetchBasicSafeZone(userNo) {
+  try {
+    const response = await fetch(`/api/schedule/basic-safe-zone/${userNo}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      throw new Error('기본 안심존을 가져올 수 없습니다.')
+    }
+    
+    const result = await response.json()
+    
+    // 메시지만 있는 경우 (기본 안심존이 설정되지 않은 경우)
+    if (result.message) {
+      console.warn(result.message)
+      return null
+    }
+    
+    return result.boundaryCoordinates ? JSON.parse(result.boundaryCoordinates) : null
+  } catch (error) {
+    console.error('기본 안심존 조회 오류:', error)
+    return null
+  }
+}
+
+// 지도에 경로형 안심존(버퍼 폴리곤) 그리기
+function drawScheduleSafeZone(map, bufferCoordinates) {
+  if (!map || !bufferCoordinates) return
+  
+  try {
+    // 기존 안심존 제거
+    if (currentSafeZone) {
+      currentSafeZone.setMap(null)
+    }
+    
+    // bufferCoordinates는 [{ latitude, longitude }, ...] 형식
+    const kakaoPath = bufferCoordinates.map(coord => 
+      new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
+    )
+    
+    // 폴리곤 생성
+    currentSafeZone = new window.kakao.maps.Polygon({
+      path: kakaoPath,
+      strokeWeight: 2,
+      strokeColor: '#EF4444',
+      strokeOpacity: 0.8,
+      fillColor: '#EF4444',
+      fillOpacity: 0.3
+    })
+    
+    currentSafeZone.setMap(map)
+    
+    // 안심존이 보이도록 지도 범위 조정
+    const bounds = new window.kakao.maps.LatLngBounds()
+    kakaoPath.forEach(latLng => bounds.extend(latLng))
+    map.setBounds(bounds)
+    
+    console.log('경로형 안심존 표시 완료')
+  } catch (error) {
+    console.error('경로형 안심존 표시 오류:', error)
+  }
+}
+
+// 지도에 기본형 안심존(원형) 그리기
+function drawBasicSafeZone(map, boundaryData) {
+  if (!map || !boundaryData) return
+  
+  try {
+    // 기존 안심존 제거
+    if (currentSafeZone) {
+      currentSafeZone.setMap(null)
+    }
+    
+    // boundaryData 구조: { type: 'Circle', center: { lat, lng }, radius, ... }
+    if (boundaryData.type === 'Circle') {
+      const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
+      const radius = boundaryData.radius
+      
+      // 원형 폴리곤 생성 (Turf.js 없이 직접 계산)
+      const circlePoints = []
+      const steps = 64
+      const earthRadius = 6371000 // 지구 반경 (미터)
+      
+      for (let i = 0; i < steps; i++) {
+        const angle = (Math.PI * 2 * i) / steps
+        const dx = radius * Math.cos(angle)
+        const dy = radius * Math.sin(angle)
+        
+        const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
+        const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)
+        
+        circlePoints.push(new window.kakao.maps.LatLng(lat, lng))
+      }
+      
+      // 폴리곤 생성
+      currentSafeZone = new window.kakao.maps.Polygon({
+        path: circlePoints,
+        strokeWeight: 3,
+        strokeColor: '#6366f1',
+        strokeOpacity: 0.8,
+        fillColor: '#6366f1',
+        fillOpacity: 0.2
+      })
+      
+      currentSafeZone.setMap(map)
+      
+      // 지도 레벨 조정
+      const bounds = new window.kakao.maps.LatLngBounds()
+      circlePoints.forEach(point => bounds.extend(point))
+      map.setBounds(bounds)
+      
+      console.log('기본형 안심존 표시 완료')
+    }
+  } catch (error) {
+    console.error('기본형 안심존 표시 오류:', error)
+  }
+}
+
+// 안심존 업데이트 (현재 일정에 따라)
+async function updateSafeZone(map) {
+  if (!map || !patient.value.userNo) return
+  
+  try {
+    // 1. 현재 진행 중인 일정 찾기
+    const currentSchedule = getCurrentSchedule()
+    
+    if (currentSchedule) {
+      // 2. 진행 중인 일정이 있으면 해당 일정의 안심존 표시
+      console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
+      const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
+      
+      if (bufferCoordinates && bufferCoordinates.length > 0) {
+        drawScheduleSafeZone(map, bufferCoordinates)
+        return
+      }
+    }
+    
+    // 3. 진행 중인 일정이 없거나 안심존이 없으면 기본 안심존 표시
+    console.log('기본 안심존 표시')
+    const basicSafeZone = await fetchBasicSafeZone(patient.value.userNo)
+    
+    if (basicSafeZone) {
+      drawBasicSafeZone(map, basicSafeZone)
+    } else {
+      console.warn('표시할 안심존이 없습니다.')
+    }
+  } catch (error) {
+    console.error('안심존 업데이트 오류:', error)
+  }
 }
 
 /* ===== 기타 ===== */
