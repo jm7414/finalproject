@@ -426,7 +426,21 @@ async function fetchScheduleSafeZone(scheduleNo) {
     }
     
     const route = await response.json()
-    return route.bufferCoordinates ? JSON.parse(route.bufferCoordinates) : null
+    if (!route.bufferCoordinates) return null
+    
+    const bufferCoordinates = JSON.parse(route.bufferCoordinates)
+    
+    // 기존 데이터 호환성 처리
+    // bufferCoordinates가 배열인 경우 (기존 형식) level 정보 추가
+    if (Array.isArray(bufferCoordinates)) {
+      return {
+        level: 1, // 기본값
+        coordinates: bufferCoordinates
+      }
+    }
+    
+    // bufferCoordinates가 객체인 경우 (새 형식) 그대로 반환
+    return bufferCoordinates
   } catch (error) {
     console.error('일정 안심존 조회 오류:', error)
     return null
@@ -470,8 +484,20 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       currentSafeZone.setMap(null)
     }
     
-    // bufferCoordinates는 [{ latitude, longitude }, ...] 형식
-    const kakaoPath = bufferCoordinates.map(coord => 
+    // bufferCoordinates 형식 처리
+    let coordinates
+    if (Array.isArray(bufferCoordinates)) {
+      // 기존 형식: [{ latitude, longitude }, ...]
+      coordinates = bufferCoordinates
+    } else if (bufferCoordinates.coordinates) {
+      // 새 형식: { level: 2, coordinates: [{ latitude, longitude }, ...] }
+      coordinates = bufferCoordinates.coordinates
+    } else {
+      console.error('지원하지 않는 bufferCoordinates 형식:', bufferCoordinates)
+      return
+    }
+    
+    const kakaoPath = coordinates.map(coord => 
       new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
     )
     
@@ -566,7 +592,12 @@ async function updateSafeZone(map) {
       console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
       const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
       
-      if (bufferCoordinates && bufferCoordinates.length > 0) {
+      if (bufferCoordinates && (
+        // 배열 형식 (기존 데이터)
+        (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) ||
+        // 객체 형식 (새 데이터)
+        (typeof bufferCoordinates === 'object' && bufferCoordinates.coordinates && bufferCoordinates.coordinates.length > 0)
+      )) {
         drawScheduleSafeZone(map, bufferCoordinates)
         return
       }

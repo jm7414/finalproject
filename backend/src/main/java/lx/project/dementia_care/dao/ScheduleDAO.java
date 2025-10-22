@@ -106,5 +106,10 @@ public class ScheduleDAO {
     public int updateSafeZone(SafeZoneVO safeZone) throws Exception {
         return session.update("mapper-schedule.updateSafeZone", safeZone);
     }
+
+    // 경로 수정 (버퍼 좌표 업데이트)
+    public int updateRoute(RouteVO route) throws Exception {
+        return session.update("mapper-schedule.updateRoute", route);
+    }
 }
 

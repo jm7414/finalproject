@@ -166,5 +166,12 @@
         WHERE safe_zone_no = #{safeZoneNo}
     </update>
 
+    <!-- 경로 수정 (버퍼 좌표 업데이트) -->
+    <update id="updateRoute" parameterType="lx.project.dementia_care.vo.RouteVO">
+        UPDATE route
+        SET buffer_coordinates = #{bufferCoordinates}::json
+        WHERE schedule_no = #{scheduleNo}
+    </update>
+
 </mapper>
 

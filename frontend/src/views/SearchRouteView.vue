@@ -149,6 +149,9 @@ function resetAll() {
   destResults.value = []
   activeField.value = 'start'
   showResults.value = false
+  
+  // 취소 시 AddSchedule.vue로 돌아가기
+  router.push({ name: 'add-schedule' })
 }
 
 const canRoute = computed(() => !!(selectedStart.value && selectedDest.value))

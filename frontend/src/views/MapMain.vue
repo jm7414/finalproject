@@ -17,9 +17,32 @@
     <!-- 지도 컨트롤 버튼들 -->
     <!-- 왼쪽 상단: 안심존 버튼들 -->
     <div class="map-controls-left">
-      <button class="map-btn-text">
-        안심존 범위 설정
-      </button>
+      <div class="safe-zone-control-wrapper">
+        <!-- 안심존 범위 설정 버튼 -->
+        <button 
+          class="map-btn-text" 
+          :class="{ 'active': isSafeZoneControlExpanded }"
+          @click="toggleSafeZoneControl"
+          :disabled="!currentActiveZone">
+          {{ isSafeZoneControlExpanded ? '확인' : '안심존 범위 설정' }}
+        </button>
+        
+        <!-- 확장 가능한 단계 선택 컨트롤러 -->
+        <transition name="slide-fade">
+          <div v-if="isSafeZoneControlExpanded" class="level-selector">
+            <button 
+              v-for="level in bufferLevels" 
+              :key="level.value"
+              class="level-btn"
+              :class="{ 'active': selectedLevel === level.value }"
+              @click="selectLevel(level.value)">
+              <span class="level-number">{{ level.value }}</span>
+              <span class="level-range">{{ level.desc }}</span>
+            </button>
+          </div>
+        </transition>
+      </div>
+      
       <button class="map-btn-text">
         안심존 해제
       </button>
@@ -203,8 +226,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, defineProps, computed, nextTick, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { lineString, buffer, circle } from '@turf/turf'
 
 const router = useRouter()
 
@@ -215,9 +239,23 @@ const scheduleLocations = ref({}) // scheduleNo를 키로 하는 위치 정보 �
 
 // 안심존 관련
 let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
+let previewSafeZone = null // 미리보기 안심존
 
 // 일정 선택 상태 관리
 const selectedScheduleIndex = ref(null)
+
+// 안심존 범위 설정 컨트롤 상태
+const isSafeZoneControlExpanded = ref(false)
+const selectedLevel = ref(1) // 현재 선택된 단계
+const currentActiveZone = ref(null) // 현재 활성화된 안심존 정보 { type, data, scheduleNo?, level }
+const originalLevel = ref(1) // 원래 단계 (취소 시 복원용)
+
+// 버퍼 레벨 설정
+const bufferLevels = [
+  { value: 1, name: '1단계', desc: '30m' },
+  { value: 2, name: '2단계', desc: '60m' },
+  { value: 3, name: '3단계', desc: '100m' }
+]
 
 // 일정 선택 함수
 const selectSchedule = (scheduleNo) => {
@@ -664,7 +702,21 @@ async function fetchScheduleSafeZone(scheduleNo) {
     }
     
     const route = await response.json()
-    return route.bufferCoordinates ? JSON.parse(route.bufferCoordinates) : null
+    if (!route.bufferCoordinates) return null
+    
+    const bufferCoordinates = JSON.parse(route.bufferCoordinates)
+    
+    // 기존 데이터 호환성 처리
+    // bufferCoordinates가 배열인 경우 (기존 형식) level 정보 추가
+    if (Array.isArray(bufferCoordinates)) {
+      return {
+        level: 1, // 기본값
+        coordinates: bufferCoordinates
+      }
+    }
+    
+    // bufferCoordinates가 객체인 경우 (새 형식) 그대로 반환
+    return bufferCoordinates
   } catch (error) {
     console.error('일정 안심존 조회 오류:', error)
     return null
@@ -708,8 +760,20 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       currentSafeZone.setMap(null)
     }
     
-    // bufferCoordinates는 [{ latitude, longitude }, ...] 형식
-    const kakaoPath = bufferCoordinates.map(coord => 
+    // bufferCoordinates 형식 처리
+    let coordinates
+    if (Array.isArray(bufferCoordinates)) {
+      // 기존 형식: [{ latitude, longitude }, ...]
+      coordinates = bufferCoordinates
+    } else if (bufferCoordinates.coordinates) {
+      // 새 형식: { level: 2, coordinates: [{ latitude, longitude }, ...] }
+      coordinates = bufferCoordinates.coordinates
+    } else {
+      console.error('지원하지 않는 bufferCoordinates 형식:', bufferCoordinates)
+      return
+    }
+    
+    const kakaoPath = coordinates.map(coord => 
       new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
     )
     
@@ -804,7 +868,23 @@ async function updateSafeZone(map) {
       console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
       const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
       
-      if (bufferCoordinates && bufferCoordinates.length > 0) {
+      if (bufferCoordinates && (
+        // 배열 형식 (기존 데이터)
+        (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) ||
+        // 객체 형식 (새 데이터)
+        (typeof bufferCoordinates === 'object' && bufferCoordinates.coordinates && bufferCoordinates.coordinates.length > 0)
+      )) {
+        // 경로형 안심존 단계 파악
+        const level = detectRouteSafeZoneLevel(bufferCoordinates)
+        currentActiveZone.value = {
+          type: '경로형',
+          data: bufferCoordinates,
+          scheduleNo: currentSchedule.scheduleNo,
+          level: level
+        }
+        selectedLevel.value = level
+        originalLevel.value = level
+        
         drawScheduleSafeZone(map, bufferCoordinates)
         return
       }
@@ -815,14 +895,297 @@ async function updateSafeZone(map) {
     const basicSafeZone = await fetchBasicSafeZone(patientUserNo.value)
     
     if (basicSafeZone) {
+      // 기본형 안심존 단계 파악
+      const level = detectBasicSafeZoneLevel(basicSafeZone)
+      currentActiveZone.value = {
+        type: '기본형',
+        data: basicSafeZone,
+        level: level
+      }
+      selectedLevel.value = level
+      originalLevel.value = level
+      
       drawBasicSafeZone(map, basicSafeZone)
     } else {
       console.warn('표시할 안심존이 없습니다.')
+      currentActiveZone.value = null
     }
   } catch (error) {
     console.error('안심존 업데이트 오류:', error)
+    currentActiveZone.value = null
   }
 }
+
+// 기본형 안심존의 단계 파악
+function detectBasicSafeZoneLevel(boundaryData) {
+  if (!boundaryData || boundaryData.type !== 'Circle') return 1
+  
+  // level이 직접 저장되어 있는 경우
+  if (boundaryData.level) {
+    return boundaryData.level
+  }
+  
+  // radius로부터 역산
+  const radius = boundaryData.radius
+  if (radius <= 30) return 1
+  if (radius <= 60) return 2
+  if (radius <= 100) return 3
+  return 1
+}
+
+// 경로형 안심존의 단계 파악
+function detectRouteSafeZoneLevel(bufferCoordinates) {
+  if (!bufferCoordinates || bufferCoordinates.length === 0) return 1
+  
+  // bufferCoordinates가 객체인 경우 (메타데이터 포함)
+  if (typeof bufferCoordinates === 'object' && !Array.isArray(bufferCoordinates)) {
+    // level 정보가 직접 저장되어 있는 경우
+    if (bufferCoordinates.level) {
+      return bufferCoordinates.level
+    }
+    
+    // coordinates 배열에서 level 정보 확인
+    if (bufferCoordinates.coordinates && Array.isArray(bufferCoordinates.coordinates)) {
+      // 첫 번째 좌표에 level 정보가 있을 수 있음
+      const firstCoord = bufferCoordinates.coordinates[0]
+      if (firstCoord && firstCoord.level) {
+        return firstCoord.level
+      }
+    }
+  }
+  
+  // bufferCoordinates가 배열인 경우, 첫 번째 요소에 level 정보가 있을 수 있음
+  if (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) {
+    const firstCoord = bufferCoordinates[0]
+    if (firstCoord && typeof firstCoord === 'object' && firstCoord.level) {
+      return firstCoord.level
+    }
+  }
+  
+  // level 정보를 찾을 수 없는 경우 기본값 1 반환
+  return 1
+}
+
+// 안심존 범위 설정 컨트롤 토글
+function toggleSafeZoneControl() {
+  if (!currentActiveZone.value) return
+  
+  if (isSafeZoneControlExpanded.value) {
+    // 확인 버튼 클릭 - 저장
+    saveSafeZoneLevel()
+  } else {
+    // 컨트롤 열기
+    isSafeZoneControlExpanded.value = true
+  }
+}
+
+// 단계 선택
+function selectLevel(level) {
+  selectedLevel.value = level
+  
+  // 실시간 미리보기 업데이트
+  updatePreviewSafeZone()
+}
+
+// 미리보기 안심존 업데이트
+function updatePreviewSafeZone() {
+  if (!mapInstance || !currentActiveZone.value) return
+  
+  // 기존 미리보기 제거
+  if (previewSafeZone) {
+    previewSafeZone.setMap(null)
+  }
+  
+  const level = selectedLevel.value
+  const radiusMap = { 1: 30, 2: 60, 3: 100 }
+  const radius = radiusMap[level]
+  
+  try {
+    if (currentActiveZone.value.type === '기본형') {
+      // 기본형 안심존 미리보기
+      const boundaryData = currentActiveZone.value.data
+      const center = [boundaryData.center.lng, boundaryData.center.lat]
+      const options = { steps: 64, units: 'meters' }
+      const circleGeoJSON = circle(center, radius, options)
+      
+      const coordinates = circleGeoJSON.geometry.coordinates[0]
+      const kakaoPath = coordinates.map(coord => 
+        new window.kakao.maps.LatLng(coord[1], coord[0])
+      )
+      
+      previewSafeZone = new window.kakao.maps.Polygon({
+        path: kakaoPath,
+        strokeWeight: 2,
+        strokeColor: '#6366f1',
+        strokeOpacity: 0.4,
+        fillColor: '#6366f1',
+        fillOpacity: 0.1
+      })
+      
+      previewSafeZone.setMap(mapInstance)
+      
+    } else if (currentActiveZone.value.type === '경로형') {
+      // 경로형 안심존 미리보기
+      // 원본 경로 좌표를 가져와야 함
+      const scheduleNo = currentActiveZone.value.scheduleNo
+      fetchRouteCoordinates(scheduleNo).then(routeCoordinates => {
+        if (!routeCoordinates || routeCoordinates.length < 2) return
+        
+        // Turf.js로 버퍼 생성
+        const turfCoords = routeCoordinates.map(c => [c.longitude, c.latitude])
+        const line = lineString(turfCoords)
+        const buffered = buffer(line, radius, { units: 'meters' })
+        
+        const coordinates = buffered.geometry.coordinates[0]
+        const kakaoPath = coordinates.map(coord => 
+          new window.kakao.maps.LatLng(coord[1], coord[0])
+        )
+        
+        previewSafeZone = new window.kakao.maps.Polygon({
+          path: kakaoPath,
+          strokeWeight: 2,
+          strokeColor: '#EF4444',
+          strokeOpacity: 0.4,
+          fillColor: '#EF4444',
+          fillOpacity: 0.1
+        })
+        
+        previewSafeZone.setMap(mapInstance)
+      })
+    }
+  } catch (error) {
+    console.error('미리보기 안심존 생성 오류:', error)
+  }
+}
+
+// 경로 좌표 가져오기
+async function fetchRouteCoordinates(scheduleNo) {
+  try {
+    const response = await fetch(`/api/schedule/${scheduleNo}/route`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) return null
+    
+    const route = await response.json()
+    return route.routeCoordinates ? JSON.parse(route.routeCoordinates) : null
+  } catch (error) {
+    console.error('경로 좌표 조회 오류:', error)
+    return null
+  }
+}
+
+// 안심존 단계 저장
+async function saveSafeZoneLevel() {
+  if (!currentActiveZone.value) return
+  
+  try {
+    const level = selectedLevel.value
+    const radiusMap = { 1: 30, 2: 60, 3: 100 }
+    const radius = radiusMap[level]
+    
+    if (currentActiveZone.value.type === '기본형') {
+      // 기본형 안심존 업데이트
+      const boundaryData = currentActiveZone.value.data
+      const updatedBoundary = {
+        ...boundaryData,
+        radius: radius,
+        level: level
+      }
+      
+      const response = await fetch(`/api/schedule/basic-safe-zone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          boundaryCoordinates: JSON.stringify(updatedBoundary)
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('기본 안심존 저장에 실패했습니다.')
+      }
+      
+    } else if (currentActiveZone.value.type === '경로형') {
+      // 경로형 안심존 업데이트
+      const scheduleNo = currentActiveZone.value.scheduleNo
+      const routeCoordinates = await fetchRouteCoordinates(scheduleNo)
+      
+      if (!routeCoordinates || routeCoordinates.length < 2) {
+        throw new Error('경로 정보를 찾을 수 없습니다.')
+      }
+      
+      // 새로운 버퍼 생성
+      const turfCoords = routeCoordinates.map(c => [c.longitude, c.latitude])
+      const line = lineString(turfCoords)
+      const buffered = buffer(line, radius, { units: 'meters' })
+      
+      // level 정보를 포함한 bufferCoordinates 생성
+      const coordinates = buffered.geometry.coordinates[0].map(coord => ({
+        latitude: coord[1],
+        longitude: coord[0]
+      }))
+      
+      // level 정보를 메타데이터로 포함
+      const bufferCoordinates = {
+        level: level,
+        coordinates: coordinates
+      }
+      
+      const response = await fetch(`/api/schedule/route-safe-zone/${scheduleNo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          bufferCoordinates: JSON.stringify(bufferCoordinates),
+          level: level
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('경로형 안심존 저장에 실패했습니다.')
+      }
+    }
+    
+    // 저장 성공 - UI 업데이트
+    isSafeZoneControlExpanded.value = false
+    originalLevel.value = level
+    
+    // 미리보기 제거
+    if (previewSafeZone) {
+      previewSafeZone.setMap(null)
+      previewSafeZone = null
+    }
+    
+    // 안심존 다시 로드
+    await updateSafeZone(mapInstance)
+    
+  } catch (error) {
+    console.error('안심존 저장 오류:', error)
+    alert('안심존 저장에 실패했습니다.')
+  }
+}
+
+// 컨트롤이 닫힐 때 미리보기 제거 (뒤로가기, 홈 버튼 등)
+watch(isSafeZoneControlExpanded, (newVal) => {
+  if (!newVal) {
+    // 컨트롤이 닫힐 때 미리보기 제거
+    if (previewSafeZone) {
+      previewSafeZone.setMap(null)
+      previewSafeZone = null
+    }
+    // 선택 단계를 원래대로 복원
+    selectedLevel.value = originalLevel.value
+  }
+})
+
+// 페이지 떠날 때 미리보기 제거
+onBeforeUnmount(() => {
+  if (previewSafeZone) {
+    previewSafeZone.setMap(null)
+  }
+})
 </script>
 
 <style scoped>
@@ -919,6 +1282,89 @@ async function updateSafeZone(map) {
   gap: 10px;
 }
 
+/* 안심존 컨트롤 래퍼 */
+.safe-zone-control-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 레벨 선택기 */
+.level-selector {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: white;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.level-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 50px;
+}
+
+.level-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.level-btn.active {
+  background: #eef2ff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.level-number {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.level-btn.active .level-number {
+  color: #6366f1;
+}
+
+.level-range {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.level-btn.active .level-range {
+  color: #4f46e5;
+}
+
+/* 슬라이드 페이드 애니메이션 */
+.slide-fade-enter-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.slide-fade-enter-from {
+  transform: translateX(-10px);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateX(-10px);
+  opacity: 0;
+}
+
 .map-controls-right {
   position: absolute;
   top: 20px;
@@ -959,6 +1405,24 @@ async function updateSafeZone(map) {
 .map-btn-text:active {
   transform: translateY(0);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.map-btn-text.active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+}
+
+.map-btn-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.map-btn-text:disabled:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* 네모난 아이콘 버튼 (+, -) */

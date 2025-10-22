@@ -306,6 +306,7 @@ function resetScheduleForm() {
   sessionStorage.removeItem('bufferCoordinates')
   sessionStorage.removeItem('scheduleLocations')
   sessionStorage.removeItem('routeBufferPolygon')
+  sessionStorage.removeItem('isScheduleInProgress') // 진행 상태 플래그도 제거
 }
 
 // 뒤로 가기
@@ -360,7 +361,10 @@ function confirmTime() {
 
 // 경로 검색 페이지로 이동
 function goToSearchRoute() {
+  // 현재 폼 데이터 저장
   sessionStorage.setItem('scheduleFormData', JSON.stringify(scheduleForm.value))
+  // 일정 추가/수정이 진행 중임을 표시
+  sessionStorage.setItem('isScheduleInProgress', 'true')
   router.push({ name: 'search-route' })
 }
 
@@ -383,6 +387,22 @@ async function saveSchedule() {
       return
     }
 
+    // bufferCoordinates 파싱 및 형식 처리
+    const bufferCoordinatesData = JSON.parse(bufferCoordinates)
+    let bufferCoordinatesArray
+    let bufferLevel = 1 // 기본값
+    
+    if (Array.isArray(bufferCoordinatesData)) {
+      // 기존 형식: [{ latitude, longitude }, ...]
+      bufferCoordinatesArray = bufferCoordinatesData
+    } else if (bufferCoordinatesData.coordinates) {
+      // 새 형식: { level: 3, coordinates: [{ latitude, longitude }, ...] }
+      bufferCoordinatesArray = bufferCoordinatesData.coordinates
+      bufferLevel = bufferCoordinatesData.level || 1
+    } else {
+      throw new Error('지원하지 않는 bufferCoordinates 형식입니다.')
+    }
+
     // 일정 저장 요청 데이터 구성
     const requestData = {
       title: scheduleForm.value.title,
@@ -392,7 +412,8 @@ async function saveSchedule() {
       endTime: scheduleForm.value.endTime,
       locations: JSON.parse(scheduleLocations),
       routeCoordinates: JSON.parse(routeCoordinates),
-      bufferCoordinates: JSON.parse(bufferCoordinates)
+      bufferCoordinates: bufferCoordinatesArray,
+      bufferLevel: bufferLevel
     }
 
     // 수정 모드인지 추가 모드인지에 따라 API 호출
@@ -547,44 +568,56 @@ onMounted(async () => {
   if (editScheduleNoFromStorage) {
     isEditMode.value = true
     editScheduleNo.value = parseInt(editScheduleNoFromStorage)
+    // 일정 수정 진행 중임을 표시
+    sessionStorage.setItem('isScheduleInProgress', 'true')
     await loadScheduleForEdit(editScheduleNo.value)
     return
   }
   
-  // 수정 모드가 아닐 때는 폼 초기화
-  resetScheduleForm()
+  // 일정 추가/수정이 진행 중인지 확인
+  const isInProgress = sessionStorage.getItem('isScheduleInProgress')
   
-  // 캘린더에서 선택된 날짜가 있는지 확인
-  const selectedDate = sessionStorage.getItem('selectedDate')
-  if (selectedDate) {
-    // 캘린더에서 선택된 날짜 사용
-    scheduleForm.value.date = selectedDate
-    sessionStorage.removeItem('selectedDate')
-  } else {
-    // 기본값으로 오늘 날짜 설정
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    scheduleForm.value.date = `${year}-${month}-${day}`
+  // 진행 중이 아닌 경우에만 폼 초기화 (새로 시작하는 경우)
+  if (!isInProgress) {
+    resetScheduleForm()
+    
+    // 캘린더에서 선택된 날짜가 있는지 확인
+    const selectedDate = sessionStorage.getItem('selectedDate')
+    if (selectedDate) {
+      // 캘린더에서 선택된 날짜 사용
+      scheduleForm.value.date = selectedDate
+      sessionStorage.removeItem('selectedDate')
+    } else {
+      // 기본값으로 오늘 날짜 설정
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      scheduleForm.value.date = `${year}-${month}-${day}`
+    }
+    
+    // 새로 시작하는 경우 진행 상태 플래그 설정
+    sessionStorage.setItem('isScheduleInProgress', 'true')
   }
   
-  // 경로 검색에서 돌아온 경우 폼 데이터 복원
-  const savedFormData = sessionStorage.getItem('scheduleFormData')
-  if (savedFormData) {
-    const parsedData = JSON.parse(savedFormData)
-    scheduleForm.value = { ...scheduleForm.value, ...parsedData }
-    sessionStorage.removeItem('scheduleFormData')
-  }
-  
-  // 위치 데이터 로드 (GeoFencingView에서 돌아온 경우)
-  const scheduleLocations = sessionStorage.getItem('scheduleLocations')
-  if (scheduleLocations) {
-    try {
-      locationData.value = JSON.parse(scheduleLocations)
-    } catch (error) {
-      console.error('위치 데이터 파싱 오류:', error)
-      locationData.value = []
+  // 진행 중인 경우: 경로 검색에서 돌아온 경우 폼 데이터 복원
+  if (isInProgress) {
+    const savedFormData = sessionStorage.getItem('scheduleFormData')
+    if (savedFormData) {
+      const parsedData = JSON.parse(savedFormData)
+      scheduleForm.value = { ...scheduleForm.value, ...parsedData }
+      sessionStorage.removeItem('scheduleFormData')
+    }
+    
+    // 위치 데이터 로드 (GeoFencingView에서 돌아온 경우)
+    const scheduleLocations = sessionStorage.getItem('scheduleLocations')
+    if (scheduleLocations) {
+      try {
+        locationData.value = JSON.parse(scheduleLocations)
+      } catch (error) {
+        console.error('위치 데이터 파싱 오류:', error)
+        locationData.value = []
+      }
     }
   }
 })

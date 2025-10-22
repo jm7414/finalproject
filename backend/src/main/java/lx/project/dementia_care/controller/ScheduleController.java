@@ -340,5 +340,62 @@ public class ScheduleController {
                     .body(Map.of("message", "일정 삭제 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
+
+    /**
+     * 경로형 안심존 단계 업데이트 API
+     * PUT /api/schedule/route-safe-zone/{scheduleNo}
+     */
+    @PostMapping("/route-safe-zone/{scheduleNo}")
+    public ResponseEntity<?> updateRouteSafeZone(@PathVariable int scheduleNo, @RequestBody Map<String, Object> request) {
+        try {
+            // 현재 로그인한 보호자 정보 가져오기
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "로그인이 필요합니다."));
+            }
+
+            UserVO currentGuardian = (UserVO) auth.getPrincipal();
+            int guardianUserNo = currentGuardian.getUserNo();
+
+            // 보호자가 관리하는 환자 조회
+            UserVO patient = connectDAO.getPatientByGuardianNo(guardianUserNo);
+            if (patient == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "관리하는 환자가 없습니다."));
+            }
+
+            int patientUserNo = patient.getUserNo();
+
+            // 일정이 해당 환자의 것인지 확인
+            ScheduleVO existingSchedule = scheduleService.getScheduleByNo(scheduleNo);
+            if (existingSchedule == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "일정을 찾을 수 없습니다."));
+            }
+            if (existingSchedule.getUserNo() != patientUserNo) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "이 일정을 수정할 권한이 없습니다."));
+            }
+
+            // 버퍼 좌표와 레벨 추출
+            String bufferCoordinates = request.get("bufferCoordinates").toString();
+            int level = Integer.parseInt(request.get("level").toString());
+
+            // 경로형 안심존 업데이트
+            scheduleService.updateRouteBuffer(scheduleNo, bufferCoordinates, level, patientUserNo);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "경로형 안심존이 성공적으로 업데이트되었습니다.",
+                    "scheduleNo", scheduleNo,
+                    "level", level
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "경로형 안심존 업데이트 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 }
 

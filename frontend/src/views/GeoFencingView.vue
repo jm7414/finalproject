@@ -356,11 +356,21 @@ function saveSettings() {
         latitude: coord[1],   // 배열의 두 번째 값이 latitude
         longitude: coord[0]   // 배열의 첫 번째 값이 longitude
       }))
-      sessionStorage.setItem('bufferCoordinates', JSON.stringify(convertedBuffer))
+      
+      // level 정보를 포함한 bufferCoordinates 생성
+      const bufferCoordinates = {
+        level: parseInt(bufferLevel.value), // 선택된 단계 (1, 2, 3)
+        coordinates: convertedBuffer
+      }
+      
+      sessionStorage.setItem('bufferCoordinates', JSON.stringify(bufferCoordinates))
     } catch (error) {
       console.error('버퍼 좌표 변환 중 오류:', error)
     }
   }
+  
+  // 일정 진행 상태 유지 (AddSchedule.vue에서 데이터 복원을 위해)
+  // isScheduleInProgress 플래그는 유지됨
   
   // AddSchedule.vue로 돌아가기
   router.push({ name: 'add-schedule' })
@@ -372,11 +382,13 @@ function saveSettings() {
 function cancelSettings() {
   console.log('설정 취소')
   
-  // sessionStorage 정리 (필요한 경우)
+  // sessionStorage 정리 (경로 관련 데이터만 삭제)
   sessionStorage.removeItem('routeCoordinates')
   sessionStorage.removeItem('routeBufferPolygon')
   sessionStorage.removeItem('bufferCoordinates')
   sessionStorage.removeItem('scheduleLocations')
+  
+  // 일정 진행 상태는 유지 (SearchRouteView에서 다시 설정할 수 있도록)
   
   // SearchRouteView로 돌아가기
   router.push({ name: 'search-route' })

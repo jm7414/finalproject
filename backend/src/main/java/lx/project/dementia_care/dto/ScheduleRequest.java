@@ -16,6 +16,7 @@ public class ScheduleRequest {
     private List<LocationDto> locations;
     private List<CoordinateDto> routeCoordinates;
     private List<CoordinateDto> bufferCoordinates;
+    private Integer bufferLevel;    // 안심존 단계 (1, 2, 3)
 
     @Override
     public String toString() {

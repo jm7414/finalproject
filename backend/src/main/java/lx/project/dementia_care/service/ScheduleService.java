@@ -3,7 +3,9 @@ package lx.project.dementia_care.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -66,7 +68,13 @@ public class ScheduleService {
         if (request.getRouteCoordinates() != null && !request.getRouteCoordinates().isEmpty()) {
             RouteVO route = new RouteVO();
             route.setRouteCoordinates(objectMapper.writeValueAsString(request.getRouteCoordinates()));
-            route.setBufferCoordinates(objectMapper.writeValueAsString(request.getBufferCoordinates()));
+            
+            // level 정보를 포함한 bufferCoordinates 저장
+            Map<String, Object> bufferData = new HashMap<>();
+            bufferData.put("level", request.getBufferLevel() != null ? request.getBufferLevel() : 1);
+            bufferData.put("coordinates", request.getBufferCoordinates());
+            route.setBufferCoordinates(objectMapper.writeValueAsString(bufferData));
+            
             route.setScheduleNo(scheduleNo);
             scheduleDAO.insertRoute(route);
         }
@@ -75,7 +83,13 @@ public class ScheduleService {
         if (request.getBufferCoordinates() != null && !request.getBufferCoordinates().isEmpty()) {
             SafeZoneVO safeZone = new SafeZoneVO();
             safeZone.setZoneType("경로형");
-            safeZone.setBoundaryCoordinates(objectMapper.writeValueAsString(request.getBufferCoordinates()));
+            
+            // level 정보를 포함한 boundaryCoordinates 생성
+            Map<String, Object> boundaryData = new HashMap<>();
+            boundaryData.put("level", request.getBufferLevel() != null ? request.getBufferLevel() : 1);
+            boundaryData.put("coordinates", request.getBufferCoordinates());
+            
+            safeZone.setBoundaryCoordinates(objectMapper.writeValueAsString(boundaryData));
             safeZone.setUserNo(patientUserNo); // 환자의 user_no
             scheduleDAO.insertSafeZone(safeZone);
         }
@@ -230,7 +244,13 @@ public class ScheduleService {
         if (request.getRouteCoordinates() != null && !request.getRouteCoordinates().isEmpty()) {
             RouteVO route = new RouteVO();
             route.setRouteCoordinates(objectMapper.writeValueAsString(request.getRouteCoordinates()));
-            route.setBufferCoordinates(objectMapper.writeValueAsString(request.getBufferCoordinates()));
+            
+            // level 정보를 포함한 bufferCoordinates 저장
+            Map<String, Object> bufferData = new HashMap<>();
+            bufferData.put("level", request.getBufferLevel() != null ? request.getBufferLevel() : 1);
+            bufferData.put("coordinates", request.getBufferCoordinates());
+            route.setBufferCoordinates(objectMapper.writeValueAsString(bufferData));
+            
             route.setScheduleNo(scheduleNo);
             scheduleDAO.insertRoute(route);
         }
@@ -239,7 +259,13 @@ public class ScheduleService {
         if (request.getBufferCoordinates() != null && !request.getBufferCoordinates().isEmpty()) {
             SafeZoneVO safeZone = new SafeZoneVO();
             safeZone.setZoneType("경로형");
-            safeZone.setBoundaryCoordinates(objectMapper.writeValueAsString(request.getBufferCoordinates()));
+            
+            // level 정보를 포함한 boundaryCoordinates 생성
+            Map<String, Object> boundaryData = new HashMap<>();
+            boundaryData.put("level", request.getBufferLevel() != null ? request.getBufferLevel() : 1);
+            boundaryData.put("coordinates", request.getBufferCoordinates());
+            
+            safeZone.setBoundaryCoordinates(objectMapper.writeValueAsString(boundaryData));
             safeZone.setUserNo(patientUserNo);
             scheduleDAO.insertSafeZone(safeZone);
         }
@@ -276,6 +302,70 @@ public class ScheduleService {
                 safeZone.setBoundaryCoordinates(route.getBufferCoordinates());
                 safeZone.setUserNo(patientUserNo);
                 scheduleDAO.insertSafeZone(safeZone);
+            }
+        }
+    }
+
+    /**
+     * 특정 일정의 경로형 안심존 단계 업데이트 (트랜잭션)
+     * 현재 진행 중인 일정의 버퍼를 새로운 단계(반경)로 재생성
+     * 
+     * Note: 실제 버퍼 생성은 프론트엔드(Turf.js)에서 처리되며,
+     *       이 메서드는 updateRouteBuffer를 통해 호출됨
+     */
+    @Transactional
+    public void updateRouteSafeZoneLevel(int scheduleNo, int level, int patientUserNo) throws Exception {
+        // 1. 해당 일정의 경로 조회
+        RouteVO route = scheduleDAO.getRouteByScheduleNo(scheduleNo);
+        if (route == null || route.getRouteCoordinates() == null) {
+            throw new Exception("경로 정보를 찾을 수 없습니다.");
+        }
+        
+        // 실제 버퍼 업데이트는 updateRouteBuffer 메서드를 통해 처리됨
+        // 이 메서드는 검증용으로 유지
+    }
+
+    /**
+     * 경로 정보 업데이트 (버퍼 좌표 및 level 포함)
+     * 현재 진행 중인 일정의 안심존만 업데이트
+     */
+    @Transactional
+    public void updateRouteBuffer(int scheduleNo, String bufferCoordinates, int level, int patientUserNo) throws Exception {
+        // 1. 경로 정보 조회
+        RouteVO route = scheduleDAO.getRouteByScheduleNo(scheduleNo);
+        if (route == null) {
+            throw new Exception("경로 정보를 찾을 수 없습니다.");
+        }
+
+        // 2. 버퍼 좌표 업데이트 (level 정보 포함)
+        route.setBufferCoordinates(bufferCoordinates);
+        scheduleDAO.updateRoute(route);
+
+        // 3. 해당 사용자의 경로형 안심존 삭제
+        scheduleDAO.deleteSafeZoneByUserNo(patientUserNo);
+        
+        // 4. 현재 진행 중인 일정의 안심존만 재생성
+        ScheduleVO currentSchedule = getCurrentSchedule(patientUserNo);
+        if (currentSchedule != null && currentSchedule.getScheduleNo() == scheduleNo) {
+            // 현재 진행 중인 일정이 업데이트 대상과 일치하는 경우에만 안심존 생성
+            SafeZoneVO safeZone = new SafeZoneVO();
+            safeZone.setZoneType("경로형");
+            safeZone.setBoundaryCoordinates(bufferCoordinates); // level 정보가 포함된 bufferCoordinates
+            safeZone.setUserNo(patientUserNo);
+            scheduleDAO.insertSafeZone(safeZone);
+        } else {
+            // 현재 진행 중인 일정이 없거나 다른 일정인 경우, 
+            // 기존의 모든 일정 안심존을 재생성 (기존 로직 유지)
+            List<ScheduleVO> allSchedules = scheduleDAO.getSchedulesByUserNo(patientUserNo);
+            for (ScheduleVO schedule : allSchedules) {
+                RouteVO scheduleRoute = scheduleDAO.getRouteByScheduleNo(schedule.getScheduleNo());
+                if (scheduleRoute != null && scheduleRoute.getBufferCoordinates() != null) {
+                    SafeZoneVO safeZone = new SafeZoneVO();
+                    safeZone.setZoneType("경로형");
+                    safeZone.setBoundaryCoordinates(scheduleRoute.getBufferCoordinates());
+                    safeZone.setUserNo(patientUserNo);
+                    scheduleDAO.insertSafeZone(safeZone);
+                }
             }
         }
     }

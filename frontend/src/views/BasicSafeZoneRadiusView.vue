@@ -46,16 +46,16 @@ let centerMarker = null
 let currentCircle = null
 
 const radiusLevels = [
-  { value: 1, name: '1단계', desc: '100m 반경' },
-  { value: 2, name: '2단계', desc: '200m 반경' },
-  { value: 3, name: '3단계', desc: '500m 반경' }
+  { value: 1, name: '1단계', desc: '30m 반경' },
+  { value: 2, name: '2단계', desc: '60m 반경' },
+  { value: 3, name: '3단계', desc: '100m 반경' }
 ]
 
 // 반경 설정 (미터)
 const radiusSettings = {
-  1: 100,
-  2: 200,
-  3: 500
+  1: 30,
+  2: 60,
+  3: 100
 }
 
 const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
