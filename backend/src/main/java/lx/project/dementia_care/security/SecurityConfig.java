@@ -6,6 +6,7 @@ import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -36,49 +37,60 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .exceptionHandling(exceptionHandling -> exceptionHandling.accessDeniedPage("/login"))
-            .authorizeHttpRequests(authz -> authz
-                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
-                // 회원가입, 로그인 페이지 접근 허용
-                .requestMatchers("/api/login", "/api/logout", "/api/register", "/SignUp").permitAll()
-                .requestMatchers("/api/user/check-duplicate").permitAll()
-                .requestMatchers("/api/route/**").permitAll()
-                .requestMatchers("/api/upload/**").authenticated()
-                .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**").permitAll()
-                //.requestMatchers(HttpMethod.GET, "/login", "/logout", "/register", "/SignUp").permitAll()
-                // 보호자/구독자 전용 페이지 및 API
-                .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
-                // 일정 관리 API (보호자/구독자 전용)
-                .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
-                // 보호자가 관리하는 환자 조회 API
-                .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "SUBSCRIBER")
-                // 환자 전용 페이지 및 API
-                .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
-                // 공통 페이지들 (로그인한 사용자만 접근 가능)
-                .requestMatchers("/calendar", "/add-schedule", "/CommunityView", "/geo-fencing", 
+                .exceptionHandling(exceptionHandling -> exceptionHandling.accessDeniedPage("/login"))
+                .authorizeHttpRequests(authz -> authz
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR)
+                        .permitAll()
+
+                        // 회원가입, 로그인 페이지 접근 허용
+                        .requestMatchers("/api/login", "/api/logout", "/api/register", "/SignUp").permitAll()
+                        .requestMatchers("/api/user/check-duplicate").permitAll()
+                        .requestMatchers("/api/route/**").permitAll()
+
+                        // 업로드는 로그인 필요 (세션)
+                        .requestMatchers("/api/upload/**").authenticated()
+
+                        // 정적 리소스
+                        .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**").permitAll()
+
+                        // 보호자/구독자 전용 페이지 및 API
+                        .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**")
+                        .hasAnyRole("GUARDIAN", "SUBSCRIBER")
+
+                        // 일정 관리 API (보호자/구독자 전용)
+                        .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+
+                        // 보호자가 관리하는 환자 조회 API
+                        .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+
+                        // 환자 전용 페이지 및 API
+                        .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
+
+                        // 환자/구독자 본인정보 수정 API 권한
+                        .requestMatchers(HttpMethod.POST, "/api/user/update").hasAnyRole("PATIENT", "SUBSCRIBER")
+
+                        // 공통 페이지들 (로그인한 사용자만 접근 가능)
+                        .requestMatchers("/calendar", "/add-schedule", "/CommunityView", "/geo-fencing",
                                 "/search-route", "/predict-location", "/total-support", "/money-support",
                                 "/record", "/report", "/gdmypage", "/dpmypage", "/basicplan", "/plusplan")
                         .authenticated()
+
                         .requestMatchers("/api/user/me").authenticated()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(login -> login
-                        .loginPage("https://localhost:5173/login") // Vue의 로그인 페이지로 리다이렉트
+                        .loginPage("https://localhost:5173/login") // Vue 로그인 페이지
                         .loginProcessingUrl("/api/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
                         .successHandler(authenticationSuccessHandler())
-                        .failureHandler((request, response, exception) -> {
-                            response.setStatus(401);
-                        })
+                        .failureHandler((request, response, exception) -> response.setStatus(401))
                         .permitAll())
                 .logout(logout -> logout
                         .logoutUrl("/api/logout")
-                        .logoutSuccessHandler((request, response, authentication) -> {
-                            response.setStatus(200);
-                        })
+                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(200))
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll());

@@ -115,25 +115,27 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+const API_BASE = 'https://localhost:8080'
+
 /** 상태 관리 */
 const saving = ref(false)
 const saveSuccess = ref(false)
 const error = ref('')
-const showPassword = ref(false)
+const showPassword = ref(false) // 비번은 현재 엔드포인트에서 미처리(추후 별도 엔드포인트 권장)
 
 /** 폼 데이터 (UI 바인딩) */
 const formData = ref({
   name: '',
   userId: '',
-  password: '',       // 화면에서만 관리(빈 값이면 서버에 안보냄)
   birthDate: '',      // YYYY-MM-DD
-  phone: ''           // 010-0000-0000
+  phone: '',          // 010-0000-0000
+  profilePhoto: ''    // 업로드 후 URL 저장(선택)
 })
 
 /** API 엔드포인트 (백엔드 규약) */
 const ENDPOINTS = {
-  me: '/api/user/me',
-  update: '/api/user/update',   // PUT 권장
+  me: `${API_BASE}/api/user/me`,
+  update: `${API_BASE}/api/user/update`,   // ✅ 백엔드 규약: POST
 }
 
 /* ============ 유틸 ============ */
@@ -141,7 +143,6 @@ function toYYYYMMDD(d) {
   if (!d) return ''
   const date = new Date(d)
   if (Number.isNaN(date.getTime())) {
-    // 이미 YYYY-MM-DD 형태면 그대로 반환
     if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return String(d)
     return ''
   }
@@ -174,31 +175,37 @@ async function loadUserData() {
   try {
     const user = await request(ENDPOINTS.me)
 
-    // 서버 응답에서 스키마가 snake_case든 camelCase든 모두 커버
+    // (선택) UX용 역할 가드: 서버는 이미 막지만 화면에서도 정중히 돌려보내기
+    if (user?.roleNo !== 2 && user?.roleNo !== 3) {
+      router.replace('/GD') // 보호자 홈 등 프로젝트 기본 라우트에 맞게 조정
+      return
+    }
+
     const name        = user?.name ?? ''
     const userId      = user?.userId ?? user?.user_id ?? ''
     const birthRaw    = user?.birthDate ?? user?.birth_date ?? null
     const phoneRaw    = user?.phoneNumber ?? user?.phone_number ?? user?.phone ?? ''
+    const photo       = user?.profilePhoto ?? user?.profile_photo ?? ''
 
     formData.value = {
       name: name || '',
       userId: userId || '',
-      password: '', // 비밀번호는 빈 값(변경 안 함)
       birthDate: toYYYYMMDD(birthRaw) || '',
-      phone: normalizePhone(phoneRaw) || ''
+      phone: normalizePhone(phoneRaw) || '',
+      profilePhoto: photo || ''
     }
   } catch (e) {
     error.value = `사용자 정보 불러오기 실패: ${e?.message || e}`
   }
 }
 
-/* ============ 프로필 이미지 변경 ============ */
-function changeProfileImage() {
-  // TODO: 이미지 업로드 로직 연결 시 구현
-  console.log('프로필 이미지 변경')
+/* ============ 프로필 이미지 변경(선택) ============ */
+async function changeProfileImage() {
+  // TODO: File input + /api/upload/post-image 사용 → 응답 imageUrl을 formData.value.profilePhoto에 대입
+  console.log('프로필 이미지 변경 로직 연결 예정')
 }
 
-/* ============ 비밀번호 표시/숨김 ============ */
+/* ============ 비밀번호 표시/숨김 (현재 엔드포인트 미사용) ============ */
 function togglePassword() {
   showPassword.value = !showPassword.value
 }
@@ -213,42 +220,29 @@ async function handleSave() {
     error.value = '필수 항목을 모두 입력해주세요.'
     return
   }
-
-  // 요청 바디 구성:
-  // - 서버가 camelCase 또는 snake_case를 기대하더라도 안전하게 둘 다 포함
-  // - 비밀번호는 입력되었을 때만 전송(빈 값이면 미변경)
-  const payload = {
-    // 이름
-    name: formData.value.name,
-    // 아이디는 보통 변경 불가 — 서버가 필요 없다면 무시될 것
-    userId: formData.value.userId,
-    user_id: formData.value.userId,
-
-    // 생년월일
-    birthDate: formData.value.birthDate,
-    birth_date: formData.value.birthDate,
-
-    // 전화번호
-    phoneNumber: formData.value.phone,
-    phone_number: formData.value.phone,
+  if (formData.value.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(formData.value.birthDate)) {
+    error.value = '생년월일 형식이 올바르지 않습니다. (예: 1970-01-31)'
+    return
   }
 
-  // 비밀번호(선택)
-  if (formData.value.password && formData.value.password !== '********') {
-    payload.userPw = formData.value.password
-    payload.user_pw = formData.value.password
+  // ✅ 백엔드가 기대하는 키만 깔끔히 전송 (불필요 필드 제외)
+  const payload = {
+    name: formData.value.name,
+    birthDate: formData.value.birthDate || null,   // 컨트롤러에서 LocalDate.parse 처리
+    phoneNumber: formData.value.phone || null,
+    profilePhoto: formData.value.profilePhoto || null
   }
 
   saving.value = true
   try {
     await request(ENDPOINTS.update, {
-      method: 'PUT',
+      method: 'POST', // ✅ 규약에 맞춤(이 레포는 update에 POST를 섞어 씀)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
 
     saveSuccess.value = true
-    // 저장 후 최신 데이터 다시 반영하고 싶으면 주석 해제
+    // 최신 데이터 재바인딩이 필요하면 주석 해제
     // await loadUserData()
   } catch (e) {
     error.value = `저장 실패: ${e?.message || e}`
@@ -259,18 +253,20 @@ async function handleSave() {
 
 /* ============ 취소/네비 ============ */
 function handleCancel() {
-  goBack()
-}
-function goBack() {
   router.go(-1)
 }
 function goHome() {
   router.push('/DP')
 }
 
+function goBack() {
+  router.go(-1)
+}
+
 /* ============ 초기화 ============ */
 onMounted(loadUserData)
 </script>
+
 
 
 <style scoped>

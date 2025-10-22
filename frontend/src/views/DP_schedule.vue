@@ -454,7 +454,7 @@ function checkDay(s) {
 }
 
 function cancle() {
-    alert(`취소`)
+    window.location.reload();
 }
 
 function onTime1Change() {

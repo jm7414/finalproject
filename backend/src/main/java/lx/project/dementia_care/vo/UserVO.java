@@ -67,4 +67,5 @@ public class UserVO implements UserDetails {
                 + ", userStatus=" + userStatus + ", profilePhoto=" + profilePhoto 
                 + ", roleNo=" + roleNo + "]";
     }
+
 }

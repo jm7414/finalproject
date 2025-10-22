@@ -129,7 +129,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import MyInfoModal from '@/components/MyInfoModal.vue'
+import MyInfoModal from '@/components/MyinfoModal.vue'
 
 import imgZone from '@/assets/images/My zone.svg'
 import imgInfo from '@/assets/images/Myinfo.svg'

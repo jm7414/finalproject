@@ -47,11 +47,11 @@
     </select>
 
     <update id="updateById" parameterType="lx.project.dementia_care.vo.UserVO">
-        UPDATE users
+    UPDATE users
         <set>
             <if test="name != null">name = #{name},</if>
             <if test="userPw != null">user_pw = #{userPw},</if>
-            <if test="birthDate != null">birth_date = #{birthDate},</if>
+            <if test="birthDate != null">birth_date = #{birthDate, jdbcType=DATE},</if>
             <if test="phoneNumber != null">phone_number = #{phoneNumber},</if>
             <if test="invitationCode != null">invitation_code = #{invitationCode},</if>
             <if test="subscriptionStatus != null">subscription_status = #{subscriptionStatus},</if>
@@ -60,7 +60,8 @@
             <if test="roleNo != null">role_no = #{roleNo},</if>
         </set>
         WHERE user_no = #{userNo}
-    </update>
+</update>
+
 
     <delete id="deleteById" parameterType="int">
         DELETE FROM users
