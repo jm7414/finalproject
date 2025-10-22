@@ -1,11 +1,12 @@
 <template>
   <div class="mobile-frame">
     <div class="app-layout">
-      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isBasicSafeZoneLocationPage)" />
+      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isBasicSafeZoneLocationPage
+      || isDpSchedule || isDpConnect)" />
       <main class="main-content" :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isBasicSafeZoneLocationPage || isAddSchedulePage}">
         <RouterView />
       </main>
-      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule)" />
+      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
     </div>
   </div>
 </template>
@@ -56,6 +57,10 @@ const isDpSchedule = computed(() => {
 
 const isBasicSafeZoneLocationPage = computed(() => {
   return route.name === 'basic-safe-zone-location'
+})
+
+const isDpConnect = computed(() => {
+  return route.name === 'dpc'
 })
 
 </script>

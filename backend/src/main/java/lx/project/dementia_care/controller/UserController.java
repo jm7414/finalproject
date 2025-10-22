@@ -134,5 +134,7 @@ public class UserController {
                     .body(Map.of("message", "환자 정보 조회 중 오류가 발생했습니다."));
         }
     }
+    
+    
 
 }

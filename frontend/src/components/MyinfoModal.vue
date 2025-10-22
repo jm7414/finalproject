@@ -46,7 +46,7 @@
                   <div class="row g-3">
                     <!-- 내 정보 수정 -->
                     <div class="col-12">
-                      <div class="menu-card menu-card-small" @click="editProfile">
+                      <div class="menu-card menu-card-small" @click="modifyInfo">
                         <div class="card-content">
                           <div class="icon-wrapper mb-2">
                             <i class="bi bi-person-fill-gear"></i>
@@ -131,10 +131,9 @@ const addSchedule = () => {
 }
 
 // 내 정보 수정
-const editProfile = () => {
+const modifyInfo = () => {
   console.log('내 정보 수정')
-  closeModal()
-  // router.push('/profile/edit')
+  router.push('/dpmodifyinfo')
 }
 
 // 보호자 연결코드
@@ -358,12 +357,12 @@ const handleLogout = async () => {
 }
 
 .btn-logout span {
-  color: #737373 !important;
+  color: #484848 !important;
 }
 
 .btn-logout i {
   font-size: 1.35rem;
-  color: #737373 !important;
+  color: #484848 !important;
 }
 
 /* Responsive adjustments */

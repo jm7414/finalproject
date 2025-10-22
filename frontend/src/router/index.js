@@ -36,6 +36,7 @@ import Insurance from '@/views/Insurance.vue'
 import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
+import DP_ModifyInfo from '@/views/DP_ModifyInfo.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -152,7 +153,7 @@ const router = createRouter({
       component: SearchRouteView,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-
+    
     // 주형 종합지원, 지원금안내페이지, 기록, 리포트 수정 시작
     {
       path: '/total-support',
@@ -178,9 +179,9 @@ const router = createRouter({
       component: Report,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-
-
-
+    
+    
+    
     {
       path: '/loan',
       name: 'loan',
@@ -218,6 +219,12 @@ const router = createRouter({
       component: DpMypageView,
       meta: { requiresAuth: true, roles: [2, 3] } // 환자(2), 구독자(3) 전용
     },    
+    {
+      path: '/dpmodifyinfo',
+      name: 'dpmodifyinfo',
+      component: DP_ModifyInfo,
+      meta: { requiresAuth: true, roles: [2, 3] } // 환자(2), 구독자(3) 전용
+    },
     // 주형 종합지원, 지원금안내페이지 수정 끝
     {
       path: '/gdmypage',
