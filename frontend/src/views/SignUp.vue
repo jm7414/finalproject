@@ -63,13 +63,13 @@
                 <label class="form-label">사용자 구분</label>
 
                 <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2 mb-2">
-                    <input v-model="form.isGuardian" :value="true" class="form-check-input me-2" type="radio" name="role" @change="form.isGuardian = true">
+                    <input v-model="form.isGuardian" :value="true" class="form-check-input me-2" type="radio" name="role">
                     <i class="bi bi-people"></i>
                     <span>보호자/가족입니다</span>
                 </label>
 
                 <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2">
-                    <input v-model="form.isGuardian" :value="false" class="form-check-input me-2" type="radio" name="role" @change="form.isGuardian = false">
+                    <input v-model="form.isGuardian" :value="false" class="form-check-input me-2" type="radio" name="role">
                     <i class="bi bi-person"></i>
                     <span>환자입니다</span>
                 </label>

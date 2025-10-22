@@ -115,7 +115,6 @@ public class SecurityConfig {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOrigins(Arrays.asList(
                 "https://localhost:5173",
-                "https://localhost:5173",
                 "https://lx12mammamia.xyz",
                 "https://www.lx12mammamia.xyz"));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));

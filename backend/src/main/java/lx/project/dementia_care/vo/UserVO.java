@@ -60,9 +60,29 @@ public class UserVO implements UserDetails {
     }
 
     @Override
+    public boolean isAccountNonExpired() {
+        return true; // 계정 만료 기능 없음
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true; // 계정 잠금 기능 없음
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true; // 비밀번호 만료 기능 없음
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true; // 계정 활성화 기능 없음
+    }
+
+    @Override
     public String toString() {
-        return "UserVO [userNo=" + userNo + ", userId=" + userId + ", userPw=" + userPw 
-                + ", name=" + name + ", birthDate=" + birthDate + ", phoneNumber=" + phoneNumber 
+        return "UserVO [userNo=" + userNo + ", userId=" + userId + ", name=" + name 
+                + ", birthDate=" + birthDate + ", phoneNumber=" + phoneNumber 
                 + ", invitationCode=" + invitationCode + ", subscriptionStatus=" + subscriptionStatus 
                 + ", userStatus=" + userStatus + ", profilePhoto=" + profilePhoto 
                 + ", roleNo=" + roleNo + "]";

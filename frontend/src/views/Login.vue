@@ -93,6 +93,7 @@
 import mamaLogo from '@/assets/images/mama.png'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const form = reactive({ username: '', password: '' })
@@ -105,26 +106,28 @@ async function onLogin() {
   }
 
   try {
-    const response = await fetch(`/api/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
+    // 로그인 요청
+    const response = await axios.post(`/api/login`, 
+      new URLSearchParams({
         username: form.username,
         password: form.password,
-      }),
-      credentials: 'include',
-    })
+      }), 
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        withCredentials: true
+      }
+    )
 
-    if (response.ok) {
+    if (response.status === 200) {
       // 로그인 성공 시 사용자 정보 조회
-      const userResponse = await fetch(`/api/user/me`, {
-        credentials: 'include',
+      const userResponse = await axios.get(`/api/user/me`, {
+        withCredentials: true
       })
       
-      if (userResponse.ok) {
-        const userData = await userResponse.json()
+      if (userResponse.status === 200) {
+        const userData = userResponse.data
          // 역할에 따라 다른 페이지로 이동
          if (userData.roleNo === 1) {
            // 보호자(1) -> GD 페이지
@@ -137,12 +140,14 @@ async function onLogin() {
            router.push('/login')
          }
       }
-    } else {
-      alert('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.')
     }
   } catch (error) {
     console.error('로그인 중 오류 발생:', error)
-    alert('로그인 처리 중 오류가 발생했습니다.')
+    if (error.response && error.response.status === 401) {
+      alert('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.')
+    } else {
+      alert('로그인 처리 중 오류가 발생했습니다.')
+    }
   }
 }
 

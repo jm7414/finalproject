@@ -54,7 +54,7 @@ public class UserController {
             }
             
             // 비밀번호 암호화
-            user.setUserPw(passwordEncoder.encode(user.getPassword()));
+            user.setUserPw(passwordEncoder.encode(user.getUserPw()));
             
             // 역할 설정 (보호자 체크박스에 따라)
             user.setRoleNo(user.getRoleNo() == 1 ? 1 : 2); // 1: 보호자, 2: 환자
