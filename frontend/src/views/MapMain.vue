@@ -44,7 +44,7 @@
       </div>
       
       <button class="map-btn-text">
-        안심존 해제
+        안심존 끄기
       </button>
     </div>
 
