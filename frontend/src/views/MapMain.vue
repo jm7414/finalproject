@@ -60,7 +60,7 @@
 
     <!-- 현위치 버튼 (바텀시트와 연동) -->
     <div class="map-controls-location" :style="{ bottom: locationBtnBottom + 'px' }">
-      <button class="map-btn-circle">
+      <button class="map-btn-circle" @click="moveToPatientLocation">
         <i class="bi bi-crosshair"></i>
       </button>
     </div>
@@ -80,23 +80,59 @@
     <div class="px-4 pt-3 pb-2" style="background: #EEF3F8;">
       <div class="card border-0 rounded-3 bg-white shadow-sm">
         <div class="card-body px-3 py-2">
-          <div class="d-flex align-items-center gap-2">
+          <!-- 환자 정보가 있는 경우 -->
+          <div v-if="patientInfo.name" class="d-flex align-items-center gap-2">
             <!-- 아바타 아이콘 -->
             <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" 
-                 style="width: 48px; height: 48px; background: #E5E7EB; border: 4px solid #94FFA1;">
+                 :style="{
+                   width: '48px', 
+                   height: '48px', 
+                   background: '#E5E7EB', 
+                   border: `4px solid ${patientInfo.isOnline ? '#94FFA1' : '#9CA3AF'}`
+                 }">
               <svg width="26" height="26" fill="#6B7280" viewBox="0 0 16 16">
                 <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
               </svg>
             </div>
             <!-- 텍스트 정보 -->
             <div class="flex-grow-1" style="min-width: 0;">
-              <div class="fw-bold text-dark" style="font-size: 1.05rem; line-height: 1.3;">김순자 님</div>
-              <div class="text-muted" style="font-size: 0.8125rem; line-height: 1.3;">온라인 • 2분 전</div>
+              <div class="fw-bold text-dark" style="font-size: 1.05rem; line-height: 1.3;">
+                {{ patientInfo.name }} 님
+              </div>
+              <div class="text-muted" style="font-size: 0.8125rem; line-height: 1.3;">
+                {{ patientInfo.isOnline ? '온라인' : '오프라인' }} • {{ formatLastActivity(patientInfo.lastActivity) }}
+              </div>
             </div>
             <!-- 아이콘 -->
             <div class="d-flex align-items-center gap-2 flex-shrink-0">
               <i class="bi bi-bell-fill" style="font-size: 20px; color: #6B7280; cursor: pointer;"></i>
               <i class="bi bi-gear-fill" style="font-size: 20px; color: #6B7280; cursor: pointer;"></i>
+            </div>
+          </div>
+          
+          <!-- 환자 정보가 없는 경우 -->
+          <div v-else class="d-flex align-items-center gap-2">
+            <!-- 연결 아이콘 -->
+            <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" 
+                 style="width: 48px; height: 48px; background: #FEF3C7; border: 4px solid #F59E0B;">
+              <svg width="26" height="26" fill="#D97706" viewBox="0 0 16 16">
+                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5.354 4.646a.5.5 0 1 1-.708.708L7.293 2.5 5.646.854a.5.5 0 1 1 .708-.708L8.293 1.793l2.146-2.147a.5.5 0 0 1 .708.708L8.707 2.5l2.146 2.146a.5.5 0 0 1-.708.708L8 3.207 5.854 5.354z"/>
+              </svg>
+            </div>
+            <!-- 텍스트 정보 -->
+            <div class="flex-grow-1" style="min-width: 0;">
+              <div class="fw-bold text-dark" style="font-size: 1.05rem; line-height: 1.3;">
+                환자 연결 필요
+              </div>
+              <div class="text-muted" style="font-size: 0.8125rem; line-height: 1.3;">
+                환자와 연결하여 위치를 확인하세요
+              </div>
+            </div>
+            <!-- 연결 버튼 -->
+            <div class="flex-shrink-0">
+              <button @click="goToConnect" class="btn btn-sm btn-outline-primary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                연결하기
+              </button>
             </div>
           </div>
         </div>
@@ -108,15 +144,15 @@
       <div class="row g-2 mb-0">
         <!-- 안심존 카드 -->
         <div class="col-6">
-          <div class="card border-0 rounded-3 d-flex flex-column" style="background: #DCFCE7; height: 85px;">
+          <div class="card border-0 rounded-3 d-flex flex-column" :style="{ background: safeZoneStatus.bgColor, height: '85px' }">
             <div class="card-body p-2 d-flex flex-column justify-content-between">
               <div class="d-flex align-items-center gap-1">
-                <i class="bi bi-shield" style="font-size: 20px; color: #16A34A;"></i>
+                <i class="bi bi-shield" :style="{ fontSize: '20px', color: safeZoneStatus.color }"></i>
                 <span class="fw-bold text-dark" style="font-size: 0.85rem;">안심존</span>
               </div>
               <div style="line-height: 1.4;">
                 <div class="text-muted" style="font-size: 0.75rem;">현재 위치</div>
-                <div class="fw-semibold" style="font-size: 0.85rem; color: #16A34A;">안전</div>
+                <div class="fw-semibold" :style="{ fontSize: '0.85rem', color: safeZoneStatus.color }">{{ safeZoneStatus.status }}</div>
               </div>
             </div>
           </div>
@@ -237,6 +273,27 @@ const patientUserNo = ref(null)
 const allSchedules = ref([])
 const scheduleLocations = ref({}) // scheduleNo를 키로 하는 위치 정보 맵
 
+// 환자 정보 데이터
+const patientInfo = ref({
+  name: '',
+  userNo: null,
+  isOnline: false,
+  lastActivity: null
+})
+
+// 환자 위치 관련
+const patientLocation = ref(null)
+const patientMarker = ref(null)
+const locationUpdateInterval = ref(null)
+
+// 안심존 상태 관련
+const safeZoneStatus = ref({
+  isInside: true,
+  status: '연결 필요',
+  color: '#9CA3AF',
+  bgColor: '#F3F4F6'
+})
+
 // 안심존 관련
 let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
 let previewSafeZone = null // 미리보기 안심존
@@ -344,6 +401,11 @@ const goToCalendar = () => {
   router.push('/calendar')
 }
 
+// 연결 페이지로 이동하는 함수
+const goToConnect = () => {
+  router.push('/gdc')
+}
+
 /* ===== 기존 지도/카드 props ===== */
 const props = defineProps({
   kakaoKey: { type: String, default: '' },
@@ -390,16 +452,22 @@ onMounted(async () => {
   try {
     const key = props.kakaoKey || import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
     const kakao = await loadKakao(key)
-    const center = new kakao.maps.LatLng(props.center.lat, props.center.lng)
-    const map = new kakao.maps.Map(mapEl.value, { center, level: 3 })
+    // 기본 센터 좌표 (환자 위치가 없을 때 사용)
+    const defaultCenter = new kakao.maps.LatLng(props.center.lat, props.center.lng)
+    const map = new kakao.maps.Map(mapEl.value, { center: defaultCenter, level: 3 })
     mapInstance = map // 지도 인스턴스 저장
     
-    new kakao.maps.Marker({ position: center }).setMap(map)
     await nextTick()
-    map.relayout(); map.setCenter(center)
+    map.relayout()
     
     // 안심존 표시
     await updateSafeZone(map)
+    
+    // 환자 위치 추적 시작
+    startPatientLocationTracking()
+    
+    // 초기 안심존 상태 확인
+    checkPatientInSafeZone()
     
     window.addEventListener('resize', onResize)
   } catch (e) { console.error(e); err.value = e.message }
@@ -409,6 +477,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
+  // 환자 위치 추적 중지
+  stopPatientLocationTracking()
 })
 
 /* ===== Bottom Sheet: 드래그로만 열기 (collapsed ↔ 80% open) ===== */
@@ -538,6 +608,27 @@ function formatTime(timeString) {
   }
 }
 
+// 마지막 활동 시간 포맷팅
+function formatLastActivity(lastActivity) {
+  if (!lastActivity) return '정보 없음'
+  
+  const now = new Date()
+  const activityTime = new Date(lastActivity)
+  const diffInMinutes = Math.floor((now - activityTime) / (1000 * 60))
+  
+  if (diffInMinutes < 1) {
+    return '방금 전'
+  } else if (diffInMinutes < 60) {
+    return `${diffInMinutes}분 전`
+  } else if (diffInMinutes < 1440) { // 24시간
+    const hours = Math.floor(diffInMinutes / 60)
+    return `${hours}시간 전`
+  } else {
+    const days = Math.floor(diffInMinutes / 1440)
+    return `${days}일 전`
+  }
+}
+
 // 위치 정보를 화살표 형식으로 포맷팅
 function formatLocation(scheduleNo) {
   const locations = scheduleLocations.value[scheduleNo]
@@ -568,6 +659,14 @@ async function fetchPatientInfo() {
     if (patient.message) {
       console.warn(patient.message)
       return null
+    }
+    
+    // 환자 정보 업데이트
+    patientInfo.value = {
+      name: patient.name || '',
+      userNo: patient.userNo,
+      isOnline: false, // 초기에는 오프라인으로 설정 (위치 조회 후 업데이트)
+      lastActivity: null // 초기에는 null로 설정 (위치 조회 후 업데이트)
     }
     
     return patient.userNo
@@ -623,6 +722,8 @@ async function loadScheduleData() {
   const userNo = await fetchPatientInfo()
   if (!userNo) {
     console.warn('관리하는 환자가 없습니다.')
+    // 환자 연결이 없으면 안심존 상태를 연결 필요로 설정
+    checkPatientInSafeZone()
     return
   }
   
@@ -637,6 +738,9 @@ async function loadScheduleData() {
     const locations = await fetchScheduleLocations(schedule.scheduleNo)
     scheduleLocations.value[schedule.scheduleNo] = locations
   }
+  
+  // 4. 환자 연결 후 안심존 상태 다시 확인
+  checkPatientInSafeZone()
 }
 
 // 현재 진행 중인 일정 찾기
@@ -1161,6 +1265,9 @@ async function saveSafeZoneLevel() {
     // 안심존 다시 로드
     await updateSafeZone(mapInstance)
     
+    // 안심존 상태 다시 확인
+    checkPatientInSafeZone()
+    
   } catch (error) {
     console.error('안심존 저장 오류:', error)
     alert('안심존 저장에 실패했습니다.')
@@ -1186,6 +1293,294 @@ onBeforeUnmount(() => {
     previewSafeZone.setMap(null)
   }
 })
+
+/* ===== 환자 위치 추적 관련 함수 ===== */
+// 환자 위치 추적 시작
+function startPatientLocationTracking() {
+  // 즉시 한 번 조회
+  fetchPatientLocation()
+  
+  // 20초마다 환자 위치 조회
+  locationUpdateInterval.value = setInterval(() => {
+    fetchPatientLocation()
+  }, 20000) // 20초
+}
+
+// 환자 위치 추적 중지
+function stopPatientLocationTracking() {
+  if (locationUpdateInterval.value) {
+    clearInterval(locationUpdateInterval.value)
+    locationUpdateInterval.value = null
+  }
+}
+
+// 환자 위치 조회
+async function fetchPatientLocation() {
+  // 환자 번호가 없으면 조회하지 않음
+  if (!patientUserNo.value) {
+    return
+  }
+  
+  try {
+    const response = await fetch(`/api/location/patient/${patientUserNo.value}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      // API 호출 실패 시 오프라인으로 설정 (마지막 활동 시간은 변경하지 않음)
+      if (patientInfo.value.userNo) {
+        patientInfo.value.isOnline = false
+        // lastActivity는 변경하지 않음 - 기존 시간 유지
+      }
+      return
+    }
+    
+    const location = await response.json()
+    
+    if (location && location.latitude && location.longitude) {
+      patientLocation.value = location
+      updatePatientMarker(location)
+      
+      // 환자 정보 업데이트 (온라인일 때만 마지막 활동 시간 업데이트)
+      if (patientInfo.value.userNo === location.userNo) {
+        patientInfo.value.isOnline = location.status === 'online'
+        // 온라인일 때만 마지막 활동 시간 업데이트
+        if (location.status === 'online') {
+          patientInfo.value.lastActivity = new Date(location.timestamp)
+        }
+        // 오프라인일 때는 기존 마지막 활동 시간 유지
+      }
+    } else {
+      // 위치 데이터가 없으면 오프라인으로 설정 (마지막 활동 시간은 변경하지 않음)
+      if (patientInfo.value.userNo) {
+        patientInfo.value.isOnline = false
+        // lastActivity는 변경하지 않음 - 기존 시간 유지
+      }
+    }
+  } catch (error) {
+    console.error('환자 위치 조회 오류:', error)
+    // 네트워크 오류 등으로 위치 조회 실패 시 오프라인으로 설정 (마지막 활동 시간은 변경하지 않음)
+    if (patientInfo.value.userNo) {
+      patientInfo.value.isOnline = false
+      // lastActivity는 변경하지 않음 - 기존 시간 유지
+    }
+  }
+}
+
+// 환자 마커 업데이트
+function updatePatientMarker(location) {
+  if (!mapInstance || !window.kakao?.maps) return
+  
+  try {
+    // 기존 환자 마커 제거
+    if (patientMarker.value) {
+      patientMarker.value.setMap(null)
+    }
+    
+    // 새로운 환자 마커 생성
+    const position = new window.kakao.maps.LatLng(location.latitude, location.longitude)
+    
+    // 환자 마커 이미지 (빨간색 원)
+    const markerImage = new window.kakao.maps.MarkerImage(
+      'data:image/svg+xml;base64,' + btoa(`
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="${location.status === 'online' ? '#EF4444' : '#9CA3AF'}" 
+                  stroke="white" stroke-width="2"/>
+          <circle cx="12" cy="12" r="4" fill="white"/>
+        </svg>
+      `),
+      new window.kakao.maps.Size(24, 24),
+      { offset: new window.kakao.maps.Point(12, 12) }
+    )
+    
+    patientMarker.value = new window.kakao.maps.Marker({
+      position: position,
+      image: markerImage,
+      title: `${patientInfo.value.name || '환자'} 위치`
+    })
+    
+    patientMarker.value.setMap(mapInstance)
+    
+    // 환자 위치로 지도 중심 이동
+    mapInstance.setCenter(position)
+    
+    // 안심존 상태 확인
+    checkPatientInSafeZone()
+    
+    console.log(`환자 위치 업데이트: (${location.latitude}, ${location.longitude}) - ${location.status}`)
+  } catch (error) {
+    console.error('환자 마커 업데이트 오류:', error)
+  }
+}
+
+// 환자 위치가 안심존 내부에 있는지 판단
+function checkPatientInSafeZone() {
+  // 환자와 연결되지 않은 경우
+  if (!patientUserNo.value) {
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '연결 필요',
+      color: '#9CA3AF',
+      bgColor: '#F3F4F6'
+    }
+    return
+  }
+  
+  // 환자 위치나 안심존이 없는 경우
+  if (!patientLocation.value || !currentActiveZone.value) {
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '위치 확인 중',
+      color: '#F59E0B',
+      bgColor: '#FEF3C7'
+    }
+    return
+  }
+  
+  try {
+    const patientLat = patientLocation.value.latitude
+    const patientLng = patientLocation.value.longitude
+    
+    let isInside = false
+    
+    if (currentActiveZone.value.type === '기본형') {
+      // 기본형 안심존 (원형) - 중심점과의 거리 계산
+      const boundaryData = currentActiveZone.value.data
+      const centerLat = boundaryData.center.lat
+      const centerLng = boundaryData.center.lng
+      const radius = boundaryData.radius
+      
+      // 두 점 간의 거리 계산 (미터 단위)
+      const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
+      isInside = distance <= radius
+      
+    } else if (currentActiveZone.value.type === '경로형') {
+      // 경로형 안심존 (폴리곤) - 점이 폴리곤 내부에 있는지 판단
+      const bufferCoordinates = currentActiveZone.value.data
+      let coordinates
+      
+      if (Array.isArray(bufferCoordinates)) {
+        coordinates = bufferCoordinates
+      } else if (bufferCoordinates.coordinates) {
+        coordinates = bufferCoordinates.coordinates
+      } else {
+        isInside = true // 좌표를 찾을 수 없으면 안전으로 처리
+      }
+      
+      if (coordinates) {
+        isInside = isPointInPolygon(patientLat, patientLng, coordinates)
+      }
+    }
+    
+    // 안심존 상태 업데이트
+    if (isInside) {
+      safeZoneStatus.value = {
+        isInside: true,
+        status: '안전',
+        color: '#16A34A',
+        bgColor: '#DCFCE7'
+      }
+    } else {
+      safeZoneStatus.value = {
+        isInside: false,
+        status: '위험',
+        color: '#EF4444',
+        bgColor: '#FEE2E2'
+      }
+    }
+    
+    console.log(`안심존 상태: ${isInside ? '안전' : '위험'} (환자 위치: ${patientLat}, ${patientLng})`)
+    
+  } catch (error) {
+    console.error('안심존 상태 확인 오류:', error)
+    // 오류 발생 시 위치 확인 중 상태로 설정
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '위치 확인 중',
+      color: '#F59E0B',
+      bgColor: '#FEF3C7'
+    }
+  }
+}
+
+// 두 점 간의 거리 계산 (Haversine 공식)
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000 // 지구 반지름 (미터)
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
+
+// 점이 폴리곤 내부에 있는지 판단 (Ray casting 알고리즘)
+function isPointInPolygon(lat, lng, polygon) {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].longitude
+    const yi = polygon[i].latitude
+    const xj = polygon[j].longitude
+    const yj = polygon[j].latitude
+    
+    if (((yi > lng) !== (yj > lng)) && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi)) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+// 현위치 버튼 클릭 시 환자 위치로 이동
+async function moveToPatientLocation() {
+  if (!mapInstance || !window.kakao?.maps) {
+    console.warn('지도가 초기화되지 않았습니다.')
+    return
+  }
+  
+  // 환자 번호가 없으면 연결 페이지로 이동
+  if (!patientUserNo.value) {
+    alert('환자와 연결이 필요합니다.')
+    goToConnect()
+    return
+  }
+  
+  try {
+    // 현재 환자 위치가 있으면 해당 위치로 이동
+    if (patientLocation.value && patientLocation.value.latitude && patientLocation.value.longitude) {
+      const position = new window.kakao.maps.LatLng(
+        patientLocation.value.latitude, 
+        patientLocation.value.longitude
+      )
+      mapInstance.setCenter(position)
+      mapInstance.setLevel(3) // 적절한 줌 레벨로 설정
+      console.log('환자 위치로 이동 완료')
+      return
+    }
+    
+    // 환자 위치가 없으면 최신 위치 조회 후 이동
+    console.log('환자 위치 조회 중...')
+    await fetchPatientLocation()
+    
+    // 조회 후에도 위치가 있으면 이동
+    if (patientLocation.value && patientLocation.value.latitude && patientLocation.value.longitude) {
+      const position = new window.kakao.maps.LatLng(
+        patientLocation.value.latitude, 
+        patientLocation.value.longitude
+      )
+      mapInstance.setCenter(position)
+      mapInstance.setLevel(3) // 적절한 줌 레벨로 설정
+      console.log('환자 위치 조회 후 이동 완료')
+    } else {
+      alert('환자의 현재 위치를 찾을 수 없습니다. 환자가 오프라인 상태일 수 있습니다.')
+    }
+  } catch (error) {
+    console.error('환자 위치로 이동 중 오류:', error)
+    alert('환자 위치로 이동하는 중 오류가 발생했습니다.')
+  }
+}
+
 </script>
 
 <style scoped>
