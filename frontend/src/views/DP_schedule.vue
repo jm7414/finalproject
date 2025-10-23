@@ -7,6 +7,20 @@
     1. 음성인식으로 출발, 도착 지점 받아오는 부분
 -->
 <template>
+    <!-- 환자 헤더 -->
+    <header class="app-header">
+        <div class="icon-wrapper" @click="goBack">
+            <i class="icon bi bi-arrow-left icon-bold"></i>
+        </div>
+
+        <div class="app-title">
+            <img src="/mammamialogo.png" alt="Mamma Mia Logo" class="logo-image">
+        </div>
+
+        <div class="icon-wrapper" @click="goHome">
+            <i class="icon bi bi-house icon-bold"></i>
+        </div>
+    </header>
     <div class="main-container">
         <div class="main-body">
             <div class="main-div">
@@ -78,7 +92,8 @@
                     <div class="div-5">
                         <span class="span">언제 가세요?</span>
                         <div class="flex-row-bf">
-                            <div class="DP_today" :class="{ active: selectedDay == 'today' }" @click="checkDay('today')">
+                            <div class="DP_today" :class="{ active: selectedDay == 'today' }"
+                                @click="checkDay('today')">
                                 <span class="span-6" :class="{ active: selectedDay == 'today' }">오늘</span>
                             </div>
 
@@ -100,7 +115,7 @@
                     </div>
                     <DatePickerModal :isVisible="showModal" @close="closeModal" @confirm="handleDateConfirm" />
                 </div>
-                
+
                 <!-- 몇 시에 가세요? -->
                 <div class="going-time">
                     <span class="how-many-go">몇 시에 가세요?</span>
@@ -121,7 +136,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <!-- 몇 시에 돌아오세요? -->
                 <div class="return-time">
                     <span class="how-many-come-back">몇 시에 돌아오세요?</span>
@@ -132,7 +147,7 @@
                                 {{ item }}
                             </option>
                         </select>
-                        
+
                         <select id="time2" v-model="selectedTime2" class="form-select custom-time-select"
                             @change="onTime2Change">
                             <option value="" disabled selected hidden>시간</option>
@@ -142,7 +157,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <!-- 저장취소 버튼 -->
                 <div class="save-cancel">
                     <div class="div-element">
@@ -157,10 +172,10 @@
             </div>
         </div>
     </div>
-            
+
     <button class="btn btn-primary" @click="requestRoute"> 경로저장 테스트</button>
     <button class="btn btn-info" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
-            
+
 </template>
 
 <script setup>
@@ -439,7 +454,7 @@ function checkDay(s) {
 }
 
 function cancle() {
-    alert(`취소`)
+    window.location.reload();
 }
 
 function onTime1Change() {
@@ -594,16 +609,16 @@ async function scheduleRegistration(userNo, startLoc, endLoc, date, startTime, e
         bufferCoordinates: JSON.parse(bufferCoordinates)
     }
     const response = await fetch(`/api/schedule/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include', // 세션 쿠키 포함
-      body: JSON.stringify(requestData)
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include', // 세션 쿠키 포함
+        body: JSON.stringify(requestData)
     })
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || `일정 ${isEditMode.value ? '수정' : '저장'}에 실패했습니다.`)
+        const error = await response.json()
+        throw new Error(error.message || `일정 ${isEditMode.value ? '수정' : '저장'}에 실패했습니다.`)
     }
 
     const result = await response.json()
@@ -619,6 +634,15 @@ function voiceSearchEnd() {
     alert(`끝`)
 }
 
+/* 헤더 */
+function goBack() {
+  router.go(-1)
+}
+
+function goHome() {
+    router.push('/DP');
+}
+
 </script>
 
 <style scoped>
@@ -628,11 +652,13 @@ function voiceSearchEnd() {
     /* z-index 값이 있다면 제거하거나 낮은 값으로 변경 */
     z-index: auto;
     /* 또는 1 정도로 */
-    right:4px;
-    top:-45px;
-     overflow-x: hidden;  /* 이 줄 추가 */
+    right: 4px;
+    top: -45px;
+    overflow-x: hidden;
+    /* 이 줄 추가 */
     width: 120%;
-    max-width: 100vw;  /* 뷰포트 너비 초과 방지 */
+    max-width: 100vw;
+    /* 뷰포트 너비 초과 방지 */
 }
 
 .bd {
@@ -740,12 +766,13 @@ function voiceSearchEnd() {
 .custom-time-select {
     font-size: 24px !important;
     font-weight: 600 !important;
-    color: #516578 !important; /* Bootstrap의 진한 회색 */
+    color: #516578 !important;
+    /* Bootstrap의 진한 회색 */
     padding: 0.5rem 2.5rem 0.5rem 0.75rem !important;
     background-color: #fff;
     border: 1px solid #ced4da;
     border-radius: 0.375rem;
-    height: 100px !important;    
+    height: 100px !important;
     /* Bootstrap 5의 form-select 화살표 유지 */
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
@@ -794,4 +821,49 @@ function voiceSearchEnd() {
     font-weight: 500;
     color: #212529;
 }
+
+/* 환자 헤더 */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 70px;
+  padding: 0 24px;
+  background-color: #FFFFFF;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+}
+
+.icon-wrapper {
+  cursor: pointer;
+}
+
+.icon-wrapper .icon {
+  width: 24px;
+  height: 24px;
+  fill: #000000;
+}
+
+.icon-bold {
+  font-size: 1.3rem;
+  -webkit-text-stroke: 0.8px currentColor;
+}
+
+.logo-image {
+  height: 32px;
+  /* 또는 원하는 크기로 조정 */
+  object-fit: contain;
+}
+
 </style>

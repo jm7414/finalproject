@@ -13,5 +13,5 @@ public class LocationDataVO {
 	private int userNo;
 	private BigDecimal latitude;
 	private BigDecimal longitude;
-	private LocalDateTime missingTime;
+	private LocalDateTime recordTime;
 }

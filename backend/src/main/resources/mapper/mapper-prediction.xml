@@ -6,25 +6,23 @@
 	
 	<!-- 예상위치에 들어오면 예측 모델로 보내기위해 28일간의 데이터를 불러옴  -->
 	<select id="getLocationData" parameterType="lx.project.dementia_care.vo.LocationDataVO">
-		SELECT user_no as userNo,
-			latitude,
-			longitude,
-			timestamp as time
-		FROM patient_location
-		WHERE <!-- {{ < == &lt; }} -->
-		 user_no = #{userNo} and missing_time &lt; #{missingTime}
-		ORDER BY timestamp DESC
-		LIMIT 8064
-	</select>
+		SELECT user_no, latitude, longitude, record_time
+        FROM user_location
+        WHERE user_no = #{userNo}
+        ORDER BY record_time ASC
+    </select>
 
 	<insert id="insertPredictedLocation"
 		parameterType="lx.project.dementia_care.dto.PredictionResponseDTO">
-		INSERT INTO pred_location (user_no, zone_level_1, zone_level_2, zone_level_3)
-		VALUES (#{userNo},#{zone_level_1},#{zone_level_2},#{zone_level_3})
+		INSERT INTO pred_location (user_no,range_50_700, range_700_1500, range_700_plus, zone_level_1, zone_level_2, zone_level_3)
+		VALUES (#{userNo},#{range_50_700},#{range_700_1500},#{range_1500_plus},#{zone_level_1},#{zone_level_2},#{zone_level_3})
 	</insert>
 
 	<select id="readPredictedLocationFromUserNo" parameterType="int">
 		SELECT user_no as userNo,
+		range_50_700,
+		range_700_1500,
+		range_1500_plus,
 		zone_level_1 as 30m,
 		zone_level_2 as 60m,
 		zone_level_3 as 90m

@@ -25,7 +25,7 @@
                 <div class="div-5">
                   <i class="bi bi-person-gear menu-bi"></i>
                 </div>
-                <span class="my-info-edit">내정보수정</span>
+                <span class="my-info-edit">내정보 수정</span>
               </div>
               <div class="icon-7">
                 <i class="bi bi-chevron-right chevron-bi"></i>
@@ -170,7 +170,8 @@ const handleLogout = async () => {
   display: flex; flex-direction: column; align-items: flex-start;
   width: 100%;                 /* 화면에 딱 맞게 */
   max-width: 480px;            /* 모바일 최대폭 */
-  margin: 0 auto;
+  max-height: 720px;
+  margin-top: -30px;
   background: #fff;
   border: none;                /* 테두리 제거 */
   border-radius: 0;
