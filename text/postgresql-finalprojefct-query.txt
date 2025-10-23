@@ -1,9 +1,13 @@
 -- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
+DROP TABLE IF EXISTS predict_location CASCADE;
+DROP TABLE IF EXISTS user_location CASCADE;
 DROP TABLE IF EXISTS record CASCADE;
 DROP TABLE IF EXISTS report CASCADE;
 DROP TABLE IF EXISTS period CASCADE;
 DROP TABLE IF EXISTS search_Together CASCADE;
 DROP TABLE IF EXISTS missing_post CASCADE;
+DROP TABLE IF EXISTS post_likes CASCADE;
+DROP TABLE IF EXISTS post_comments CASCADE;
 DROP TABLE IF EXISTS post CASCADE;
 DROP TABLE IF EXISTS route CASCADE;
 DROP TABLE IF EXISTS schedule_location CASCADE;
@@ -12,8 +16,6 @@ DROP TABLE IF EXISTS safe_zone CASCADE;
 DROP TABLE IF EXISTS guardian_patient_connection CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS role CASCADE;
-DROP TABLE IF EXISTS post_likes CASCADE;
-DROP TABLE IF EXISTS post_comments CASCADE;
 
 -- === 역할(role) 테이블 ===
 CREATE TABLE role (
@@ -247,40 +249,36 @@ CREATE TABLE record (
 
 -- === 환자 위치 저장 테이블 === 
 CREATE TABLE user_location (
-	location_no SERIAL PRIMARY KEY,
-	user_no INTEGER NOT NULL,
-	latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    location_no SERIAL PRIMARY KEY,
+    user_no INTEGER NOT NULL,
+    latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
     longitude DECIMAL(11,8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
-	record_time TIMESTAMP NOT NULL, -- GPS정보가 찍힌 시간
-	
-	FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+    record_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
 
--- ASC가 기본 값
 CREATE INDEX idx_user_location_user_time ON user_location(user_no, record_time);
-
--- SELECT * FROM user_location 
--- WHERE user_no = 1 
--- ORDER BY record_time;
-
-
+CREATE INDEX idx_user_location_time ON user_location(record_time);
 
 -- === 예측된 위치 저장 테이블 (heatMap 나타내기위함) ===
 CREATE TABLE predict_location (
-	predicted_no SERIAL PRIMARY KEY,
-	user_no INTEGER NOT NULL,
-	location_no INTEGER NOT NULL,
-	range_50_700 JSONB NOT NULL,
-	range_700_1500 JSONB NOT NULL,
-	range_1500_plus JSONB NOT NULL,
-	level_1_top3 JSONB NOT NULL,
-	level_2_top3 JSONB NOT NULL,
-	level_3_top3 JSONB NOT NULL,
+    predicted_no SERIAL PRIMARY KEY,
+    user_no INTEGER NOT NULL,
+    location_no INTEGER NOT NULL,
+    range_50_700 JSONB NOT NULL,
+    range_700_1500 JSONB NOT NULL,
+    range_1500_plus JSONB NOT NULL,
+    level_1_top3 JSONB NOT NULL,
+    level_2_top3 JSONB NOT NULL,
+    level_3_top3 JSONB NOT NULL,
 
-	FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
-	FOREIGN KEY (location_no) REFERENCES user_location(location_no) ON DELETE CASCADE
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
+    FOREIGN KEY (location_no) REFERENCES user_location(location_no) ON DELETE CASCADE
 );
+
 CREATE INDEX idx_predict_user ON predict_location(user_no);
+CREATE INDEX idx_predict_user_location ON predict_location(user_no, location_no);
 
 -- === 샘플 데이터 삽입 ===
 INSERT INTO users (user_id, user_pw, name, role_no) VALUES
@@ -311,6 +309,3 @@ INSERT INTO search_Together (missing_post_id, user_id) VALUES
 INSERT INTO guardian_patient_connection (patient_no, guardian1_no, guardian2_no, guardian3_no) VALUES
 (3, 1, 2, NULL);
 
-SELECT user_no, name, birth_date, phone_number
-FROM users
-WHERE user_no = 13;
