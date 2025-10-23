@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +56,7 @@ public class UserController {
 
             // 비밀번호 암호화
             user.setUserPw(passwordEncoder.encode(user.getUserPw()));
-            
+
             // 역할 설정 (보호자 체크박스에 따라)
             user.setRoleNo(user.getRoleNo() == 1 ? 1 : 2); // 1: 보호자, 2: 환자
 
@@ -135,6 +136,7 @@ public class UserController {
         }
     }
 
+    /* 내정보 수정 */
     @PostMapping("/api/user/update")
     public ResponseEntity<?> updateCurrentUser(@RequestBody Map<String, Object> body) {
         try {
@@ -185,6 +187,13 @@ public class UserController {
             }
 
             UserVO fresh = userDAO.findByUserNo(current.getUserNo());
+            // 세션의 Principal 갱신
+            Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                    fresh, // 최신 UserVO로 교체
+                    auth.getCredentials(),
+                    auth.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(newAuth);
+            
             return ResponseEntity.ok(fresh);
 
         } catch (Exception e) {

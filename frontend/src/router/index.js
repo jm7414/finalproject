@@ -37,6 +37,7 @@ import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
 import DP_ModifyInfo from '@/views/DP_ModifyInfo.vue'
+import GD_ModifyInfo from '@/views/GD_ModifyInfo.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -230,6 +231,12 @@ const router = createRouter({
       path: '/gdmypage',
       name: 'gdmypage',
       component: GdMypageView,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
+    {
+      path: '/gdmodifyinfo',
+      name: 'gdmodifyinfo',
+      component: GD_ModifyInfo,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {

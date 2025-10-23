@@ -7,7 +7,7 @@
         <div class="card-body p-3">
           <!-- 인사 -->
           <h3 class="fw-bold mb-3" style="letter-spacing:-.2px">
-            {{ userName || '사용자' }}님 안녕하세요!
+            {{ userName || '사용자' }} 님 안녕하세요!
           </h3>
 
           <!-- 오늘 일정 카드 -->

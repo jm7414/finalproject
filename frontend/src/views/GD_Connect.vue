@@ -307,7 +307,18 @@ onMounted(async () => {
 
 <style scoped>
 /* 이 화면 글자색을 컴포넌트 수준에서 강제 */
-.gd-connect-page { color:#171717; }
+.gd-connect-page { 
+  color:#171717;
+  height: 640px;
+  max-width: 480px;
+  margin: 0 auto;
+  font-size: 0.9rem;
+  transform: scale(1.03);
+  transform-origin: top center;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-top: -5px; }
 .gd-connect-page .text-secondary { color:#6c757d !important; }
 .gd-connect-page a { color: inherit !important; }
 
