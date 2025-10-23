@@ -66,8 +66,8 @@ public class SecurityConfig {
                         // 환자 전용 페이지 및 API
                         .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
 
-                        // 환자/구독자 본인정보 수정 API 권한
-                        .requestMatchers(HttpMethod.POST, "/api/user/update").hasAnyRole("PATIENT", "SUBSCRIBER")
+                        // 본인정보 수정 API 권한
+                        .requestMatchers(HttpMethod.POST, "/api/user/update").hasAnyRole("GUARDIAN","PATIENT", "SUBSCRIBER")
 
                         // 공통 페이지들 (로그인한 사용자만 접근 가능)
                         .requestMatchers("/calendar", "/add-schedule", "/CommunityView", "/geo-fencing",

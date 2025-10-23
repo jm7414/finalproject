@@ -325,6 +325,7 @@ public class ConnectController {
          out.put("patientNo", patientNo);
          out.put("subscriptionActive", subscriptionActive);
          out.put("plus", plus);
+         out.put("subscriptionEndTime", sub != null ? sub.get("end") : null);
          return out;
       } catch (Exception e) {
          e.printStackTrace();

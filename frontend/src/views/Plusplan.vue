@@ -3,14 +3,14 @@
     <!-- 상단 프로필 -->
     <div class="profile-section bg-light py-2">
       <div class="profile-container">
-        <img :src="logoPath" alt="Logo" class="logo-icon mb-2" />
+        <img :src="logoPath" alt="Logo" class="logo-icon mb-0" />
         <div class="d-flex align-items-center justify-content-center">
-          <div class="user-avatar me-2">
+          <div class="user-avatar me-2 mb-2">
             <i class="bi bi-person-circle text-secondary"></i>
           </div>
-          <div class="text-start">
+          <div class="text-start mb-2">
             <h6 class="mb-0 fw-normal">{{ currentPlan }} 이용중</h6>
-            <p class="text-secondary mb-0 small">{{ userName }}님 안녕하세요</p>
+            <p class="text-secondary mb-0 small">{{ guardianName }} 님 안녕하세요</p>
           </div>
         </div>
       </div>
@@ -62,112 +62,162 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 /** props */
 const props = defineProps<{ userName?: string }>()
-const userName = props.userName ?? 'User'
 
 /** 라우터 */
 const router = useRouter()
 
 /** 로고/표시 값 */
-const logoPath = '/mamaicon.png'
-const currentPlan = ref('플러스 플랜')        // 월/연간 식별이 어려우면 “플러스 플랜”으로 표기
-const nextPaymentDate = ref<string>('')        // YYYY-MM-DD (KST)
+const logoPath = '/mammamialogo.png'
+const currentPlan = ref('플러스 플랜')
+const nextPaymentDate = ref<string>('')
 
 /** 세션 정보 */
 const guardianNo = ref<number|null>(null)
 const patientNo = ref<number|null>(null)
+
+// 사용자 정보 저장
+const userData = ref(null)
+const subscriptionData = ref(null)
+
+// Computed 속성
+const guardianName = computed(() => {
+  return userData.value?.name || 'User'
+})
 
 /** 유틸: KST YYYY-MM-DD 포맷 */
 function formatKstYmd(input: string | number | Date | undefined | null): string {
   if (!input) return ''
   const d = new Date(input)
   if (Number.isNaN(+d)) return ''
-  // sv-SE 포맷은 YYYY-MM-DD, timeZone으로 KST 고정
   const ymd = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Seoul',
     year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(d) // e.g. "2026-10-15"
+  }).format(d)
   return ymd
 }
 
-/** 내 정보→guardianNo 확보 (localStorage fallback) */
-async function ensureGuardian() {
+/** 1. 사용자 기본 정보 로드 */
+async function loadUserData() {
   try {
-    const res = await fetch('/api/user/me', { credentials: 'include' })
-    const me = await res.json().catch(() => ({} as any))
-    guardianNo.value = Number(me.userNo ?? me.userId ?? me.id ?? 0) || null
-  } catch { /* ignore */ }
-  if (!guardianNo.value) {
+    const response = await axios.get('/api/user/me')
+    userData.value = response.data
+    guardianNo.value = userData.value.userNo
+    
+    // 로컬스토리지에 저장 (fallback용)
+    if (guardianNo.value) {
+      localStorage.setItem('guardianNo', String(guardianNo.value))
+    }
+  } catch (error) {
+    console.error('사용자 정보 로드 실패:', error)
+    // fallback: 로컬스토리지에서 가져오기
     guardianNo.value = Number(localStorage.getItem('guardianNo') || 0) || null
   }
 }
 
-/** 구독 요약 → 연결/플러스 여부/환자번호 확보 */
-async function fetchSummaryAndGuard() {
+/** 2. 구독 정보 로드 */
+async function loadSubscriptionData() {
   if (!guardianNo.value) return
-  const res = await fetch('/api/subscriptions/summary?guardianNo=' + guardianNo.value, {
-    credentials: 'include',
-    headers: { 'X-Mock-User': String(guardianNo.value) }
-  })
-  const s = await res.json().catch(() => ({} as any))
-  // plus 아니면 베이직으로 보냄
-  const plus = s?.plus === true || s?.subscriptionActive === true
-  if (!plus) {
-    router.replace('/basicplan')
-    return
-  }
-  patientNo.value = s?.patientNo ?? null
-
-  // 혹시 요약에 end가 내려오면 즉시 사용
-  const endFromSummary = s?.subscription?.end || s?.end || s?.subscribe_endtime
-  if (endFromSummary) {
-    nextPaymentDate.value = formatKstYmd(endFromSummary)
+  
+  try {
+    const response = await axios.get('/api/subscriptions/summary', {
+      params: {
+        guardianNo: guardianNo.value
+      },
+      headers: {
+        'X-Mock-User': String(guardianNo.value)
+      }
+    })
+    
+    subscriptionData.value = response.data
+    
+    // plus 플랜이 아니면 베이직 페이지로 이동
+    const plus = subscriptionData.value?.plus === true || 
+                 subscriptionData.value?.subscriptionActive === true
+    
+    if (!plus) {
+      router.replace('/basicplan')
+      return
+    }
+    
+    patientNo.value = subscriptionData.value?.patientNo ?? null
+    
+    // subscriptionEndTime이 있으면 날짜 포맷팅
+    const endTime = subscriptionData.value?.subscriptionEndTime || 
+                    subscriptionData.value?.subscription?.end || 
+                    subscriptionData.value?.end || 
+                    subscriptionData.value?.subscribe_endtime
+    
+    if (endTime) {
+      nextPaymentDate.value = formatKstYmd(endTime)
+    }
+  } catch (error) {
+    console.error('구독 정보 로드 실패:', error)
   }
 }
 
-/** 환자 basic/guardians 등에서 subscribe_endtime 추출(백엔드 구현 다양성 대응) */
+/** 3. 추가 결제일 정보 로드 (fallback) */
 async function fetchEndtimeFallback() {
-  if (!patientNo.value) return
+  if (!patientNo.value || nextPaymentDate.value) return
+  
   // 1) patient basic
   try {
-    const resB = await fetch(`/api/connect/patient/${patientNo.value}/basic`, { credentials: 'include' })
+    const resB = await fetch(`/api/connect/patient/${patientNo.value}/basic`, { 
+      credentials: 'include' 
+    })
     const b = await resB.json().catch(() => ({} as any))
-    const end =
-      b?.subscribe_endtime ||
-      b?.subscription_endtime ||
-      b?.subscribeEndtime ||
-      b?.subscriptionEndTime ||
-      b?.end
-    if (end && !nextPaymentDate.value) {
+    const end = b?.subscribe_endtime || 
+                b?.subscription_endtime || 
+                b?.subscribeEndtime || 
+                b?.subscriptionEndTime || 
+                b?.end
+    if (end) {
       nextPaymentDate.value = formatKstYmd(end)
+      return
     }
   } catch { /* ignore */ }
 
-  // 2) guardians 목록에 포함되어 오는 경우 방어적 파싱
+  // 2) guardians 목록
   try {
-    const resG = await fetch(`/api/connect/patient/${patientNo.value}/guardians`, { credentials: 'include' })
+    const resG = await fetch(`/api/connect/patient/${patientNo.value}/guardians`, { 
+      credentials: 'include' 
+    })
     const g = await resG.json().catch(() => [])
-    // 배열/객체 어느 쪽이든 subscribe_endtime 비슷한 키를 탐색
-    const scan = (obj:any) => obj?.subscribe_endtime || obj?.subscription_endtime || obj?.end || obj?.subscribeEndtime
+    const scan = (obj:any) => obj?.subscribe_endtime || 
+                               obj?.subscription_endtime || 
+                               obj?.end || 
+                               obj?.subscribeEndtime
     if (Array.isArray(g)) {
       for (const it of g) {
         const end = scan(it)
-        if (end) { nextPaymentDate.value = formatKstYmd(end); break }
+        if (end) { 
+          nextPaymentDate.value = formatKstYmd(end)
+          break 
+        }
       }
     } else {
       const end = scan(g)
-      if (end && !nextPaymentDate.value) nextPaymentDate.value = formatKstYmd(end)
+      if (end) nextPaymentDate.value = formatKstYmd(end)
     }
   } catch { /* ignore */ }
 }
 
-/** 구독 취소 (백엔드 준비되면 실제 동작) */
+/** 구독 취소 */
 async function cancelSubscription() {
-  if (!guardianNo.value) { alert('보호자 정보를 찾을 수 없습니다.'); return }
+  if (!guardianNo.value) { 
+    alert('보호자 정보를 찾을 수 없습니다.')
+    return 
+  }
+  
+  if (!confirm('정말 구독을 취소하시겠습니까?')) {
+    return
+  }
+  
   try {
     const res = await fetch('/api/subscriptions/cancel', {
       method: 'POST',
@@ -179,24 +229,35 @@ async function cancelSubscription() {
       body: JSON.stringify({ guardianNo: guardianNo.value })
     })
     const data = await res.json().catch(() => ({} as any))
+    
     if (!res.ok) {
       alert(data?.message || '구독 취소 처리에 실패했습니다.')
       return
     }
+    
     alert('구독이 취소되었습니다.')
     router.replace('/basicplan')
-  } catch {
-    // 백엔드가 아직 없을 수도 있음
+  } catch (error) {
+    console.error('구독 취소 실패:', error)
     alert('구독 취소 API가 아직 준비되지 않았습니다. (백엔드 연결 필요)')
   }
 }
 
+/** 초기화 */
 onMounted(async () => {
-  await ensureGuardian()
-  await fetchSummaryAndGuard()
-  if (!nextPaymentDate.value) await fetchEndtimeFallback()
+  // 1. 사용자 정보 먼저 로드
+  await loadUserData()
+  
+  // 2. 구독 정보 로드
+  await loadSubscriptionData()
+  
+  // 3. 결제일 정보가 없으면 fallback 시도
+  if (!nextPaymentDate.value) {
+    await fetchEndtimeFallback()
+  }
 })
 </script>
+
 
 <style scoped>
 /* ===== 전역 초록 글씨 차단: 이 컴포넌트 내부에서는 기본색 강제 ===== */
@@ -206,15 +267,16 @@ onMounted(async () => {
 
 /* 레이아웃 */
 .subscription-cancel-page {
-  height: 672px;
+  height: 640px;
   max-width: 480px;
   margin: 0 auto;
   font-size: 0.9rem;
-  transform: scale(0.9);
+  transform: scale(1.0);
   transform-origin: top center;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin-top: -14px;
 }
 
 .profile-section {

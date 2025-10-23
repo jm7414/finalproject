@@ -18,7 +18,7 @@
                 </div>
                 <div>
                   <h5 class="mb-1">내 정보</h5>
-                  <p class="text-secondary mb-0 small">{{ displayUserName }}님 안녕하세요</p>
+                  <p class="text-secondary mb-0 small">{{ displayUserName }} 님 안녕하세요</p>
                 </div>
               </div>
             </div>
