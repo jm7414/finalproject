@@ -59,3 +59,6 @@ yarn-error.log
 bin/
 target/
 build/
+
+# 수정 이력 txt
+learning-pages-guide.txt
