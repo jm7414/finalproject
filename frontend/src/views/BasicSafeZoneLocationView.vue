@@ -1,6 +1,6 @@
 <template>
   <div class="page">
-    <!-- 헤더 -->
+    <!-- 헤더
     <div class="header">
       <button class="back-btn" @click="goBack">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -8,7 +8,7 @@
         </svg>
       </button>
       <h1 class="page-title">기본 안심존 설정</h1>
-    </div>
+    </div> -->
 
     <!-- 설명 -->
     <div class="description-card">
@@ -226,9 +226,10 @@ function goBack() {
   min-height: 100vh;
   background: #f9fafb;
   padding-bottom: 100px;
+  margin-top: 120px; /*추가*/
 }
 
-/* 헤더 */
+/* 헤더
 .header {
   display: flex;
   align-items: center;
@@ -236,7 +237,7 @@ function goBack() {
   padding: 16px 20px;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
-}
+} */
 
 .back-btn {
   background: none;

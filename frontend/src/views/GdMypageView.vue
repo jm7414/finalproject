@@ -48,7 +48,7 @@
             </div>
 
             <!-- 환자 정보 관리 -->
-            <div class="div-12" style="cursor: pointer;">
+            <div class="div-12" style="cursor: pointer;" @click="goToAdminDP">
               <div class="div-13">
                 <div class="div-14">
                   <i class="bi bi-people menu-bi"></i>
@@ -210,6 +210,10 @@ const goToGdc = () => {
 
 const goToModifyInfo = () => {
   router.push('/gdmodifyinfo')
+}
+
+const goToAdminDP = () => {
+  router.push('/gdadmindp')
 }
 
 const u = (p: string) => encodeURI(p)
