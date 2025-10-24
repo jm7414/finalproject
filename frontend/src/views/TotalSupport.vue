@@ -5,7 +5,7 @@
       <div class="profile-section">
         <ProfileMarker class="profile-icon" />
         <div class="greeting-text">
-          <div class="greeting-title">User 님 안녕하세요!</div>
+          <div class="greeting-title">{{ userName }} 님 안녕하세요!</div>
           <div class="greeting-subtitle">필요한 지원을 찾아보세요</div>
         </div>
       </div>
@@ -68,6 +68,8 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import MoneyMarker from '@/components/MoneyMarker.vue' 
 import BohumMarker from '@/components/BohumMarker.vue' 
 import SangDamMarker from '@/components/SangDamMarker.vue' 
@@ -75,6 +77,33 @@ import HospitalMarker from '@/components/HospitalMarker.vue'
 import ProfileMarker from '@/components/ProfileMarker.vue' 
 
 const router = useRouter()
+
+// ✅ 추가: 사용자 정보 저장
+const userData = ref(null)
+
+// ✅ 수정: computed에서 userData 사용
+const userName = computed(() => {
+  return userData.value?.name || 'User'
+})
+
+// ✅ 추가: 사용자 정보 로드 함수
+const loadUserData = async () => {
+  try {
+    const response = await axios.get('/api/user/me')
+    userData.value = response.data
+  } catch (error) {
+    console.error('사용자 정보 로드 실패:', error)
+    if (error.response?.status === 401) {
+      alert('로그인이 필요합니다.')
+      router.push('/login')
+    }
+  }
+}
+
+// ✅ 추가: 컴포넌트 마운트 시 데이터 로드
+onMounted(() => {
+  loadUserData()
+})
 
 function goBenefit() {
   router.push('/benefit')
@@ -94,7 +123,7 @@ function goHospitalCare() {
 .dashboard {
   max-width: 500px;
   margin: 0 auto;
-  margin-top: 35px;
+  margin-top: -15px;
   padding: 16px;
   background: #f7f8fa;
 }

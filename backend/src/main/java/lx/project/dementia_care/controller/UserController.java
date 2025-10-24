@@ -90,7 +90,19 @@ public class UserController {
             }
 
             UserVO currentUser = (UserVO) auth.getPrincipal();
-            return ResponseEntity.ok(currentUser);
+
+            // [추가] DB에서 최신 정보 다시 조회
+            UserVO freshUser = userDAO.findByUserNo(currentUser.getUserNo());
+
+            // [추가] 세션의 Principal을 최신 정보로 교체
+            Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                    freshUser, // 최신 UserVO로 교체
+                    auth.getCredentials(),
+                    auth.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(newAuth);
+
+            // [수정] 최신 정보 반환 (기존: currentUser → 변경: freshUser)
+            return ResponseEntity.ok(freshUser);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -193,7 +205,7 @@ public class UserController {
                     auth.getCredentials(),
                     auth.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(newAuth);
-            
+
             return ResponseEntity.ok(fresh);
 
         } catch (Exception e) {

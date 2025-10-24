@@ -152,9 +152,16 @@ const currentPlan = computed(() => {
     : '베이직 플랜 이용중'
 })
 
+// 수정: subscriptionStatus가 0이면 '-' 표시
 const nextPaymentDate = computed(() => {
+  // 구독 상태가 아니면 '-' 표시
+  if (subscriptionStatus.value !== 1) {
+    return '-'
+  }
+
+  // 구독 상태인데 날짜 정보가 없으면 '-' 표시
   if (!subscriptionData.value?.subscriptionEndTime) {
-    return '2025.10.18' // 기본값
+    return '-'
   }
 
   const date = new Date(subscriptionData.value.subscriptionEndTime)

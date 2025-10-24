@@ -308,7 +308,7 @@ async function handleCancelConfirm() {
 
     alert('구독이 취소되었습니다.')
     showCancelModal.value = false
-    router.replace('/basicplan')
+    router.replace('/gdmypage')
   } catch (error) {
     console.error('구독 취소 실패:', error)
     alert('구독 취소 API가 아직 준비되지 않았습니다. (백엔드 연결 필요)')
