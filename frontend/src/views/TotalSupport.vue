@@ -126,6 +126,7 @@ function goHospitalCare() {
   margin-top: -15px;
   padding: 16px;
   background: #f7f8fa;
+  max-height: 650px;
 }
 
 /* 상단 카드 */
@@ -135,6 +136,7 @@ function goHospitalCare() {
   padding: 16px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   margin-bottom: 16px;
+  margin-top: -8px;
 }
 .profile-section {
   display: flex;
@@ -164,6 +166,7 @@ function goHospitalCare() {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
+  
 }
 .summary-btn {
   flex: 1;
@@ -189,6 +192,7 @@ function goHospitalCare() {
 .summary-label {
   font-size: 15px;
   font-weight: 500;
+  letter-spacing: -1.5px;
 }
 .summary-count {
   font-size: 24px;
@@ -232,12 +236,12 @@ function goHospitalCare() {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 230px;
+  height: 205px;
 }
 .func-icon {
   width: 60px;
   height: 60px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .func-title {
   font-size: 20px;
