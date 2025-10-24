@@ -63,11 +63,17 @@ public class ConnectController {
       if (!samePatient) {
 
          // 만료된 구독이면 2/3번 슬롯 정리
-         try { connectDAO.expireExtraSlots(); } catch (Exception ignore) {}
+         try {
+            connectDAO.expireExtraSlots();
+         } catch (Exception ignore) {
+         }
 
          // 현재 연결 수
          int currentCnt = 0;
-         try { currentCnt = connectDAO.countGuardians(patientNo); } catch (Exception ignore) {}
+         try {
+            currentCnt = connectDAO.countGuardians(patientNo);
+         } catch (Exception ignore) {
+         }
 
          // 실시간 구독 유효 여부 계산
          boolean subscriptionActive = false;
@@ -92,12 +98,16 @@ public class ConnectController {
                      }
                   }
                }
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
          }
 
          // 호환용: 위에서 판단 못했으면 role=3 기준으로 보조 판단
          if (!subscriptionActive) {
-            try { subscriptionActive = connectDAO.isPatientRole3(patientNo); } catch (Exception ignore) {}
+            try {
+               subscriptionActive = connectDAO.isPatientRole3(patientNo);
+            } catch (Exception ignore) {
+            }
          }
 
          // [변경] 역할이 아닌 "실시간 구독 유효" 기준으로 상한 결정
@@ -297,10 +307,15 @@ public class ConnectController {
          // guardianNo 결정: 헤더 > 쿼리 파라미터
          Integer guardianNo = null;
          if (mockUser != null && !mockUser.isBlank()) {
-            try { guardianNo = Integer.parseInt(mockUser.trim()); } catch (Exception ignore) {}
+            try {
+               guardianNo = Integer.parseInt(mockUser.trim());
+            } catch (Exception ignore) {
+            }
          }
-         if (guardianNo == null && guardianNoParam != null) guardianNo = guardianNoParam;
-         if (guardianNo == null) return Map.of("ok", false, "message", "guardianNo 필요");
+         if (guardianNo == null && guardianNoParam != null)
+            guardianNo = guardianNoParam;
+         if (guardianNo == null)
+            return Map.of("ok", false, "message", "guardianNo 필요");
 
          // 구독 기간(end > now?) → 실시간 활성
          boolean subscriptionActive = false;
@@ -308,14 +323,17 @@ public class ConnectController {
          if (sub != null && sub.get("end") != null) {
             Object endObj = sub.get("end"); // java.sql.Timestamp
             java.time.Instant endTs = (endObj instanceof java.sql.Timestamp)
-                  ? ((java.sql.Timestamp) endObj).toInstant() : null;
-            if (endTs != null && endTs.isAfter(java.time.Instant.now())) subscriptionActive = true;
+                  ? ((java.sql.Timestamp) endObj).toInstant()
+                  : null;
+            if (endTs != null && endTs.isAfter(java.time.Instant.now()))
+               subscriptionActive = true;
          }
 
          // 연결된 환자
          Integer patientNo = connectDAO.findPatientNoByGuardian(guardianNo);
 
-         // 화면 분기용 간단 플래그(실무 조건: guardian/patient의 users.subscription_status=1 & patient role=3 이지만
+         // 화면 분기용 간단 플래그(실무 조건: guardian/patient의 users.subscription_status=1 & patient
+         // role=3 이지만
          // 결제 시 컨트롤러가 그렇게 세팅하므로 여기선 gpc 활성 + 환자 존재로 간주)
          boolean plus = subscriptionActive && patientNo != null;
 
@@ -387,12 +405,81 @@ public class ConnectController {
 
          // 5) 저장값 조회해서 응답
          Map<String, Object> sub = connectDAO.selectSubscriptionByGuardian(guardianNo);
-         return ResponseEntity.ok(Map.of("status", "PAID", "plan", req.getSelectedPlan(), "subscription", sub, // { start, end }
+         return ResponseEntity.ok(Map.of("status", "PAID", "plan", req.getSelectedPlan(), "subscription", sub, // {
+                                                                                                               // start,
+                                                                                                               // end }
                "message", "OK"));
 
       } catch (Exception e) {
          e.printStackTrace();
          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "구독 처리 중 오류가 발생했습니다."));
+      }
+   }
+
+   /**
+    * 구독 취소 API
+    * POST /api/subscriptions/cancel
+    */
+   @PostMapping("/api/subscriptions/cancel")
+   public ResponseEntity<?> cancelSubscription(
+         @RequestHeader(value = "X-Mock-User", required = false) String mockUser,
+         @RequestBody Map<String, Object> body) {
+      try {
+         // 1) guardianNo 결정: 헤더 > 바디
+         Integer guardianNo = null;
+         if (mockUser != null && !mockUser.isBlank()) {
+            try {
+               guardianNo = Integer.parseInt(mockUser.trim());
+            } catch (Exception ignore) {
+            }
+         }
+         if (guardianNo == null && body.get("guardianNo") != null) {
+            guardianNo = ((Number) body.get("guardianNo")).intValue();
+         }
+         if (guardianNo == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                  .body(Map.of("message", "보호자 정보가 없습니다."));
+         }
+
+         // 2) 구독 만료 처리 (subscribe_endtime을 현재 시간으로 설정)
+         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+         int updated = connectDAO.cancelSubscription(guardianNo, now);
+
+         if (updated == 0) {
+            return ResponseEntity.badRequest()
+                  .body(Map.of("message", "취소할 구독을 찾을 수 없습니다."));
+         }
+
+         // 3) users 테이블 업데이트: 보호자 구독 상태 OFF
+         UserVO guardian = new UserVO();
+         guardian.setUserNo(guardianNo);
+         guardian.setSubscriptionStatus(0);
+         userDAO.updateById(guardian);
+
+         // 4) 연결된 환자 찾기 → 환자 role 2로 변경, 구독 OFF
+         Integer patientNo = connectDAO.findPatientNoByGuardian(guardianNo);
+         if (patientNo != null) {
+            UserVO patient = new UserVO();
+            patient.setUserNo(patientNo);
+            patient.setRoleNo(2); // 구독자(3) → 환자(2)
+            patient.setSubscriptionStatus(0);
+            userDAO.updateById(patient);
+         }
+
+         // 5) 보호자 2, 3번 슬롯 정리 (PLUS 플랜 해지로 1명만 가능)
+         try {
+            connectDAO.expireExtraSlots();
+         } catch (Exception ignore) {
+         }
+
+         return ResponseEntity.ok(Map.of(
+               "status", "CANCELLED",
+               "message", "구독이 취소되었습니다."));
+
+      } catch (Exception e) {
+         e.printStackTrace();
+         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+               .body(Map.of("message", "구독 취소 처리 중 오류가 발생했습니다."));
       }
    }
 
