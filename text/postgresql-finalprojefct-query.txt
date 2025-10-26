@@ -218,34 +218,87 @@ CREATE INDEX idx_search_together_missing_post ON search_Together(missing_post_id
 CREATE INDEX idx_search_together_user ON search_Together(user_id);
 
 -- === period, report, record 테이블 ===
-CREATE TABLE period (
-    period_id SERIAL PRIMARY KEY,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+CREATE TABLE IF NOT EXISTS period (
+  period_id    SERIAL PRIMARY KEY,
+  period_type  VARCHAR(16) NOT NULL,          -- 'year' | 'month' | 'week' | 'custom'
+  period_key   VARCHAR(32) NOT NULL,          -- 예: 2024 / 2024-10 / 2024-W43
+  start_date   DATE NOT NULL,
+  end_date     DATE NOT NULL,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_period_type_key UNIQUE (period_type, period_key)
 );
 
-CREATE TABLE report (
-    report_id SERIAL PRIMARY KEY,
-    period_id INT NOT NULL,
-    patient_id INT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT fk_report_period FOREIGN KEY(period_id) REFERENCES period(period_id) ON DELETE CASCADE,
-    CONSTRAINT fk_report_patient FOREIGN KEY(patient_id) REFERENCES users(user_no) ON DELETE CASCADE
+-- (선택) 탐색 성능용 보조 인덱스
+CREATE INDEX IF NOT EXISTS idx_period_type_key ON period (period_type, period_key);
+
+
+CREATE TABLE IF NOT EXISTS report (
+  report_id     SERIAL PRIMARY KEY,
+  period_id     INT NOT NULL,
+  patient_id    INT NOT NULL,
+  content       TEXT NOT NULL,
+
+  -- 메타
+  period_type   VARCHAR(16) NOT NULL DEFAULT 'year',   -- 조회/캐시용(동일 값 중복 보관)
+  period_key    VARCHAR(32) NOT NULL DEFAULT '',
+  version       INT NOT NULL DEFAULT 1,
+  generated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  generated_by  VARCHAR(50) DEFAULT 'gemini',
+  locked        BOOLEAN NOT NULL DEFAULT TRUE,
+  source_hash   TEXT,
+
+  metrics       JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sections      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  chart_prefs   JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT fk_report_period  FOREIGN KEY(period_id)  REFERENCES period(period_id) ON DELETE CASCADE,
+  CONSTRAINT fk_report_patient FOREIGN KEY(patient_id) REFERENCES users(user_no)    ON DELETE CASCADE
 );
 
-CREATE TABLE record (
-    record_id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,
-    record_date DATE NOT NULL,
-    content JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE
+-- 같은 환자 X 같은 기간(type+key)은 1건 보장
+CREATE UNIQUE INDEX IF NOT EXISTS uq_report_patient_tk
+  ON report (patient_id, period_type, period_key);
+
+
+CREATE TABLE IF NOT EXISTS record (
+  record_id   SERIAL PRIMARY KEY,
+  user_id     INT NOT NULL,
+  record_date DATE NOT NULL,
+  content     JSONB NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE,
+  CONSTRAINT uq_record_user_date UNIQUE (user_id, record_date)
 );
+
+-- updated_at 자동 갱신 트리거 (period / report / record 모두 적용)
+CREATE OR REPLACE FUNCTION trg_touch_updated_at() RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tg_period_touch ON period;
+CREATE TRIGGER tg_period_touch
+BEFORE UPDATE ON period
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+DROP TRIGGER IF EXISTS tg_report_touch ON report;
+CREATE TRIGGER tg_report_touch
+BEFORE UPDATE ON report
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+DROP TRIGGER IF EXISTS tg_record_touch ON record;
+CREATE TRIGGER tg_record_touch
+BEFORE UPDATE ON record
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+-----------------------------------------------------------------
 
 -- === 환자 위치 저장 테이블 === 
 CREATE TABLE user_location (
@@ -309,3 +362,74 @@ INSERT INTO search_Together (missing_post_id, user_id) VALUES
 INSERT INTO guardian_patient_connection (patient_no, guardian1_no, guardian2_no, guardian3_no) VALUES
 (3, 1, 2, NULL);
 
+
+
+
+
+
+SELECT setseed(0.42);  -- 랜덤 시드(옵션)
+
+WITH params AS (
+  SELECT
+    5::int           AS user_id,        -- << 여기 바꾸기
+    DATE '2024-01-01' AS start_date,    -- << 시작일
+    DATE '2024-12-31' AS end_date       -- << 종료일
+),
+dates AS (
+  SELECT p.user_id, gs::date AS record_date
+  FROM params p
+  JOIN generate_series((SELECT start_date FROM params),
+                       (SELECT end_date   FROM params),
+                       INTERVAL '1 day') gs ON TRUE
+)
+INSERT INTO record (user_id, record_date, content)
+SELECT
+  d.user_id,
+  d.record_date,
+  jsonb_build_object(
+    'act', jsonb_build_object(
+      'fall',        (random() < 0.05),
+      'dress',       (ARRAY['혼자','도움 필요'])[1 + floor(random()*2)],
+      'toilet',      (ARRAY['혼자','도움 필요'])[1 + floor(random()*2)],
+      'lostWay',     (random() < 0.03),
+      'knowDate',    (random() >= 0.10),
+      'missAppt',    (ARRAY['0','1–2회','3회 이상'])[1 + floor(random()*3)],
+      'appliance',   (ARRAY['문제 없음','주의 필요'])[1 + floor(random()*2)],
+      'lostItems',   (ARRAY['0','1–2회','3회 이상'])[1 + floor(random()*3)]
+    ),
+    'med', jsonb_build_object(
+      'medMiss',        to_jsonb(ARRAY(
+                           SELECT x FROM unnest(ARRAY['아침','점심','저녁']) x
+                           WHERE random() < 0.10
+                         )),
+      'extraMed',       (random() < 0.08),
+      'extraMedDetail', CASE WHEN random() < 0.08 THEN '진통제' ELSE '' END
+    ),
+    'feel', jsonb_build_object(
+      'apathy',       (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+      'anxiety',      (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+      'depress',      (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+      'irritate',     (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+      'moodScore',    (1 + floor(random()*5))::int,
+      'conversation', (ARRAY['적극','보통','소극'])[1 + floor(random()*3)]
+    ),
+    'meal', jsonb_build_object(
+      'snack',    (random() < 0.60),
+      'water',    (ARRAY['충분','보통','적음'])[1 + floor(random()*3)],
+      'skipMeal', (ARRAY['아침','점심','저녁','없음'])[1 + floor(random()*4)]
+    ),
+    'note', jsonb_build_object(
+      'pain',            (random() < 0.10),
+      'temp',            (random() < 0.10),
+      'support',         (random() < 0.15),
+      'emergency',       (random() < 0.02),
+      'repeatAct',       (random() < 0.08),
+      'painDetail',      '',
+      'tempDetail',      '',
+      'nightWander',     (random() < 0.12),
+      'supportDetail',   '',
+      'emergencyDetail', ''
+    )
+  )
+FROM dates d
+ON CONFLICT (user_id, record_date) DO NOTHING;

@@ -50,7 +50,7 @@ export function getDefaultRouteByRole(roleNo) {
  */
 export async function logout() {
   try {
-    await axios.post(`/api/logout`, {}, {
+    await axios.post(`/logout`, {}, {
       withCredentials: true
     })
     
