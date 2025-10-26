@@ -50,6 +50,11 @@ export function useKakaoMap(options = {}) {
   // 지도 초기화 함수
   async function initMap(customCenter = null) {
     try {
+      // DOM 요소가 준비되었는지 확인
+      if (!mapEl.value) {
+        throw new Error('지도 DOM 요소가 준비되지 않았습니다. nextTick() 후 다시 시도해주세요.')
+      }
+      
       const key = kakaoKey || import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
       const kakao = await loadKakao(key)
       
