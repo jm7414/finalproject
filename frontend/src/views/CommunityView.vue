@@ -7,7 +7,7 @@ import CommunityBoard from '@/components/CommunityBoard.vue'; // CommunityPost �
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
 // 기본으로 보여줄 탭(채널)을 'Post'로 설정
-const activeTab = ref('Post'); 
+const activeTab = ref('Missing'); 
 
 // 탭(채널)을 변경하는 함수
 function changeTab(tabName) {

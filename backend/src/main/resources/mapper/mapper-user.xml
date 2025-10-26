@@ -67,4 +67,25 @@
         WHERE user_no = #{userNo}
     </delete>
 
+    <update id="updateUserStatus">      <!--실종자 신고시 실종상태 변환-->
+        UPDATE users
+        SET user_status = #{status} -- 전달받은 status 값으로 변경
+        WHERE user_no = #{userNo}   -- 특정 사용자 번호(userNo)
+    </update>
+
+    <select id="findMissingUsers" resultType="lx.project.dementia_care.vo.UserVO">
+        SELECT
+            user_no AS userNo,
+            user_id AS userId,
+            name,
+            birth_date AS birthDate,
+            phone_number AS phoneNumber,
+            user_status AS userStatus,
+            profile_photo AS profilePhoto,
+            role_no AS roleNo
+        FROM users
+        WHERE user_status = 1
+        ORDER BY user_no
+    </select>
+
 </mapper>
