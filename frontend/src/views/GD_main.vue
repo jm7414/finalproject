@@ -220,6 +220,7 @@ import { useRouter } from 'vue-router'
 import { useKakaoMap } from '@/composables/useKakaoMap'
 import { useSchedule } from '@/composables/useSchedule'
 import { usePatientLocation } from '@/composables/usePatientLocation'
+import axios from 'axios'
 
 import zone1 from '@/assets/images/zone 1.svg'
 import locationIcon from '@/assets/images/location.svg'
@@ -246,6 +247,7 @@ const err = ref('')
 
 const patient = ref({ userNo: null, name: '', avatarUrl: null })
 const missingEvent = ref(null)
+const isReportModalVisible = ref(false)
 
 // 안심존 상태 관련
 const safeZoneStatus = ref({
