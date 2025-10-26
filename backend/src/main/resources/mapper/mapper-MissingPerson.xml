@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.mapper.MissingPersonMapper">
+
+    <resultMap id="MissingPersonResultMap" type="lx.project.dementia_care.dto.MissingPersonDto">
+        <id property="missingPostId" column="missing_post_id"/>
+        <result property="patientUserNo" column="patient_user_no"/>
+        <result property="reporterUserNo" column="reporter_user_no"/>
+        <result property="photoPath" column="photo_path"/>
+        <result property="description" column="description"/>
+        <result property="reportedAt" column="reported_at"/>
+        <result property="status" column="status"/>
+        <result property="patientName" column="patient_name"/>
+        <result property="patientBirthDate" column="birth_date"/>
+        <result property="searchTogetherCount" column="search_together_count"/>
+    </resultMap>
+
+<select id="findMissingUsers" resultType="lx.project.dementia_care.vo.UserVO">
+        SELECT
+            user_no AS userNo,
+            user_id AS userId,
+            -- user_pw AS userPw, -- 비밀번호는 목록에 필요 없으니 제외
+            name,
+            birth_date AS birthDate,
+            phone_number AS phoneNumber,
+            -- invitation_code AS invitationCode, -- 초대 코드도 제외
+            -- subscription_status AS subscriptionStatus, -- 구독 상태도 제외
+            user_status AS userStatus,
+            profile_photo AS profilePhoto,
+            role_no AS roleNo
+        FROM users
+        WHERE user_status = 1 
+        -- ORDER BY user_no 정렬이 필요하면 주석 해제
+    </select>
+
+    <select id="findAllMissingPersons" resultMap="MissingPersonResultMap">
+        SELECT
+            mp.missing_post_id,
+            mp.patient_user_no,
+            mp.reporter_user_no,
+            mp.photo_path,
+            mp.description,
+            mp.reported_at,
+            mp.status,
+            u.name AS patient_name,
+            u.birth_date,
+            (SELECT COUNT(*) FROM search_Together st WHERE st.missing_post_id = mp.missing_post_id) AS search_together_count
+        FROM
+            missing_post mp
+        JOIN
+            users u ON mp.patient_user_no = u.user_no
+        WHERE
+            mp.status = '실종' -- 현재 '실종' 상태인 경우만
+        ORDER BY
+            mp.reported_at DESC -- 최근 신고 순
+    </select>
+
+    <insert id="createMissingPersonReport" parameterType="lx.project.dementia_care.dto.MissingPersonDto">
+        <selectKey keyProperty="missingPostId" resultType="int" order="AFTER">
+            SELECT CURRVAL('missing_post_missing_post_id_seq') 
+        </selectKey>
+        INSERT INTO missing_post (
+            patient_user_no, reporter_user_no, photo_path, 
+            description, reported_at, status
+        ) VALUES (
+            #{patientUserNo}, #{reporterUserNo}, #{photoPath}, 
+            #{description}, #{reportedAt}, #{status, jdbcType=VARCHAR, typeHandler=org.apache.ibatis.type.StringTypeHandler}
+        )
+    </insert>
+    
+    <update id="updateMissingStatus">
+        UPDATE missing_post
+        SET status = #{status}
+        WHERE missing_post_id = #{missingPostId}
+    </update>
+
+    <select id="findLatestMissingReportByPatientNo" parameterType="int" resultMap="MissingPersonResultMap">
+        SELECT
+            mp.missing_post_id,
+            mp.patient_user_no,
+            mp.reporter_user_no,
+            mp.photo_path,
+            mp.description,
+            mp.reported_at,
+            mp.status,
+            u.name AS patient_name,
+            u.birth_date,
+            (SELECT COUNT(*) FROM search_Together st WHERE st.missing_post_id = mp.missing_post_id) AS search_together_count
+        FROM
+            missing_post mp
+        JOIN
+            users u ON mp.patient_user_no = u.user_no
+        WHERE
+            mp.patient_user_no = #{patientUserNo} 
+            AND mp.status = '실종' -- '실종' 상태인 것만 (선택사항)
+        ORDER BY
+            mp.reported_at DESC -- 가장 최근 신고
+        LIMIT 1 -- 1건만 가져옴
+    </select>
+
+    <select id="findMissingReportById" parameterType="int" resultMap="MissingPersonResultMap">
+        SELECT
+            mp.missing_post_id,
+            mp.patient_user_no,
+            mp.reporter_user_no,
+            mp.photo_path,
+            mp.description,
+            mp.reported_at,
+            mp.status,
+            u.name AS patient_name,
+            u.birth_date,
+            (SELECT COUNT(*) FROM search_Together st WHERE st.missing_post_id = mp.missing_post_id) AS search_together_count
+        FROM
+            missing_post mp
+        JOIN
+            users u ON mp.patient_user_no = u.user_no
+        WHERE
+            mp.missing_post_id = #{missingPostId}
+    </select>
+
+</mapper>

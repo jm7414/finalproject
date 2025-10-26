@@ -11,6 +11,16 @@
       ">
     </button>
 
+    <!--  여기에 임시 '상태변환' 버튼 추가  -->
+    <button class="position-absolute btn btn-primary btn-sm" @click="reportMissing()"
+      title="상태변환 (임시)" style="
+        top:6px; right:30px; z-index:50;
+        font-size: 10px; padding: 2px 4px;
+      ">
+      변환
+    </button>
+    <!--  버튼 추가 끝  -->
+
     <!-- (요청) 실종 제보 카드: 상태 문구보다 위로 이동 -->
     <div v-if="missingEvent" class="card border-0 shadow-sm mb-3">
       <div class="row g-3 align-items-center p-3">
@@ -166,17 +176,25 @@
       {{ err }}
     </div>
   </div>
+  <!-- 실종 모달 -->
+  <MissingReportModal
+    :show="isReportModalVisible"
+    :patient="patient"
+    @close="isReportModalVisible = false"
+    @reportSuccess="onReportSuccess"
+  />
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios';
 
 import zone1 from '@/assets/images/zone 1.svg'
 import locationIcon from '@/assets/images/location.svg'
 import report2 from '@/assets/images/report2.png'
 import connectIcon from '@/assets/images/connect.svg'
-
+import MissingReportModal from '@/components/MissingReportModal.vue'; // 실종 임포트
 const router = useRouter()
 
 /* ===== API ===== */
@@ -188,6 +206,7 @@ const ENDPOINTS = {
   scheduleLocations: (sn) => `/api/schedule/${sn}/locations`,
   basicSafeZone: (no) => `/api/schedule/basic-safe-zone/${no}`,
   activeMissing: (no) => `/api/missing/active/${no}`,
+  reportMissing: '/api/missing-persons/report' // 실종 API
 }
 
 /* ===== 상태 ===== */
@@ -202,6 +221,7 @@ const safeStatus = ref({ safe: true, checkedAt: '' })
 const lastLocation = ref(null)
 const allSchedules = ref([])
 const scheduleLocationsMap = ref({})
+const isReportModalVisible = ref(false); // 실종 모달 오프
 
 // 안심존 관련
 let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
@@ -637,6 +657,17 @@ const nextSchedule = computed(() => {
   const loc = formatLocation(upcoming.scheduleNo)
   return { id: upcoming.scheduleNo, title: upcoming.scheduleTitle, time: t, location: loc, depart: null, arrive: null }
 })
+function openReportModal() {    // 실종 모달 함수
+  if (!connected.value || !patient.value?.userNo) {
+    alert("먼저 환자와 연결해야 합니다.");
+    return;
+  }
+  isReportModalVisible.value = true; // 모달 온
+}
+async function onReportSuccess(reportData) {  // 실종 모달 확인용
+  console.log("신고 접수 완료 (메인에서 받음):", reportData);
+  await getActiveMissing(patient.value.userNo);
+}
 
 function toggleTestEvent() {
   if (missingEvent.value) { missingEvent.value = null }
@@ -652,6 +683,43 @@ function toggleTestEvent() {
   }
 }
 function goToMapMain() { router.push('/map-main') }
+
+async function reportMissing() {
+  // 1. 연결된 환자가 있는지 확인합니다.
+  if (!connected.value || !patient.value?.userNo) {
+    alert("먼저 환자와 연결해야 합니다.");
+    return;
+  }
+
+  // 2. 사용자에게 재확인 받습니다.
+  if (!confirm(`${patient.value.name || '환자'}님을(를) '실종' 상태로 신고하시겠습니까?`)) {
+    return;
+  }
+
+  try {
+    // 3. 백엔드에 보낼 신고 데이터를 준비합니다.
+    const reportData = {
+      patientUserNo: patient.value.userNo, // 신고할 환자 ID
+      description: "긴급 신고: 메인 화면에서 '상태변환' 버튼을 통해 신고됨", // 임시 상세정보
+      status: "실종"
+    };
+
+    // 4. 우리가 만든 '실종 신고' API를 호출합니다.
+    const response = await axios.post(ENDPOINTS.reportMissing, reportData, {
+      withCredentials: true
+    });
+    
+    alert('실종 신고가 성공적으로 접수되었습니다.');
+    console.log("신고 접수 완료:", response.data);
+    
+    // 5. 신고 접수 후, 화면의 실종 이벤트 카드(missingEvent)를 즉시 업데이트합니다.
+    await getActiveMissing(patient.value.userNo);
+    
+  } catch (error) {
+    console.error("실종 신고 처리 중 오류 발생:", error);
+    alert("실종 신고에 실패했습니다.");
+  }
+}
 
 /* ===== 초기화 ===== */
 onMounted(async () => {

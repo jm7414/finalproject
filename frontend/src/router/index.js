@@ -114,7 +114,7 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
-      path: '/CommunityMissingDetail',
+      path: '/CommunityMissingDetail/:id',
       name: 'CommunityMissingDetail',
       component: CommunityMissingDetail,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용      
