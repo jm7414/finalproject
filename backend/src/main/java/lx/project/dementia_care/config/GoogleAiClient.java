@@ -1,4 +1,4 @@
-package lx.project.dementia_care.client;
+package lx.project.dementia_care.config;
 
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -14,7 +14,7 @@ public class GoogleAiClient {
 	private static final String BASE = "https://generativelanguage.googleapis.com";
 
 	private String resolveApiKey() {
-		return "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+		return "AIzaSyAQ1j2ULKh6mWvWHWsJfND7x3g9IAl3ib4";
 		
 	}
 
