@@ -29,10 +29,10 @@
           </div>
           <!-- 실종신고 버튼 -->
           <div class="flex-shrink-0">
-            <!-- 실종상태변환 기능 18: @click 이벤트를 내부 함수 'openModalByStatus'로 변경 -->
-            <button class="missing-report-btn" @click="openModalByStatus">
+            <!-- 실종상태변환 기능 12: @click 이벤트를 내부 함수 'handleStatusChangeClick'로 변경 -->
+            <button class="missing-report-btn" @click="handleStatusChangeClick">
               <i class="bi bi-exclamation-triangle-fill"></i>
-              <!-- 실종상태변환 기능 19: 환자 상태(user_status)에 따라 버튼 텍스트 동적 변경 -->
+              <!-- 실종상태변환 기능 13: 환자 상태(user_status)에 따라 버튼 텍스트 동적 변경 -->
               <span>{{ patientInfo.user_status === 0 ? '상태 변경' : '실종 해제' }}</span>
             </button>
           </div>
@@ -60,24 +60,25 @@
     </div>
   </div>
 
-  <!-- 실종상태변환 기능 20: '실종 신고' 폼 모달 (MissingReportModal.vue) -->
-  <MissingReportModal :show="isReportModalVisible" :patient="patientInfo" @close="isReportModalVisible = false"
-    @reportSuccess="handleReportSuccess" />
+  <!-- (MissingReportModal 태그 삭제됨) -->
 
-  <!-- 실종상태변환 기능 21: '실종 해제' 확인 모달 (ConfirmModal.vue) -->
+  <!-- 실종상태변환 기능 14: '실종 해제' 확인 모달 (ConfirmModal.vue) - 유지 -->
   <ConfirmModal :show="isResolveModalVisible" title="상태 해제 확인" message="환자의 '실종' 상태를 해제하시겠습니까?" confirm-text="상태 해제"
     cancel-text="취소" @close="isResolveModalVisible = false" @cancel="isResolveModalVisible = false"
     @confirm="handleResolveConfirm" />
 </template>
 
 <script setup>
-// 실종상태변환 기능 1: ref (Vue의 반응형 상태 관리) import
 import { ref } from 'vue'
-// 실종상태변환 기능 2: 2개의 모달 컴포넌트 import
-import ConfirmModal from './ConfirmModal.vue' // '해제'용
-import MissingReportModal from './MissingReportModal.vue' // '신고'용
-// 실종상태변환 기능 3: 백엔드 API 통신을 위한 axios import
+// 실종상태변환 기능 2: '해제'용 ConfirmModal import (유지)
+import ConfirmModal from './ConfirmModal.vue'
+// 실종상태변환 기능 3: 백엔드 API 통신을 위한 axios import (유지)
 import axios from 'axios'
+// 실종상태변환 기능 4: 페이지 이동을 위한 useRouter import 추가
+import { useRouter } from 'vue-router'
+
+// 실종상태변환 기능 5: router 인스턴스 생성
+const router = useRouter()
 
 // Props 정의
 const props = defineProps({
@@ -89,14 +90,13 @@ const props = defineProps({
       userNo: null,
       isOnline: false,
       lastActivity: null,
-      // 실종상태변환 기능 4: 부모로부터 환자의 'user_status'를 받음 (0:정상, 1:실종)
+      // 실종상태변환 기능 6: 부모로부터 환자의 'user_status'를 받음 (0:정상, 1:실종)
       user_status: 0
     })
   }
 })
 
 // Emits 정의
-// (참고: 'statusUpdated'는 부모가 데이터를 갱신할 때 사용하도록 남겨둘 수 있습니다)
 const emit = defineEmits(['goToMyPage', 'reportMissing', 'goToConnect', 'statusUpdated'])
 
 // 마지막 활동 시간 포맷팅 (원본 코드 유지)
@@ -113,37 +113,28 @@ function formatLastActivity(lastActivity) {
 
 // --- 실종상태변환 기능 ---
 
-// 실종상태변환 기능 5: 2개의 모달 표시 상태를 각각 제어
-const isReportModalVisible = ref(false)  // '신고' 폼 모달 (MissingReportModal)
+// 실종상태변환 기능 7: '해제' 모달 상태만 제어
 const isResolveModalVisible = ref(false) // '해제' 확인 모달 (ConfirmModal)
 
-// 실종상태변환 기능 6: '상태 변경' 버튼 클릭 시 실행되는 메인 함수
-function openModalByStatus() {
-  // 실종상태변환 기능 7: 환자의 현재 user_status 값 확인
+// 실종상태변환 기능 8: '상태 변경' 버튼 클릭 시 실행되는 메인 함수
+function handleStatusChangeClick() {
+  // 실종상태변환 기능 9: 환자의 현재 user_status 값 확인
   if (props.patientInfo.user_status === 0) {
-    // 0 (정상) -> 1 (실종) : '신고' 폼 모달(MissingReportModal) 열기
-    isReportModalVisible.value = true
+    // 실종상태변환 기능 10: 0 (정상) -> 1 (실종) : '/report-missing' 페이지로 이동
+    // (주의: '/report-missing'은 실제 라우터에 등록된 경로여야 합니다)
+    // (주의: 신고 대상 환자 정보를 함께 전달해야 할 수 있습니다. 예: query parameter)
+    console.log(`실종 신고 페이지로 이동합니다. 대상 환자 userNo: ${props.patientInfo.userNo}`);
+    // (라우터 경로와 파라미터 전달 방식은 프로젝트에 맞게 수정하세요)
+    router.push({ path: '/MissingReport', query: { patientNo: props.patientInfo.userNo } });
   } else {
-    // 1 (실종) -> 0 (정상) : '해제' 확인 모달(ConfirmModal) 열기
+    // 실종상태변환 기능 11: 1 (실종) -> 0 (정상) : '해제' 확인 모달(ConfirmModal) 열기
     isResolveModalVisible.value = true
   }
 }
 
-// 실종상태변환 기능 9: '신고' 폼이 성공적으로 제출됐을 때 (MissingReportModal이 @reportSuccess 호출)
-async function handleReportSuccess(reportData) {
-  console.log('--- 실종 신고 성공 (MissingReportModal) ---')
-  console.log('신고 데이터:', reportData)
-
-  isReportModalVisible.value = false // 모달 닫기
-
-  // 실종상태변환 기능 10: 부모에게 상태가 갱신되었음을 알림
-  // (실종 신고 후 다른 페이지로 이동하므로, 'location.reload()'는 불필요)
-  emit('statusUpdated')
-}
-
-// 실종상태변환 기능 11: '실종 해제' 모달의 '확인' 버튼 클릭 시 실행
+// 실종상태변환 기능 12: '실종 해제' 모달의 '확인' 버튼 클릭 시 실행
 async function handleResolveConfirm() {
-  // 실종상태변환 기능 12: DB에 업데이트할 새 상태(0) 계산
+  // 실종상태변환 기능 13: DB에 업데이트할 새 상태(0) 계산
   const newStatus = 0; // 해제는 0으로 고정
 
   console.log(`--- '실종 해제' API 호출 실행 ---`);
@@ -151,7 +142,7 @@ async function handleResolveConfirm() {
   console.log(`새 상태: ${newStatus}`);
 
   try {
-    // 실종상태변환 기능 13: 백엔드 API 호출 (user_status를 0으로 변경)
+    // 실종상태변환 기능 14: 백엔드 API 호출 (user_status를 0으로 변경)
     const response = await axios.post('/api/users/update-status',
       {
         userNo: props.patientInfo.userNo,
@@ -162,19 +153,19 @@ async function handleResolveConfirm() {
       }
     );
 
-    // 실종상태변환 기능 14: API 호출 성공
+    // 실종상태변환 기능 15: API 호출 성공
     console.log('API 호출 성공 (상태 해제):', response.data);
     alert('환자의 실종 상태가 성공적으로 해제되었습니다.');
 
-    // 실종상태변환 기능 15: (요청사항) 페이지를 강제 새로고침하여 변경된 상태(버튼 텍스트)를 즉시 반영
+    // 실종상태변환 기능 16: 페이지를 강제 새로고침하여 변경된 상태(버튼 텍스트)를 즉시 반영
     location.reload();
 
   } catch (error) {
-    // 실종상태변환 기능 16: API 호출 실패
+    // 실종상태변환 기능 17: API 호출 실패
     console.error("상태 해제 API 호출 실패:", error);
     alert('상태 변경에 실패했습니다. (콘솔 로그 확인)');
   } finally {
-    // 실종상태변환 기능 17: 모달 닫기
+    // 실종상태변환 기능 18: 모달 닫기
     isResolveModalVisible.value = false;
   }
 }
@@ -199,24 +190,20 @@ async function handleResolveConfirm() {
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(71, 85, 105, 0.1);
 }
-
 .missing-report-btn:hover {
   background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
   border-color: #94A3B8;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(71, 85, 105, 0.15);
 }
-
 .missing-report-btn:active {
   transform: translateY(0);
   box-shadow: 0 1px 3px rgba(71, 85, 105, 0.1);
 }
-
 .missing-report-btn i {
   font-size: 14px;
   color: #475569;
 }
-
 .missing-report-btn span {
   white-space: nowrap;
   font-weight: 600;
@@ -227,13 +214,12 @@ async function handleResolveConfirm() {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .avatar-clickable:hover {
   transform: scale(1.05);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
-
 .avatar-clickable:active {
   transform: scale(0.98);
 }
 </style>
+

@@ -6,6 +6,7 @@ import GeoFencingView from '@/views/GeoFencingView.vue'
 import SearchRouteView from '@/views/SearchRouteView.vue'
 import Signup from '@/views/SignUp.vue'
 import Login from '@/views/Login.vue'
+import MissingReport from '@/components/MissingReport.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
@@ -94,6 +95,13 @@ const router = createRouter({
     },
     
     // 병욱 게시판 시작
+{       
+      path: '/MissingReport',
+      name: 'MissingReport',
+      
+      component: MissingReport,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
     {
       path: '/CommunityView',
       name: 'CommunityView',
