@@ -9,18 +9,14 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -44,37 +40,32 @@ public class ReportController {
 			@RequestParam String periodKey,
 			@RequestParam(value = "persist", required = false, defaultValue = "true") boolean persist,
 			@RequestParam(value = "save", required = false) Integer saveFallback) {
-
 		String type = normalizePeriod(periodType); // year|month|week
 		LocalDate start;
 		LocalDate end;
 
 		switch (type) {
-		case "year": {
+		case "year" -> {
 			int year = Integer.parseInt(periodKey);
 			start = LocalDate.of(year, 1, 1);
 			end = LocalDate.of(year, 12, 31);
-			break;
 		}
-		case "month": {
+		case "month" -> {
 			String[] ym = periodKey.split("-");
 			int y = Integer.parseInt(ym[0]);
 			int m = Integer.parseInt(ym[1]);
 			start = LocalDate.of(y, m, 1);
 			end = start.with(TemporalAdjusters.lastDayOfMonth());
-			break;
 		}
-		case "week": {
+		case "week" -> {
 			String[] parts = periodKey.split("-W");
 			int isoYear = Integer.parseInt(parts[0]);
 			int isoWeek = Integer.parseInt(parts[1]);
 			WeekFields wf = WeekFields.ISO;
 			start = LocalDate.of(isoYear, 1, 4).with(wf.weekOfWeekBasedYear(), isoWeek).with(wf.dayOfWeek(), 1);
 			end = start.plusDays(6);
-			break;
 		}
-		default:
-			throw new IllegalArgumentException("지원하지 않는 periodType: " + periodType);
+		default -> throw new IllegalArgumentException("지원하지 않는 periodType: " + periodType);
 		}
 
 		// DB 우선 조회: persist=false(또는 save!=1)이면 저장본 먼저 반환
@@ -96,7 +87,7 @@ public class ReportController {
 			String key = makeKey(type, start); // YYYY / YYYY-MM / YYYY-Www
 			Long periodId = upsertPeriod(type, key, start, end);
 			upsertReport(patientId, periodId, type, key, payload);
-			// 저장 후, 방금 저장한 것을 DB에서 다시 읽어 그대로 리턴(형태 통일)
+
 			Map<String, Object> savedRow = fetchSavedRow(patientId, type, key);
 			Map<String, Object> legacy = adaptStoredToLegacy(savedRow, type);
 			legacy.put("preview", false);
@@ -122,7 +113,6 @@ public class ReportController {
 			@RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
 			@RequestParam(value = "persist", required = false, defaultValue = "false") boolean persist,
 			@RequestParam(value = "save", required = false) Integer saveFallback) {
-
 		String type = normalizePeriod(period); // year|month|week
 
 		// 경계 보정 (연/월/주 정확히)
@@ -157,6 +147,7 @@ public class ReportController {
 		if (doSave) {
 			Long periodId = upsertPeriod(type, key, start, end);
 			upsertReport(userId, periodId, type, key, payload);
+
 			Map<String, Object> savedRow = fetchSavedRow(userId, type, key);
 			Map<String, Object> legacy = adaptStoredToLegacy(savedRow, type);
 			legacy.put("preview", false);
@@ -165,6 +156,44 @@ public class ReportController {
 			payload.put("preview", true);
 			return ResponseEntity.ok(payload);
 		}
+	}
+
+	/* ======================== 집계용 (주→월/연) ======================== */
+
+	@GetMapping("/api/ai/report/monthly-from-week")
+	public ResponseEntity<?> monthlyFromWeek(@RequestParam Long userId, @RequestParam int year,
+			@RequestParam int month) {
+		return ResponseEntity.ok(reportService.monthlyFromWeeks(userId, year, month));
+	}
+
+	@GetMapping("/api/ai/report/yearly-from-week")
+	public ResponseEntity<?> yearlyFromWeek(@RequestParam Long userId, @RequestParam int year) {
+		return ResponseEntity.ok(reportService.yearlyFromWeeks(userId, year));
+	}
+
+	/* ======================== 항목별 한줄 설명(AI) ======================== */
+
+	@PostMapping(value = "/api/ai/report/explain-items", consumes = "application/json", produces = "application/json")
+	public ResponseEntity<?> explainItems(@RequestBody Map<String, Object> body) {
+		// userId
+		Object uid = body.get("userId");
+		Long userId = (uid instanceof Number) ? ((Number) uid).longValue() : null;
+
+		// period / start / end
+		String period = String.valueOf(body.getOrDefault("period", "weekly")); // weekly|monthly|yearly
+		String startS = String.valueOf(body.getOrDefault("start", ""));
+		String endS = String.valueOf(body.getOrDefault("end", ""));
+
+		LocalDate start = startS.isBlank() ? null : LocalDate.parse(startS);
+		LocalDate end = endS.isBlank() ? null : LocalDate.parse(endS);
+
+		// metrics(선택): 프런트가 보낸 CARE-5 포맷을 그대로 사용. 없으면 백엔드가 기간으로 재계산
+		@SuppressWarnings("unchecked")
+		Map<String, Object> metrics = (body.get("metrics") instanceof Map) ? (Map<String, Object>) body.get("metrics")
+				: null;
+
+		Map<String, Object> res = reportService.explainCare5Items(userId, start, end, period, metrics);
+		return ResponseEntity.ok(res);
 	}
 
 	/* ======================== DB 조회/저장 유틸 ======================== */
@@ -177,8 +206,10 @@ public class ReportController {
 				+ "       r.period_type, r.period_key, p.start_date, p.end_date " + "FROM report r "
 				+ "JOIN period p ON p.period_id = r.period_id "
 				+ "WHERE r.patient_id = :uid AND r.period_type = :t AND r.period_key = :k";
+
 		MapSqlParameterSource ps = new MapSqlParameterSource().addValue("uid", userId).addValue("t", type).addValue("k",
 				keyOrMaybeKey);
+
 		return jdbcTemplate.query(sql, ps, rs -> rs.next() ? mapRow(rs) : null);
 	}
 
@@ -200,19 +231,21 @@ public class ReportController {
 	/** 저장: period UPSERT 후 period_id 반환 */
 	private Long upsertPeriod(String type, String key, LocalDate start, LocalDate end) {
 		final String sql = "INSERT INTO period (period_type, period_key, start_date, end_date) "
-				+ "VALUES (:t, :k, :s, :e) " + "ON CONFLICT (period_type, period_key) "
-				+ "DO UPDATE SET start_date = EXCLUDED.start_date, " + "              end_date   = EXCLUDED.end_date, "
-				+ "              updated_at = NOW() " + "RETURNING period_id";
+				+ "VALUES (:t, :k, :s, :e) " + "ON CONFLICT (period_type, period_key) DO UPDATE SET "
+				+ "  start_date = EXCLUDED.start_date, " + "  end_date   = EXCLUDED.end_date, "
+				+ "  updated_at = NOW() " + "RETURNING period_id";
+
 		MapSqlParameterSource ps = new MapSqlParameterSource().addValue("t", type).addValue("k", key)
 				.addValue("s", start).addValue("e", end);
+
 		return jdbcTemplate.queryForObject(sql, ps, Long.class);
 	}
 
-	/** 저장: report UPSERT */
+	/** 저장: report UPSERT — ★ metrics를 그대로 보존(없으면 fallback) */
 	private Long upsertReport(Long patientId, Long periodId, String type, String key,
 			Map<String, Object> legacyPayload) {
 		final String content = buildContentFromLegacy(legacyPayload);
-		final String metricsJson = toJsonSafe(extractMetrics(legacyPayload));
+		final String metricsJson = toJsonSafe(extractMetricsForSave(legacyPayload)); // ★ CARE-5 보존
 		final String sectionsJson = toJsonSafe(extractSections(legacyPayload));
 		final String chartJson = "{}";
 
@@ -222,8 +255,8 @@ public class ReportController {
 				+ "  :t, :k, 1, NOW(), 'api', FALSE, "
 				+ "  CAST(:metrics AS jsonb), CAST(:sections AS jsonb), CAST(:charts AS jsonb)" + ") "
 				+ "ON CONFLICT (patient_id, period_type, period_key) DO UPDATE SET "
-				+ "  content     = EXCLUDED.content, " + "  metrics     = EXCLUDED.metrics, "
-				+ "  sections    = EXCLUDED.sections, " + "  chart_prefs = EXCLUDED.chart_prefs, "
+				+ "  content     = EXCLUDED.content, " + "  metrics     = EXCLUDED.metrics, " + // ★ 덮어쓰기
+				"  sections    = EXCLUDED.sections, " + "  chart_prefs = EXCLUDED.chart_prefs, "
 				+ "  updated_at  = NOW(), " + "  version     = report.version + 1 " + "RETURNING report_id";
 
 		MapSqlParameterSource ps = new MapSqlParameterSource().addValue("pid", periodId).addValue("uid", patientId)
@@ -251,17 +284,14 @@ public class ReportController {
 
 	// 서비스에 넘길 라벨
 	private String toApiPeriodLabel(String type) {
-		switch (type) {
-		case "year":
-			return "yearly";
-		case "month":
-			return "monthly";
-		default:
-			return "weekly";
-		}
+		return switch (type) {
+		case "year" -> "yearly";
+		case "month" -> "monthly";
+		default -> "weekly";
+		};
 	}
 
-	// DB → 레거시 payload로 변환 (저장된 걸 그대로 화면 포맷으로)
+	// DB → 레거시 payload로 변환 (저장된 걸 화면 포맷으로)
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> adaptStoredToLegacy(Map<String, Object> row, String type) {
 		Map<String, Object> out = new HashMap<>();
@@ -276,46 +306,54 @@ public class ReportController {
 		out.put("range", range);
 		out.put("period", toApiPeriodLabel(type));
 
-		// metrics → score
+		// metrics (그대로 전달)
+		Map<String, Object> metricsMap = parseJsonToMap((String) row.get("metrics"));
+		if (metricsMap == null)
+			metricsMap = Map.of();
+		out.put("metrics", metricsMap); // ★ 프런트 레이더가 이 값을 사용
+
+		// score (표시용 지표)
 		Map<String, Object> score = new HashMap<>();
-		try {
-			String metricsTxt = (String) row.get("metrics");
-			if (metricsTxt != null && !metricsTxt.isBlank()) {
-				Map<String, Object> metrics = objectMapper.readValue(metricsTxt, Map.class);
-				if (metrics.get("cognitive") != null)
-					score.put("cognitive", metrics.get("cognitive"));
-				if (metrics.get("delta") != null)
-					score.put("delta", metrics.get("delta"));
-			}
-		} catch (Exception ignored) {
+		if ("CARE5".equals(String.valueOf(metricsMap.get("scale")))
+				&& metricsMap.get("scores") instanceof Map<?, ?> sc) {
+			Object total = ((Map<?, ?>) sc).get("total");
+			score.put("cognitive", (total instanceof Number) ? ((Number) total).intValue() : tryParseInt(total));
+			score.put("delta", 0);
+		} else {
+			Object cognitive = metricsMap.get("cognitive");
+			Object delta = metricsMap.get("delta");
+			if (cognitive != null)
+				score.put("cognitive", tryParseInt(cognitive));
+			if (delta != null)
+				score.put("delta", tryParseInt(delta));
 		}
 		out.put("score", score);
 
 		// sections → weeklySummary / behaviorChanges
-		try {
-			String sectionsTxt = (String) row.get("sections");
-			if (sectionsTxt != null && !sectionsTxt.isBlank()) {
-				Map<String, Object> sections = objectMapper.readValue(sectionsTxt, Map.class);
-				Object summary = sections.get("summary");
-				Object behavior = sections.get("behavior");
-				out.put("weeklySummary", summary != null ? String.valueOf(summary) : "");
-				out.put("behaviorChanges", behavior != null ? String.valueOf(behavior) : "");
-			} else {
-				out.put("weeklySummary", "");
-				out.put("behaviorChanges", "");
-			}
-		} catch (Exception e2) {
-			out.put("weeklySummary", "");
-			out.put("behaviorChanges", "");
-		}
+		Map<String, Object> sectionsMap = parseJsonToMap((String) row.get("sections"));
+		String summary = sectionsMap == null ? "" : String.valueOf(sectionsMap.getOrDefault("summary", ""));
+		String behavior = sectionsMap == null ? ""
+				: String.valueOf(sectionsMap.getOrDefault("behavior", sectionsMap.getOrDefault("behavior_change", "")));
+		out.put("weeklySummary", summary == null ? "" : summary);
+		out.put("behaviorChanges", behavior == null ? "" : behavior);
 
-		// 나머지(activities/memory/recommendations/aiTip)는 저장 스키마에 없으면 생략/기본값
+		// 나머지 기본값
 		out.putIfAbsent("activities", Map.of());
 		out.putIfAbsent("memory", Map.of());
 		out.putIfAbsent("recommendations", new String[0]);
 		out.putIfAbsent("aiTip", Map.of());
 
 		return out;
+	}
+
+	private int tryParseInt(Object v) {
+		if (v instanceof Number n)
+			return n.intValue();
+		try {
+			return Integer.parseInt(String.valueOf(v));
+		} catch (Exception e) {
+			return 0;
+		}
 	}
 
 	// period_key 생성 (YYYY / YYYY-MM / YYYY-Www)
@@ -338,12 +376,10 @@ public class ReportController {
 		String tipBody = nestedStr(p, "aiTip", "body");
 
 		StringBuilder sb = new StringBuilder();
-		if (!changes.isBlank()) {
+		if (!changes.isBlank())
 			sb.append("## 행동 변화\n").append(changes).append("\n\n");
-		}
-		if (!summary.isBlank()) {
+		if (!summary.isBlank())
 			sb.append("## 종합 요약\n").append(summary).append("\n\n");
-		}
 		if (!tipTitle.isBlank() || !tipBody.isBlank()) {
 			sb.append("## AI Tip\n");
 			if (!tipTitle.isBlank())
@@ -363,11 +399,21 @@ public class ReportController {
 		return s.replaceFirst("^##\\s*[^\\n]+\\n?", "").trim();
 	}
 
-	private Map<String, Object> extractMetrics(Map<String, Object> p) {
+	/**
+	 * 저장용 metrics 추출: payload에 metrics 있으면 그대로, 없으면 score.cognitive/delta fallback
+	 */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractMetricsForSave(Map<String, Object> p) {
+		Object m = p.get("metrics");
+		if (m instanceof Map<?, ?> mm) {
+			Map<String, Object> res = new LinkedHashMap<>();
+			mm.forEach((k, v) -> res.put(String.valueOf(k), v));
+			return res; // ★ CARE-5 그대로 저장
+		}
+		// fallback: score에서 cognitive/delta 저장(구버전 호환)
 		Object score = p.get("score");
-		if (score instanceof Map) {
-			Map<?, ?> sc = (Map<?, ?>) score;
-			Map<String, Object> out = new HashMap<>();
+		if (score instanceof Map<?, ?> sc) {
+			Map<String, Object> out = new LinkedHashMap<>();
 			if (sc.get("cognitive") != null)
 				out.put("cognitive", sc.get("cognitive"));
 			if (sc.get("delta") != null)
@@ -384,8 +430,18 @@ public class ReportController {
 		if (!summary.isBlank())
 			out.put("summary", summary);
 		if (!changes.isBlank())
-			out.put("behavior", changes);
+			out.put("behavior_change", changes); // ★ 키 통일
 		return out;
+	}
+
+	private Map<String, Object> parseJsonToMap(String txt) {
+		if (txt == null || txt.isBlank())
+			return null;
+		try {
+			return objectMapper.readValue(txt, Map.class);
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	private String toJsonSafe(Object obj) {
@@ -405,7 +461,7 @@ public class ReportController {
 		if (m == null)
 			return "";
 		Object inner = m.get(k1);
-		if (inner instanceof Map) {
+		if (inner instanceof Map<?, ?>) {
 			Object v = ((Map<String, Object>) inner).get(k2);
 			return v == null ? "" : String.valueOf(v).trim();
 		}
