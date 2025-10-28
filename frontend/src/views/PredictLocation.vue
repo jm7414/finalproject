@@ -125,6 +125,13 @@
                     </div>
                 </div>
 
+
+
+
+                <!-- 병욱 작업공간 확보  시작 -->
+
+
+
                 <div class="detail-sections">
                     <div class="info-item glass-card">
                         <div class="info-badge">
@@ -163,6 +170,14 @@
                     </div>
                 </div>
             </div>
+
+
+                <!-- 병욱 작업공간 확보  끝 -->
+
+
+
+
+
 
             <!-- 예상 위치 카드 리스트 -->
             <div v-if="selectedType === 'map'" class="prediction-list">
@@ -279,6 +294,15 @@
     </div>
 </template>
 <script setup>
+
+// 병욱 작업공간 확보 시작 
+
+
+
+
+
+
+// 병욱 작업공간 확보 끝
 import { ref, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
 
