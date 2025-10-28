@@ -63,3 +63,9 @@ build/
 
 # 수정 이력 txt
 learning-pages-guide.txt
+
+
+# python 파일
+python/__pycache__/
+python/cache/
+python/venv/
