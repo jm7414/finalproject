@@ -8,7 +8,6 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
 
-// import org.springframework.core.io.ClassPathResource; // 이 부분은 이제 필요 없습니다.
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

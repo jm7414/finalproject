@@ -215,4 +215,38 @@ public class UserController {
         }
     }
 
+    // 실종상태변환 기능 /api/users/update-status
+    @PostMapping("/api/users/update-status")
+    public ResponseEntity<?> updateUserStatus(@RequestBody Map<String, Object> payload) {
+        try {
+            // 1. 시큐리티 인증 확인 (로그인한 사용자인지)
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "로그인이 필요합니다."));
+            }
+
+            // 2. 프론트엔드에서 보낸 데이터(userNo, userStatus) 추출
+            // (참고: PatientInfoCard.vue에서 'userStatus'로 키를 보냈습니다)
+            Integer userNo = (Integer) payload.get("userNo");
+            Integer userStatus = (Integer) payload.get("userStatus");
+
+            if (userNo == null || userStatus == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "필수 정보(userNo, userStatus)가 누락되었습니다."));
+            }
+
+            // 3. UserDAO를 호출하여 실제 DB 상태 업데이트
+            userDAO.updateUserStatus(userNo, userStatus);
+
+            // 4. 프론트엔드에 성공 응답 전송
+            return ResponseEntity.ok(Map.of("message", "사용자 상태가 성공적으로 업데이트되었습니다."));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "상태 업데이트 중 서버 오류가 발생했습니다."));
+        }
+    }
+
 }
