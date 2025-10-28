@@ -123,7 +123,7 @@
         <!-- 하단 버튼 -->
         <div class="action-buttons">
           <button class="btn btn-back w-100 py-2 mb-2" @click="goBack">
-            <i class="bi bi-arrow-left me-2"></i>뒤로 가기
+            <i class="bi bi-check-circle"></i> 저 장
           </button>
         </div>
       </div>
@@ -492,16 +492,16 @@ const goBack = () => {
 }
 
 .btn-back {
-  background-color: #e5e7eb;
+  background-color: rgba(74, 98, 221, 0.85);
   border: none;
   border-radius: 8px;
-  color: #171717;
+  color: #fff;
   font-size: 0.95rem;
   transition: all 0.2s;
 }
 
 .btn-back:hover {
-  background-color: #d1d5db;
+  background-color: rgba(74, 98, 221, 1);
   transform: translateY(-1px);
 }
 

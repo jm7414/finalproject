@@ -1,17 +1,26 @@
-<!-- src/views/GuardianProfileEdit.vue -->
 <template>
   <div class="guardian-profile-edit-page">
-
     <!-- 메인 컨텐츠 -->
     <div class="content-section">
       <div class="container py-3">
         <!-- 프로필 이미지 섹션 -->
         <div class="profile-image-section text-center mb-4">
           <div class="profile-image-wrapper">
+            <!-- 지현수정: 프로필 사진 표시 추가 -->
             <div class="profile-image">
-              <i class="bi bi-person-circle"></i>
+              <img v-if="formData.profilePhoto" :src="formData.profilePhoto" alt="Profile" class="profile-photo-img" />
+              <i v-else class="bi bi-person-circle"></i>
             </div>
-            <button class="profile-image-edit-btn" @click="changeProfileImage">
+            <!-- 지현수정: 파일 input 추가 -->
+            <input 
+              type="file" 
+              ref="fileInput" 
+              accept="image/*" 
+              @change="handlePhotoChange"
+              style="display: none"
+            />
+            <!-- 지현수정: triggerFileInput으로 함수명 변경 -->
+            <button class="profile-image-edit-btn" @click="triggerFileInput">
               <i class="bi bi-camera-fill"></i>
             </button>
           </div>
@@ -141,31 +150,32 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-
 const API_BASE = 'https://localhost:8080'
 
-/** 상태 관리 */
+// 상태 관리
 const saving = ref(false)
 const saveSuccess = ref(false)
 const error = ref('')
 const showPassword = ref(false)
+const fileInput = ref(null) // 지현수정: 파일 input ref 추가
 
-/** 폼 데이터 (UI 바인딩) */
+// 폼 데이터
 const formData = ref({
   name: '',
   userId: '',
-  birthDate: '',      // YYYY-MM-DD
-  phone: '',          // 010-0000-0000
-  profilePhoto: ''    // 업로드 후 URL 저장(선택)
+  birthDate: '',
+  phone: '',
+  profilePhoto: '' // 지현수정: 프로필 사진 URL 추가
 })
 
-/** API 엔드포인트 (백엔드 규약) */
+// API 엔드포인트
 const ENDPOINTS = {
   me: `${API_BASE}/api/user/me`,
-  update: `${API_BASE}/api/user/update`,   // ✅ 백엔드 규약: POST
+  update: `${API_BASE}/api/user/update`,
+  uploadPhoto: `${API_BASE}/api/upload/profile-photo` // 지현수정: 프로필 사진 업로드 API 추가
 }
 
-/* ============ 유틸 ============ */
+// 유틸 함수
 function toYYYYMMDD(d) {
   if (!d) return ''
   const date = new Date(d)
@@ -196,69 +206,107 @@ async function request(url, options = {}) {
   return body
 }
 
-/* ============ 초기 데이터 로드 ============ */
+// 초기 데이터 로드
 async function loadUserData() {
   error.value = ''
   try {
     const user = await request(ENDPOINTS.me)
 
-    // ✅ 보호자 권한 체크 (role_no = 1)
     if (user?.roleNo !== 1) {
-      router.replace('/GD') // 보호자가 아니면 홈으로
+      router.replace('/GD')
       return
     }
 
-    // ✅ DB 컬럼명에 맞춰 매핑
-    const name        = user?.name ?? ''
-    const userId      = user?.userId ?? user?.user_id ?? ''
-    const birthRaw    = user?.birthDate ?? user?.birth_date ?? null
-    const phoneRaw    = user?.phoneNumber ?? user?.phone_number ?? ''  // ✅ phone_number 추가
-    const photo       = user?.profilePhoto ?? user?.profile_photo ?? ''
+    const name = user?.name ?? ''
+    const userId = user?.userId ?? user?.user_id ?? ''
+    const birthRaw = user?.birthDate ?? user?.birth_date ?? null
+    const phoneRaw = user?.phoneNumber ?? user?.phone_number ?? ''
+    const photo = user?.profilePhoto ?? user?.profile_photo ?? '' // 지현수정: 프로필 사진 URL 로드
 
     formData.value = {
       name: name || '',
       userId: userId || '',
       birthDate: toYYYYMMDD(birthRaw) || '',
       phone: normalizePhone(phoneRaw) || '',
-      profilePhoto: photo || ''
+      profilePhoto: photo || '' // 지현수정: 프로필 사진 URL 설정
     }
   } catch (e) {
     error.value = `사용자 정보 불러오기 실패: ${e?.message || e}`
   }
 }
 
-/* ============ 프로필 이미지 변경(선택) ============ */
-async function changeProfileImage() {
-  // TODO: File input + /api/upload/post-image 사용 → 응답 imageUrl을 formData.value.profilePhoto에 대입
-  console.log('프로필 이미지 변경 로직 연결 예정')
+// 지현수정: 파일 선택 트리거 함수 추가
+function triggerFileInput() {
+  fileInput.value?.click()
 }
 
-/* ============ 비밀번호 표시/숨김 ============ */
+// 지현수정: 사진 변경 처리 함수 추가
+async function handlePhotoChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  if (file.size > 10 * 1024 * 1024) {
+    alert('파일 크기는 10MB 이하여야 합니다.')
+    event.target.value = ''
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('이미지 파일만 업로드 가능합니다.')
+    event.target.value = ''
+    return
+  }
+
+  try {
+    const formDataUpload = new FormData()
+    formDataUpload.append('file', file)
+
+    const response = await fetch(ENDPOINTS.uploadPhoto, {
+      method: 'POST',
+      credentials: 'include',
+      body: formDataUpload
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.message || '업로드 실패')
+    }
+
+    if (result.success && result.imageUrl) {
+      formData.value.profilePhoto = result.imageUrl
+      event.target.value = ''
+    }
+  } catch (e) {
+    alert(`프로필 사진 업로드 실패: ${e?.message || e}`)
+  }
+}
+
+// 비밀번호 표시/숨김
 function togglePassword() {
   showPassword.value = !showPassword.value
 }
 
-/* ============ 저장(업데이트) ============ */
+// 저장
 async function handleSave() {
   error.value = ''
   saveSuccess.value = false
 
-  // 간단 유효성
   if (!formData.value.name || !formData.value.phone) {
     error.value = '필수 항목을 모두 입력해주세요.'
     return
   }
+  
   if (formData.value.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(formData.value.birthDate)) {
     error.value = '생년월일 형식이 올바르지 않습니다. (예: 1970-01-31)'
     return
   }
 
-  // ✅ 백엔드가 기대하는 키만 깔끔히 전송
   const payload = {
     name: formData.value.name,
     birthDate: formData.value.birthDate || null,
-    phoneNumber: formData.value.phone || null,  // ✅ phoneNumber로 전송
-    profilePhoto: formData.value.profilePhoto || null
+    phoneNumber: formData.value.phone || null,
+    profilePhoto: formData.value.profilePhoto || null // 지현수정: 프로필 사진 URL 포함
   }
 
   saving.value = true
@@ -271,7 +319,6 @@ async function handleSave() {
 
     saveSuccess.value = true
     await loadUserData()
-
   } catch (e) {
     error.value = `저장 실패: ${e?.message || e}`
   } finally {
@@ -279,7 +326,7 @@ async function handleSave() {
   }
 }
 
-/* ============ 취소/네비 ============ */
+// 취소/네비
 function handleCancel() {
   router.go(-1)
 }
@@ -288,13 +335,11 @@ function goBack() {
   router.go(-1)
 }
 
-/* ============ 초기화 ============ */
+// 초기화
 onMounted(loadUserData)
 </script>
 
-
 <style scoped>
-/* 전체 페이지 */
 .guardian-profile-edit-page {
   min-height: 80vh;
   background: #f8f9fa;
@@ -302,39 +347,6 @@ onMounted(loadUserData)
   margin-top: -15px;
 }
 
-/* 헤더 */
-.header-section {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.btn-back {
-  background: none;
-  border: none;
-  padding: 0.375rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 6px;
-}
-
-.btn-back:hover {
-  background: #f5f5f5;
-}
-
-.btn-back i {
-  font-size: 1.25rem;
-  color: #404040;
-}
-
-.header-title {
-  color: #171717;
-  font-size: 1.125rem;
-  font-weight: 400;
-}
-
-/* 컨테이너 */
 .container {
   max-width: 420px;
   padding-left: 1.5rem;
@@ -368,6 +380,15 @@ onMounted(loadUserData)
   color: #d4d4d4;
 }
 
+/* 지현수정: 프로필 사진 이미지 스타일 추가 */
+.profile-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 50%;
+}
+
 .profile-image-edit-btn {
   position: absolute;
   bottom: 0;
@@ -393,9 +414,6 @@ onMounted(loadUserData)
 .profile-image-edit-btn i {
   color: white;
   font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .profile-image-label {
@@ -452,7 +470,6 @@ onMounted(loadUserData)
   margin-top: 0.375rem;
   color: #737373;
   font-size: 0.875rem;
-  line-height: 1.4;
 }
 
 /* 비밀번호 입력 */
@@ -469,16 +486,11 @@ onMounted(loadUserData)
   border: none;
   cursor: pointer;
   padding: 0.375rem;
-  transition: all 0.2s;
 }
 
 .password-toggle-btn i {
   font-size: 1.125rem;
   color: #737373;
-}
-
-.password-toggle-btn:hover i {
-  color: #404040;
 }
 
 /* 날짜 입력 */
@@ -496,7 +508,6 @@ onMounted(loadUserData)
   pointer-events: none;
 }
 
-/* 날짜 입력 필드의 기본 아이콘 숨기기 */
 .custom-input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0;
   position: absolute;
@@ -517,7 +528,6 @@ onMounted(loadUserData)
   color: white;
   padding: 1rem;
   font-size: 1rem;
-  font-weight: 400;
   border-radius: 8px;
   transition: all 0.2s;
 }
@@ -526,7 +536,6 @@ onMounted(loadUserData)
   background: rgba(74, 98, 221, 1);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  color: white;
 }
 
 .btn-save:disabled {
@@ -540,16 +549,13 @@ onMounted(loadUserData)
   color: #404040;
   padding: 1rem;
   font-size: 1rem;
-  font-weight: 400;
   border-radius: 8px;
   transition: all 0.2s;
 }
 
 .btn-cancel:hover {
   background: #f5f5f5;
-  border-color: #a3a3a3;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* 성공 메시지 */
@@ -557,71 +563,22 @@ onMounted(loadUserData)
   background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
   color: #155724;
   border: 2px solid rgba(40, 167, 69, 0.3);
-  transition: all 0.2s;
-  animation: slideIn 0.3s ease-out;
   padding: 0.75rem 1rem;
-}
-
-.alert-success-custom:hover {
-  background: linear-gradient(135deg, #c3e6cb 0%, #b1dfbb 100%);
-  transform: translateX(-3px);
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
 }
 
 .alert-success-custom i.bi-check-circle-fill {
   color: #28a745;
-  font-size: 1rem;
-}
-
-.alert-success-custom i.bi-arrow-left {
-  color: #28a745;
-  font-size: 1.25rem;
 }
 
 /* 에러 메시지 */
 .alert-danger {
   background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
   color: #721c24;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* 애니메이션 */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 스피너 */
 .spinner-border-sm {
   width: 0.875rem;
   height: 0.875rem;
   border-width: 0.125rem;
-}
-
-/* 반응형 */
-@media (max-width: 414px) {
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  
-  .custom-input,
-  .custom-input-disabled {
-    font-size: 0.9375rem;
-    padding: 0.75rem 0.875rem;
-  }
-  
-  .btn-save,
-  .btn-cancel {
-    font-size: 0.9375rem;
-    padding: 0.875rem;
-  }
 }
 </style>

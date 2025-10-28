@@ -15,14 +15,18 @@
   </header>
 
   <div class="content-section">
-    <div class="container py-4">
+    <div class="container py-2">
       <!-- 프로필 이미지 섹션 -->
       <div class="profile-image-section text-center mb-5">
         <div class="profile-image-wrapper">
+          <!-- 지현 수정: 프로필 사진 표시 -->
           <div class="profile-image">
-            <i class="bi bi-person-circle"></i>
+            <img v-if="formData.profilePhoto" :src="formData.profilePhoto" alt="Profile" class="profile-photo-img" />
+            <i v-else class="bi bi-person-circle"></i>
           </div>
-          <button class="profile-image-edit-btn" @click="changeProfileImage">
+          <!-- 지현 수정: 파일 input 추가 -->
+          <input type="file" ref="fileInput" accept="image/*" @change="handlePhotoChange" style="display: none" />
+          <button class="profile-image-edit-btn" @click="triggerFileInput">
             <i class="bi bi-camera-fill"></i>
           </button>
         </div>
@@ -121,21 +125,23 @@ const API_BASE = 'https://localhost:8080'
 const saving = ref(false)
 const saveSuccess = ref(false)
 const error = ref('')
-const showPassword = ref(false) // 비번은 현재 엔드포인트에서 미처리(추후 별도 엔드포인트 권장)
+const showPassword = ref(false)
+const fileInput = ref(null) // ✅ 추가
 
 /** 폼 데이터 (UI 바인딩) */
 const formData = ref({
   name: '',
   userId: '',
-  birthDate: '',      // YYYY-MM-DD
-  phone: '',          // 010-0000-0000
-  profilePhoto: ''    // 업로드 후 URL 저장(선택)
+  birthDate: '',
+  phone: '',
+  profilePhoto: ''
 })
 
 /** API 엔드포인트 (백엔드 규약) */
 const ENDPOINTS = {
   me: `${API_BASE}/api/user/me`,
-  update: `${API_BASE}/api/user/update`,   // ✅ 백엔드 규약: POST
+  update: `${API_BASE}/api/user/update`,
+  uploadPhoto: `${API_BASE}/api/upload/profile-photo` // 지현 추가
 }
 
 /* ============ 유틸 ============ */
@@ -155,8 +161,8 @@ function toYYYYMMDD(d) {
 function normalizePhone(p) {
   if (!p) return ''
   const digits = String(p).replace(/\D/g, '')
-  if (digits.length === 11) return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`
-  if (digits.length === 10) return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`
+  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
   return p
 }
 
@@ -175,17 +181,16 @@ async function loadUserData() {
   try {
     const user = await request(ENDPOINTS.me)
 
-    // (선택) UX용 역할 가드: 서버는 이미 막지만 화면에서도 정중히 돌려보내기
     if (user?.roleNo !== 2 && user?.roleNo !== 3) {
-      router.replace('/GD') // 보호자 홈 등 프로젝트 기본 라우트에 맞게 조정
+      router.replace('/GD')
       return
     }
 
-    const name        = user?.name ?? ''
-    const userId      = user?.userId ?? user?.user_id ?? ''
-    const birthRaw    = user?.birthDate ?? user?.birth_date ?? null
-    const phoneRaw    = user?.phoneNumber ?? user?.phone_number ?? user?.phone ?? ''
-    const photo       = user?.profilePhoto ?? user?.profile_photo ?? ''
+    const name = user?.name ?? ''
+    const userId = user?.userId ?? user?.user_id ?? ''
+    const birthRaw = user?.birthDate ?? user?.birth_date ?? null
+    const phoneRaw = user?.phoneNumber ?? user?.phone_number ?? user?.phone ?? ''
+    const photo = user?.profilePhoto ?? user?.profile_photo ?? ''
 
     formData.value = {
       name: name || '',
@@ -199,13 +204,58 @@ async function loadUserData() {
   }
 }
 
-/* ============ 프로필 이미지 변경(선택) ============ */
-async function changeProfileImage() {
-  // TODO: File input + /api/upload/post-image 사용 → 응답 imageUrl을 formData.value.profilePhoto에 대입
-  console.log('프로필 이미지 변경 로직 연결 예정')
+/* ============ 프로필 이미지 변경 ============ */
+// 파일 선택 트리거
+function triggerFileInput() {
+  fileInput.value?.click()
 }
 
-/* ============ 비밀번호 표시/숨김 (현재 엔드포인트 미사용) ============ */
+// 사진 변경 처리
+async function handlePhotoChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // 파일 크기 체크 (10MB 제한)
+  if (file.size > 10 * 1024 * 1024) {
+    alert('파일 크기는 2MB 이하여야 합니다.')
+    event.target.value = ''
+    return
+  }
+
+  // 이미지 파일인지 체크
+  if (!file.type.startsWith('image/')) {
+    alert('이미지 파일만 업로드 가능합니다.')
+    event.target.value = ''
+    return
+  }
+
+  try {
+    const formDataUpload = new FormData()
+    formDataUpload.append('file', file)
+
+    const response = await fetch(ENDPOINTS.uploadPhoto, {
+      method: 'POST',
+      credentials: 'include',
+      body: formDataUpload
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.message || '업로드 실패')
+    }
+
+    if (result.success && result.imageUrl) {
+      formData.value.profilePhoto = result.imageUrl
+      event.target.value = ''
+    }
+  } catch (e) {
+    alert(`프로필 사진 업로드 실패: ${e?.message || e}`)
+  }
+}
+
+
+/* ============ 비밀번호 표시/숨김 ============ */
 function togglePassword() {
   showPassword.value = !showPassword.value
 }
@@ -225,10 +275,9 @@ async function handleSave() {
     return
   }
 
-  // ✅ 백엔드가 기대하는 키만 깔끔히 전송 (불필요 필드 제외)
   const payload = {
     name: formData.value.name,
-    birthDate: formData.value.birthDate || null,   // 컨트롤러에서 LocalDate.parse 처리
+    birthDate: formData.value.birthDate || null,
     phoneNumber: formData.value.phone || null,
     profilePhoto: formData.value.profilePhoto || null
   }
@@ -236,14 +285,12 @@ async function handleSave() {
   saving.value = true
   try {
     await request(ENDPOINTS.update, {
-      method: 'POST', // ✅ 규약에 맞춤(이 레포는 update에 POST를 섞어 씀)
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
 
     saveSuccess.value = true
-    // 최신 데이터 재바인딩이 필요하면 주석 해제
-    // await loadUserData()
   } catch (e) {
     error.value = `저장 실패: ${e?.message || e}`
   } finally {
@@ -267,14 +314,13 @@ function goBack() {
 onMounted(loadUserData)
 </script>
 
-
-
 <style scoped>
 .profile-edit-page {
   min-height: 100vh;
   background: #f8f9fa;
   color: #171717;
 }
+
 /* 환자 헤더 */
 .app-header {
   display: flex;
@@ -328,7 +374,7 @@ onMounted(loadUserData)
 
 /* 프로필 이미지 섹션 */
 .profile-image-section {
-  padding: 2rem 0;
+  padding: 2rem 0; 
 }
 
 .profile-image-wrapper {
@@ -337,8 +383,8 @@ onMounted(loadUserData)
 }
 
 .profile-image {
-  width: 96px;
-  height: 96px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   background: white;
   border: 4px solid #E5E5E5;
@@ -349,7 +395,7 @@ onMounted(loadUserData)
 }
 
 .profile-image i {
-  font-size: 96px;
+  font-size: 140px;
   color: #d4d4d4;
 }
 
@@ -357,8 +403,8 @@ onMounted(loadUserData)
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 32px;
-  height: 32px;
+  width: 40px;  /* 32px → 40px */
+  height: 40px; /* 32px → 40px */
   background: rgba(74, 98, 221, 1);
   border: none;
   border-radius: 50%;
@@ -376,7 +422,7 @@ onMounted(loadUserData)
 
 .profile-image-edit-btn i {
   color: white;
-  font-size: 0.875rem;
+  font-size: 1rem; /* 0.875rem → 1rem */
 }
 
 .profile-image-label {
@@ -385,8 +431,18 @@ onMounted(loadUserData)
   -webkit-text-stroke: 0.5px currentColor;
 }
 
+.profile-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top; /* 상단 중앙 정렬 */
+  border-radius: 50%;
+}
+
+
 /* 폼 섹션 */
 .form-section {
+  margin-top: -40px;
   margin-bottom: 2rem;
 }
 
@@ -573,6 +629,7 @@ onMounted(loadUserData)
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -592,17 +649,17 @@ onMounted(loadUserData)
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  
+
   .form-label {
     font-size: 1.125rem;
   }
-  
+
   .custom-input,
   .custom-input-disabled {
     font-size: 1.125rem;
     padding: 1rem 1.25rem;
   }
-  
+
   .btn-save,
   .btn-cancel {
     font-size: 1.125rem;
