@@ -12,6 +12,7 @@ certs/rootCA-key.pem
 ### 업로드된 파일 ###
 # 사용자가 업로드한 이미지 파일 무시
 backend/src/main/resources/uploads/
+backend/src/main/resources/static/uploads/
 
 ### 기존 .gitignore 내용 유지 ###
 ### Java ###
@@ -59,3 +60,6 @@ yarn-error.log
 bin/
 target/
 build/
+
+# 수정 이력 txt
+learning-pages-guide.txt

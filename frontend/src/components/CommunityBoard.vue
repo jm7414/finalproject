@@ -171,6 +171,7 @@ function goToPostWrite() {
 .post-list {
   display: flex;
   flex-direction: column;
+  margin-top: 10px;
   gap: 12px; /* 카드 사이 간격 */
 }
 .card-body {
@@ -188,8 +189,7 @@ function goToPostWrite() {
 .post-content {
   font-size: 14px;
   color: #555;
-  line-height: 1.5; /* 줄 간격 */
-  /* ✨ 친구 요청: 4줄까지만 보이도록 설정 ✨ */
+  line-height: 1.5; 
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -201,18 +201,18 @@ function goToPostWrite() {
 /* 게시글 이미지 */
 .post-image {
   width: 100%;
-  height: auto; /* 비율 유지 */
-  max-height: 250px; /* 너무 크지 않게 최대 높이 제한 (선택사항) */
-  object-fit: cover; /* 이미지가 잘리지 않고 비율 유지하며 채움 */
-  border-radius: 8px; /* 이미지 모서리 둥글게 */
-  margin-top: 12px; /* 본문과의 간격 */
-  display: block; /* 이미지 아래 불필요한 공백 제거 */
+  height: auto;
+  max-height: 250px; 
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 12px;
+  display: block; 
 }
 /* 게시글 카드 */
 .post-card {
   background-color: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
   padding: 16px;
   cursor: pointer;
   transition: transform 0.2s ease;

@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +56,7 @@ public class UserController {
 
             // 비밀번호 암호화
             user.setUserPw(passwordEncoder.encode(user.getUserPw()));
-            
+
             // 역할 설정 (보호자 체크박스에 따라)
             user.setRoleNo(user.getRoleNo() == 1 ? 1 : 2); // 1: 보호자, 2: 환자
 
@@ -89,7 +90,19 @@ public class UserController {
             }
 
             UserVO currentUser = (UserVO) auth.getPrincipal();
-            return ResponseEntity.ok(currentUser);
+
+            // [추가] DB에서 최신 정보 다시 조회
+            UserVO freshUser = userDAO.findByUserNo(currentUser.getUserNo());
+
+            // [추가] 세션의 Principal을 최신 정보로 교체
+            Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                    freshUser, // 최신 UserVO로 교체
+                    auth.getCredentials(),
+                    auth.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(newAuth);
+
+            // [수정] 최신 정보 반환 (기존: currentUser → 변경: freshUser)
+            return ResponseEntity.ok(freshUser);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -135,6 +148,7 @@ public class UserController {
         }
     }
 
+    /* 내정보 수정 */
     @PostMapping("/api/user/update")
     public ResponseEntity<?> updateCurrentUser(@RequestBody Map<String, Object> body) {
         try {
@@ -185,12 +199,53 @@ public class UserController {
             }
 
             UserVO fresh = userDAO.findByUserNo(current.getUserNo());
+            // 세션의 Principal 갱신
+            Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                    fresh, // 최신 UserVO로 교체
+                    auth.getCredentials(),
+                    auth.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(newAuth);
+
             return ResponseEntity.ok(fresh);
 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "사용자 정보 업데이트 중 오류가 발생했습니다."));
+        }
+    }
+
+    // 실종상태변환 기능 /api/users/update-status
+    @PostMapping("/api/users/update-status")
+    public ResponseEntity<?> updateUserStatus(@RequestBody Map<String, Object> payload) {
+        try {
+            // 1. 시큐리티 인증 확인 (로그인한 사용자인지)
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "로그인이 필요합니다."));
+            }
+
+            // 2. 프론트엔드에서 보낸 데이터(userNo, userStatus) 추출
+            // (참고: PatientInfoCard.vue에서 'userStatus'로 키를 보냈습니다)
+            Integer userNo = (Integer) payload.get("userNo");
+            Integer userStatus = (Integer) payload.get("userStatus");
+
+            if (userNo == null || userStatus == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "필수 정보(userNo, userStatus)가 누락되었습니다."));
+            }
+
+            // 3. UserDAO를 호출하여 실제 DB 상태 업데이트
+            userDAO.updateUserStatus(userNo, userStatus);
+
+            // 4. 프론트엔드에 성공 응답 전송
+            return ResponseEntity.ok(Map.of("message", "사용자 상태가 성공적으로 업데이트되었습니다."));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "상태 업데이트 중 서버 오류가 발생했습니다."));
         }
     }
 

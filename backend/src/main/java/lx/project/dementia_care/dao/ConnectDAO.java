@@ -35,11 +35,10 @@ public class ConnectDAO {
         return session.delete("mapper-connect.deleteByPatientNo", patientNo);
     }
 
-	/** guardian1_no 기준으로 보호자가 관리하는 환자 1명 반환 */
-	public Integer findPatientNoByGuardian1No(int guardianNo) throws Exception {
-		return session.selectOne("mapper-connect.findPatientNoByGuardian1No", guardianNo);
-	}
-
+    /** guardian1_no 기준으로 보호자가 관리하는 환자 1명 반환 */
+    public Integer findPatientNoByGuardian1No(int guardianNo) throws Exception {
+        return session.selectOne("mapper-connect.findPatientNoByGuardian1No", guardianNo);
+    }
 
     /** 초대코드로 환자 찾기 */
     public UserVO findPatientByInvitationCode(String code) throws Exception {
@@ -131,8 +130,8 @@ public class ConnectDAO {
     public int expireExtraSlots() throws Exception {
         return session.update("mapper-connect.expireExtraSlots");
     }
-    
- // --추가-- 보호자 수 카운트
+
+    // --추가-- 보호자 수 카운트
     public int countGuardians(int patientNo) throws Exception {
         Integer n = session.selectOne("mapper-connect.countGuardians", patientNo);
         return n == null ? 0 : n;
@@ -152,24 +151,34 @@ public class ConnectDAO {
         Boolean b = session.selectOne("mapper-connect.isGuardianLinkedToPatient", p);
         return Boolean.TRUE.equals(b);
     }
+
     // 구독 추가
     public Integer findPatientNoByGuardian(int guardianNo) throws Exception {
         return session.selectOne("mapper-connect.findPatientNoByGuardian", guardianNo);
     }
-    
- // ConnectDAO
-    public int setSubscription(int guardianNo, java.time.OffsetDateTime start, java.time.OffsetDateTime end) throws Exception {
+
+    // ConnectDAO
+    public int setSubscription(int guardianNo, java.time.OffsetDateTime start, java.time.OffsetDateTime end)
+            throws Exception {
         Map<String, Object> p = new HashMap<>();
         p.put("guardianNo", guardianNo);
         p.put("startTs", java.sql.Timestamp.from(start.toInstant()));
-        p.put("endTs",   java.sql.Timestamp.from(end.toInstant()));
+        p.put("endTs", java.sql.Timestamp.from(end.toInstant()));
         return session.update("mapper-connect.setSubscription", p);
     }
 
     public Map<String, Object> selectSubscriptionByGuardian(int guardianNo) throws Exception {
         return session.selectOne("mapper-connect.selectSubscriptionByGuardian", guardianNo);
     }
-    
-    
-    
+
+    /**
+     * 구독 취소 (subscribe_endtime을 현재 시간으로 설정)
+     */
+    public int cancelSubscription(int guardianNo, java.time.OffsetDateTime cancelTime) throws Exception {
+        Map<String, Object> p = new HashMap<>();
+        p.put("guardianNo", guardianNo);
+        p.put("cancelTs", java.sql.Timestamp.from(cancelTime.toInstant()));
+        return session.update("mapper-connect.cancelSubscription", p);
+    }
+
 }

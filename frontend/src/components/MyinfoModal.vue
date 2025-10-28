@@ -13,12 +13,14 @@
           <div class="header-section bg-white border-bottom">
             <div class="container py-3">
               <div class="d-flex align-items-center">
+                <!-- ✅ 수정: 프로필 사진 표시 -->
                 <div class="user-avatar me-3">
-                  <i class="bi bi-person-circle text-secondary"></i>
+                  <img v-if="profilePhotoUrl" :src="profilePhotoUrl" alt="Profile" class="profile-photo" />
+                  <i v-else class="bi bi-person-circle text-secondary"></i>
                 </div>
                 <div>
                   <h5 class="mb-1">내 정보</h5>
-                  <p class="text-secondary mb-0 small">{{ displayUserName }}님 안녕하세요</p>
+                  <p class="text-secondary mb-0 small">{{ displayUserName }} 님 안녕하세요</p>
                 </div>
               </div>
             </div>
@@ -92,9 +94,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { logout } from '@/utils/auth'
+import axios from 'axios'
 
 // Props
 interface Props {
@@ -114,8 +117,35 @@ const emit = defineEmits<{
 
 const router = useRouter()
 
+// ✅ 추가: 프로필 사진 URL
+const profilePhotoUrl = ref('')
+
 // Computed
 const displayUserName = computed(() => props.userName || '아무개')
+
+// ✅ 추가: 프로필 사진 로드
+const loadProfilePhoto = async () => {
+  try {
+    const response = await axios.get('/api/user/me')
+    profilePhotoUrl.value = response.data.profilePhoto || ''
+  } catch (error) {
+    console.error('프로필 사진 로드 실패:', error)
+  }
+}
+
+// ✅ 추가: 모달이 열릴 때마다 프로필 사진 새로고침
+watch(() => props.modelValue, (newValue) => {
+  if (newValue) {
+    loadProfilePhoto()
+  }
+})
+
+// 초기 로드
+onMounted(() => {
+  if (props.modelValue) {
+    loadProfilePhoto()
+  }
+})
 
 // 모달 닫기
 const closeModal = () => {
@@ -255,9 +285,28 @@ const handleLogout = async () => {
   color: #6c757d !important;
 }
 
+/* ✅ 수정: 프로필 사진 스타일 */
+.user-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+}
+
 .user-avatar i {
   font-size: 58px;
   color: #6c757d !important;
+}
+
+.profile-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
 }
 
 .divider {

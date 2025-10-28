@@ -393,7 +393,8 @@ const submitPayment = async () => {
 
     if (data?.status === 'PAID') {
       closeCardModal()
-      router.replace('/plusplan')
+      alert('구독이 완료 되었습니다.')
+      router.replace('/gdmypage')
     } else {
       alert(data?.message || '결제 처리 결과를 확인할 수 없습니다.')
     }

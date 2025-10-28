@@ -1,448 +1,292 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios'; // API 호출을 위해 추가
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
 
-// 이미지 업로드 심부름꾼 불러오기 (경로는 실제 파일 위치에 맞게 수정)
-import { usePostImageUpload } from '@/composables/usePostImageUpload'; 
+// 기본 프로필/사진 경로 (public 폴더에 이미지 필요)
+const defaultPersonImage = '/default-person.png'; // 기본 이미지 경로
 
+const route = useRoute();
 const router = useRouter();
-const { upload } = usePostImageUpload();
+const missingPostId = ref(route.params.id); // URL에서 /:id 값을 가져옴
 
-// --- 폼 데이터 ---
-// 실종자 정보 (실제로는 이전 페이지에서 받아오거나 API로 조회)
-const missingPerson = ref({
-  name: '김○○',
-  age: 75
+const detail = ref(null); // API로부터 받을 상세 정보 (MissingPersonDto)
+const loading = ref(true);
+const error = ref(null);
+
+// 컴포넌트 마운트 시 데이터 로드
+onMounted(() => {
+  fetchMissingPersonDetail();
 });
 
-const missingDateTime = ref(''); // 실종 일시
-const description = ref('');    // 특이사항
-const reporterContact = ref(''); // 신고자 연락처
+// 백엔드 API 호출 함수
+async function fetchMissingPersonDetail() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
+      withCredentials: true
+    });
+    detail.value = response.data;
+  } catch (err) {
+    console.error("실종자 상세 정보를 불러오는 데 실패했습니다:", err);
+    if (err.response && err.response.status === 404) {
+      error.value = "해당 실종자 정보를 찾을 수 없습니다.";
+    } else {
+      error.value = "정보를 불러오는 데 실패했습니다.";
+    }
+  } finally {
+    loading.value = false;
+  }
+}
 
-// --- 이미지 관련 데이터 ---
-const fileInput = ref(null);
-const imagePreviewUrl = ref(null);
-const uploadedImageUrl = ref(null);
-const isUploading = ref(false);
-
-// --- UI 액션 함수 ---
+// 뒤로가기 함수
 function goBack() {
   router.back();
 }
 
-function triggerFileInput() {
-  fileInput.value.click();
-}
-
-async function handleFileChange(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  imagePreviewUrl.value = URL.createObjectURL(file);
-  isUploading.value = true;
-
+// 나이 계산 함수
+function calculateAge(birthDateString) {
+  if (!birthDateString) return '?';
   try {
-    const imageUrl = await upload(file);
-    uploadedImageUrl.value = imageUrl;
-    console.log("실종자 사진 업로드 성공! 경로:", imageUrl);
-  } catch (error) {
-    alert("사진 업로드에 실패했습니다.");
-    removeImage();
-  } finally {
-    isUploading.value = false;
-  }
+    const birthDate = new Date(birthDateString);
+    if (isNaN(birthDate)) return '?';
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : '?';
+  } catch(e) { return '?'; }
 }
 
-function removeImage() {
-  imagePreviewUrl.value = null;
-  uploadedImageUrl.value = null;
-  if(fileInput.value) fileInput.value.value = '';
+// description 파싱 및 표시 함수 (개선된 버전, \n 처리 포함)
+function formatDescription(desc) {
+  if (!desc) return '상세 정보 없음';
+  // 서버에서 받은 '\n'을 실제 줄바꿈으로 변경
+  return String(desc).replace(/\\n/g, '\n'); 
 }
 
-// --- 폼 제출 함수 ---
-async function submitReport() {
-  // 간단한 유효성 검사 (필요에 따라 추가)
-  if (!missingDateTime.value || !description.value || !reporterContact.value) {
-    alert('모든 필수 정보를 입력해주세요.');
-    return;
-  }
+// '지도에서 확인' 버튼 클릭 시 동작 (실제 지도 연동 필요)
+function checkMap() {
+  // TODO: 지도 API 연동 로직 구현
+  alert('지도 연동 기능은 준비 중입니다.');
+}
 
-  // 백엔드로 보낼 데이터 준비
-  const reportData = {
-    // patientUserNo: ???, // 실제 실종자 userNo 필요 (API 설계 필요)
-    // reporterUserNo: ???, // 실제 신고자 userNo 필요 (현재 로그인 사용자)
-    photoPath: uploadedImageUrl.value,
-    description: description.value,
-    reportedAt: missingDateTime.value, // 실종 일시 필드명 확인 필요
-    contact: reporterContact.value // 신고자 연락처 필드명 확인 필요
-    // status: '실종' // 기본값은 서버에서 처리 가능
-  };
-
-  console.log('서버로 전송할 데이터:', reportData);
-
-  try {
-    isUploading.value = true; // 제출 중 상태 표시 (옵션)
-    
-    // 🚨 중요: 실제 백엔드 API 주소로 변경해야 함!
-    // const response = await axios.post('/api/missing-posts', reportData, {
-    //   withCredentials: true
-    // });
-    
-    alert('실종 신고가 접수되었습니다.'); // 임시 알림
-    // router.push('/communityMissing'); // 성공 시 목록 페이지 등으로 이동
-
-  } catch (error) {
-    console.error('실종 신고 처리 중 오류 발생:', error);
-    alert('신고 접수에 실패했습니다.');
-  } finally {
-     isUploading.value = false;
-  }
+// '함께하기' 버튼 클릭 시 동작 (실제 기능 구현 필요)
+function joinSearch() {
+  // TODO: 함께하기 API 연동 로직 구현
+  alert('함께하기 기능은 준비 중입니다.');
 }
 
 </script>
 
 <template>
-  <div class="report-container">
+  <div class="detail-container">
     <div class="header">
       <button @click="goBack" class="back-button">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10.707 13.293a1 1 0 0 1-1.414 1.414l-6-6a1 1 0 0 1 0-1.414l6-6a1 1 0 0 1 1.414 1.414L5.414 8l5.293 5.293z" fill="#525252"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 13.293a1 1 0 0 1-1.414 1.414l-6-6a1 1 0 0 1 0-1.414l6-6a1 1 0 0 1 1.414 1.414L5.414 8l5.293 5.293z" fill="#525252"/></svg>
       </button>
-      <h1 class="title">실종 신고</h1>
-    </div>
+      <h1 class="title">실종자 상세정보</h1>
+      </div>
 
-    <div class="form-content">
+    <div v-if="loading" class="status-message">정보를 불러오는 중...</div>
+    <div v-else-if="error" class="status-message error">{{ error }}</div>
+
+    <div v-else-if="detail" class="content">
       <section class="info-section">
         <h2>실종자 정보</h2>
         <div class="info-box">
           <div class="info-row">
             <span>이름</span>
-            <span>{{ missingPerson.name }}</span>
+            <span>{{ detail.patientName || '정보 없음' }}</span>
           </div>
           <div class="info-row">
             <span>나이</span>
-            <span>{{ missingPerson.age }}세</span>
+            <span>{{ calculateAge(detail.patientBirthDate) }}세</span>
+          </div>
+          <div class="info-row">
+            <span>보호자 전화번호</span>
+            <span>{{ '010-0000-0000' }}</span> </div>
+          <div class="info-row detail-description">
+            <span>상세정보</span>
+            <p>{{ formatDescription(detail.description) }}</p>
           </div>
         </div>
       </section>
 
-      <section class="form-section">
+      <section class="info-section">
         <h2>실종자 사진</h2>
-        <input type="file" ref="fileInput" @change="handleFileChange" accept="image/*" style="display: none;" />
-
-        <div v-if="imagePreviewUrl" class="preview-area">
-          <img :src="imagePreviewUrl" alt="미리보기" class="image-preview" />
-          <button @click="removeImage" class="remove-image-button">X</button>
-        </div>
-        <div v-else class="photo-uploader" @click="triggerFileInput">
-          <div class="upload-icon">📷</div>
-          <div class="upload-text-main">최근 사진을 업로드해주세요</div>
-          <button class="upload-button">사진 선택</button>
+        <div class="photo-container">
+          <img :src="detail.photoPath || defaultPersonImage" :alt="detail.patientName" class="missing-photo">
         </div>
       </section>
 
-      <section class="form-section"> 
-        <label for="missing-datetime">실종 일시</label>
-        <div class="input-with-icon">
-          <input 
-            id="missing-datetime"
-            type="datetime-local" 
-            v-model="missingDateTime"
-            class="form-input" 
-          />
-          <span class="icon-calendar">📅</span> 
-        </div>
-      </section>
-
-      <div class="info-guide">
-        <span>ℹ️</span>
-        <div>
-          <strong>실종장소 안내</strong>
-          <p>실종시간을 기반으로 예상위치 페이지에서 표시됩니다.</p>
+      <div class="guide-box">
+        <span class="guide-icon">ℹ️</span>
+        <div class="guide-text">
+          <strong>함께하기란?</strong>
+          <p>함께하기 버튼을 눌러서 자신의 위치를 실시간으로 공유하며, 실종자의 예상위치와 또다른 함께하기 중인 이웃의 위치를 확인하실 수 있습니다.</p>
         </div>
       </div>
 
-      <section class="form-section">
-        <label for="description">특이사항</label>
-        <textarea 
-          id="description"
-          v-model="description" 
-          placeholder="실종자를 찾는데 도움이 될 수 있는 모든 정보를 입력해주세요" 
-          class="form-textarea"
-        ></textarea>
-      </section>
-
-      <section class="form-section">
-        <label for="contact">신고자 연락처</label>
-        <input 
-          id="contact"
-          type="tel" 
-          v-model="reporterContact" 
-          placeholder="010-0000-0000" 
-          class="form-input"
-        />
-      </section>
-
+      <div class="button-section">
+        <button @click="checkMap" class="action-button primary">지도에서 확인</button>
+        <button @click="joinSearch" class="action-button secondary">함께하기</button>
+      </div>
     </div>
-
-    <div class="footer-buttons">
-      <button @click="submitReport" class="submit-button" :disabled="isUploading">
-        <span>⚠️</span> 긴급 실종 신고
-      </button>
-      </div>
+    
+    <div v-else class="status-message">해당 실종자 정보를 찾을 수 없습니다.</div>
 
   </div>
 </template>
 
 <style scoped>
 /* 전체 컨테이너 */
-.report-container {
+.detail-container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 500px; /* 최대 너비 제한 */
+  max-width: 500px;
   min-height: 100vh;
   margin: 0 auto;
   background-color: #FFFFFF;
-  border: 1px solid #E5E5E5; /* 테두리 추가 (선택사항) */
 }
 
 /* 헤더 */
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid #E5E5E5;
   background-color: #FFFFFF;
-  position: sticky; /* 상단 고정 */
-  top: 0;
-  z-index: 10;
+  position: sticky; top: 0; z-index: 10;
 }
 .back-button {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
+  background: none; border: none; padding: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
 .title {
-  font-size: 18px;
-  font-weight: 600; /* 조금 더 굵게 */
-  color: #171717;
-  margin: 0;
-  position: absolute; /* 중앙 정렬 트릭 */
-  left: 50%;
-  transform: translateX(-50%);
+  font-size: 18px; font-weight: 600; color: #171717; margin: 0;
+  position: absolute; left: 50%; transform: translateX(-50%);
 }
 
-/* 메인 폼 영역 */
-.form-content {
-  padding: 24px 16px 80px 16px; /* 하단 버튼 영역 확보 */
-  flex-grow: 1; /* 남은 공간 채우기 */
+/* 로딩/에러 메시지 */
+.status-message { padding: 50px; text-align: center; color: #737373; }
+.error { color: red; }
+
+/* 메인 컨텐츠 영역 */
+.content {
+  padding: 24px 16px; /* 좌우 패딩 */
+  flex-grow: 1;
 }
 
-/* 섹션 공통 스타일 */
-.form-section {
-  margin-bottom: 32px; /* 섹션 간 간격 */
+/* 정보 섹션 (실종자 정보, 사진) */
+.info-section {
+  margin-bottom: 32px;
 }
-.form-section h2 { /* 실종자 정보, 사진 섹션 제목 */
+.info-section h2 {
   font-size: 16px;
-  font-weight: 600; /* 굵게 */
+  font-weight: 600;
   color: #171717;
-  margin-bottom: 12px;
-}
-.form-section label { /* 나머지 섹션 라벨 */
-  display: block;
-  font-size: 14px;
-  font-weight: 500; /* 살짝 굵게 */
-  color: #404040;
-  margin-bottom: 8px;
+  margin: 0 0 12px 0; /* 제목 아래 여백 */
 }
 
 /* 실종자 정보 박스 */
-.info-section .info-box {
+.info-box {
   background: #FAFAFA;
   border-radius: 6px;
   padding: 16px;
+  font-size: 14px;
 }
 .info-row {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
-  color: #525252;
+  margin-bottom: 10px;
 }
-.info-row span:last-child {
+.info-row:last-child {
+  margin-bottom: 0;
+}
+.info-row span:first-child { /* 라벨 (이름, 나이 등) */
+  color: #525252;
+  flex-shrink: 0; /* 줄어들지 않게 */
+  margin-right: 16px; /* 값과의 간격 */
+}
+.info-row span:last-child { /* 값 (김OO, 75세 등) */
   color: #171717;
   font-weight: 500;
+  text-align: right; /* 오른쪽 정렬 */
 }
-.info-row:not(:last-child) {
-  margin-bottom: 8px;
+/* 상세정보는 여러 줄 가능하도록 */
+.info-row.detail-description {
+  flex-direction: column; /* 라벨과 내용을 위아래로 */
+  align-items: flex-start; /* 왼쪽 정렬 */
 }
-
-/* 사진 업로더 */
-.photo-uploader {
-  border: 2px dashed #D4D4D4;
-  border-radius: 8px;
-  padding: 26px 20px;
-  text-align: center;
-  cursor: pointer;
-  background-color: #FFFFFF; /* 배경 흰색 */
+.info-row.detail-description span:first-child {
+  margin-bottom: 6px; /* 라벨과 내용 사이 간격 */
 }
-.upload-icon { 
-  font-size: 24px; /* 아이콘 크기 */
-  color: #A3A3A3; /* 아이콘 색상 */
-  background-color: #E5E5E5; /* 아이콘 배경 */
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-} 
-.upload-text-main { 
-  font-size: 14px;
-  color: #525252; 
-  margin-bottom: 8px;
-}
-.upload-button { /* 사진 선택 버튼 */
-  background: #171717;
-  color: #FFFFFF;
-  border: none;
-  padding: 7px 16px;
-  font-size: 14px;
-  border-radius: 6px;
-  cursor: pointer;
+.info-row.detail-description p {
+  margin: 0;
+  color: #525252; /* 내용 글자색 */
+  white-space: pre-wrap; /* 줄바꿈 처리 */
+  line-height: 1.6;
+  text-align: left; /* 왼쪽 정렬 */
 }
 
-/* 이미지 미리보기 */
-.preview-area {
-  position: relative;
-  width: 100px; /* 크기 조정 */
-  height: 100px; /* 크기 조정 */
-  border: 1px solid #eee;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.image-preview {
-  display: block;
+/* 실종자 사진 */
+.photo-container {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  border-radius: 8px;
+  overflow: hidden; /* 이미지가 밖으로 나가지 않게 */
+  border: 1px solid #eee; /* 테두리 (선택사항) */
 }
-.remove-image-button {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  border-radius: 50%;
-  width: 20px; /* 크기 살짝 줄임 */
-  height: 20px; /* 크기 살짝 줄임 */
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 12px; /* X 크기 조정 */
-  line-height: 20px;
-  text-align: center;
-  padding: 0;
-}
-
-/* 입력 필드 공통 */
-.form-input, .form-textarea {
-  box-sizing: border-box;
+.missing-photo {
+  display: block; /* 이미지 아래 불필요한 공백 제거 */
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #D4D4D4;
-  border-radius: 6px;
-  font-size: 16px;
-  background: #FFFFFF;
-}
-.form-input:focus, .form-textarea:focus {
-  outline: none;
-  border-color: #8E97FD; /* 포커스 색상 */
-}
-.form-textarea {
-  min-height: 96px; /* 높이 */
-  resize: vertical;
+  height: auto; /* 비율 유지 */
+  object-fit: contain; /* 이미지가 잘리지 않게 */
+  background-color: #f0f0f0; /* 이미지 없을 때 배경색 */
 }
 
-/* 실종 일시 입력 필드 (아이콘 포함) */
-.input-with-icon {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.input-with-icon .form-input {
-  padding-right: 40px; /* 아이콘 공간 확보 */
-}
-.input-with-icon .icon-calendar {
-  position: absolute;
-  right: 12px;
-  color: #555; /* 아이콘 색상 */
-  font-size: 20px; /* 아이콘 크기 */
-}
-
-/* 실종장소 안내 박스 */
-.info-guide {
+/* 함께하기 안내 박스 */
+.guide-box {
   display: flex;
   gap: 12px;
   background: #FAFAFA;
   border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 32px;
+  padding: 16px; /* 패딩 늘림 */
+  margin-bottom: 32px; /* 아래 버튼과의 간격 */
 }
-.info-guide span:first-child { /* 아이콘 */
-  color: #737373;
-  font-size: 16px;
-  margin-top: 2px;
+.guide-icon { color: #737373; font-size: 18px; margin-top: 2px; }
+.guide-text strong {
+  display: block; font-size: 14px; font-weight: 600; color: #262626; margin-bottom: 6px;
 }
-.info-guide strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #262626;
-  margin-bottom: 4px;
-}
-.info-guide p {
-  font-size: 11px;
-  color: #525252;
-  margin: 0;
-  line-height: 1.4;
-}
+.guide-text p { font-size: 12px; color: #525252; margin: 0; line-height: 1.5; }
 
-/* 하단 버튼 영역 */
-.footer-buttons {
-  padding: 16px;
-  border-top: 1px solid #E5E5E5;
-  background-color: #FFFFFF;
-  position: sticky; /* 하단 고정 */
-  bottom: 0;
-  z-index: 10;
-}
-.submit-button {
+/* 하단 버튼 섹션 */
+.button-section {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  flex-direction: column; /* 버튼 위아래 배치 */
+  gap: 12px; /* 버튼 사이 간격 */
+  padding-bottom: 16px; /* 하단 여백 */
+}
+.action-button {
   width: 100%;
-  padding: 12px;
+  padding: 14px; /* 버튼 크기 키움 */
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600; /* 굵게 */
+  cursor: pointer;
+  text-align: center;
+}
+.action-button.primary { /* 지도에서 확인 */
   background: #525252;
   color: #FFFFFF;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500; /* 살짝 얇게 */
-  cursor: pointer;
 }
-.submit-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+.action-button.secondary { /* 함께하기 */
+  background: #E5E5E5;
+  color: #404040;
 }
-.submit-button span { /* 아이콘 */
-  font-size: 16px;
-}
-
 </style>

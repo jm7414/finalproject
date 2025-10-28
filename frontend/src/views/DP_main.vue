@@ -7,7 +7,7 @@
         <div class="card-body p-3">
           <!-- 인사 -->
           <h3 class="fw-bold mb-3" style="letter-spacing:-.2px">
-            {{ userName || '사용자' }}님 안녕하세요!
+            {{ userName || '사용자' }} 님 안녕하세요!
           </h3>
 
           <!-- 오늘 일정 카드 -->
@@ -127,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import MyInfoModal from '@/components/MyinfoModal.vue'
 
@@ -145,6 +145,10 @@ const userName = ref('')
 const patientUserNo = ref(null)
 const allSchedules = ref([])
 const isMyInfoModalOpen = ref(false)
+
+// 위치 추적 관련
+const locationUpdateInterval = ref(null)
+const locationPermissionGranted = ref(false)
 
 /** ====== 공통 fetch ====== */
 async function request(url, options = {}) {
@@ -212,19 +216,93 @@ const nextSchedule = computed(() => {
 
 /** ====== 네비게이션 ====== */
 function go(path) {
-  console.log('네비게이션:', path)
   router.push(path)
 }
 
 /** ====== 모달 관리 ====== */
 function openMyInfoModal() {
-  console.log('내 정보 모달 열기')
   isMyInfoModalOpen.value = true
 }
 
 function handleMyInfoModalClose() {
-  console.log('내 정보 모달 닫힘')
   isMyInfoModalOpen.value = false
+}
+
+/** ====== 위치 추적 관련 함수 ====== */
+// 위치 권한 요청 및 추적 시작
+async function startLocationTracking() {
+  try {
+    // 위치 권한 요청
+    const permission = await navigator.permissions.query({ name: 'geolocation' })
+    if (permission.state === 'denied') {
+      console.warn('위치 권한이 거부되었습니다.')
+      return
+    }
+
+    // 위치 추적 시작
+    locationPermissionGranted.value = true
+    updateLocation() // 즉시 한 번 실행
+    
+    // 30초마다 위치 업데이트
+    locationUpdateInterval.value = setInterval(() => {
+      updateLocation()
+    }, 30000) // 30초
+  } catch (error) {
+    console.error('위치 추적 시작 실패:', error)
+  }
+}
+
+// 위치 추적 중지
+function stopLocationTracking() {
+  if (locationUpdateInterval.value) {
+    clearInterval(locationUpdateInterval.value)
+    locationUpdateInterval.value = null
+  }
+}
+
+// 현재 위치 업데이트
+function updateLocation() {
+  if (!navigator.geolocation) {
+    console.error('Geolocation이 지원되지 않습니다.')
+    return
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      try {
+        const locationData = {
+          userNo: patientUserNo.value,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          timestamp: Date.now()
+        }
+
+        // 서버에 위치 전송
+        const response = await fetch('/api/location/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(locationData)
+        })
+
+        if (!response.ok) {
+          console.error('위치 업데이트 실패:', response.status)
+        }
+      } catch (error) {
+        console.error('위치 전송 오류:', error)
+      }
+    },
+    (error) => {
+      console.error('위치 조회 실패:', error.message)
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,        // 타임아웃 증가 (정확한 위치를 위해)
+      maximumAge: 0          // 캐시 사용 안함 (항상 새로운 위치 요청)
+    }
+  )
 }
 
 /** ====== 초기 로드 ====== */
@@ -236,6 +314,9 @@ onMounted(async () => {
     if (patientUserNo.value) {
       const list = await fetchSchedules(patientUserNo.value)
       allSchedules.value = Array.isArray(list) ? list : []
+      
+      // 환자 로그인 시 위치 추적 시작
+      await startLocationTracking()
     }
   } catch (e) {
     err.value = String(e?.message || e)
@@ -243,6 +324,11 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+// 페이지 떠날 때 위치 추적 중지
+onBeforeUnmount(() => {
+  stopLocationTracking()
 })
 </script>
 

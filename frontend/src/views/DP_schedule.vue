@@ -1,11 +1,3 @@
-<!-- 되는 부분 : 
-    1. 날짜 선택해서 날짜, 시간 값 받아와서 시간 제대로 설정했는지 확인하는 부분 
-    2. 나중에 음성인식으로 출발지점, 도착지점 받아오면 버퍼 그릴 수 있게(코드 수정 가능합니다.)
--->
-
-<!-- 아직 안되는 부분 : 
-    1. 음성인식으로 출발, 도착 지점 받아오는 부분
--->
 <template>
     <!-- 환자 헤더 -->
     <header class="app-header">
@@ -13,9 +5,11 @@
             <i class="icon bi bi-arrow-left icon-bold"></i>
         </div>
 
+
         <div class="app-title">
             <img src="/mammamialogo.png" alt="Mamma Mia Logo" class="logo-image">
         </div>
+
 
         <div class="icon-wrapper" @click="goHome">
             <i class="icon bi bi-house icon-bold"></i>
@@ -32,6 +26,7 @@
                     <span class="start-location-text">어디서 출발하세요?</span>
                     <div class="flex-row-aab">
                         <div class="sub-div-1">
+
 
                             <!--  여기가 어디서 출발하세요? -> 장소를 검색해주세요 부분 -->
                             <div class="input-div" @click="voiceSearchStart">
@@ -53,6 +48,7 @@
                                 </div>
                             </div>
 
+
                         </div>
                         <span class="search-place">장소를 검색해주세요</span>
                     </div>
@@ -61,6 +57,7 @@
                     <span class="where-are-you-going">어디로 가세요?</span>
                     <div class="flex-row-e">
                         <div class="div">
+
 
                             <!-- 여기가 어디로가세요? -> 장소를 검색해주세요 부분 -->
                             <div class="input" @click="voiceSearchEnd">
@@ -82,6 +79,7 @@
                                     </div>
                                 </div>
 
+
                             </div>
                         </div>
                         <span class="search-place-4">장소를 검색해주세요
@@ -96,6 +94,7 @@
                                 @click="checkDay('today')">
                                 <span class="span-6" :class="{ active: selectedDay == 'today' }">오늘</span>
                             </div>
+
 
                             <div class="tomorrow" :class="{ active: selectedDay == 'tomorrow' }"
                                 @click="checkDay('tomorrow')">
@@ -116,6 +115,7 @@
                     <DatePickerModal :isVisible="showModal" @close="closeModal" @confirm="handleDateConfirm" />
                 </div>
 
+
                 <!-- 몇 시에 가세요? -->
                 <div class="going-time">
                     <span class="how-many-go">몇 시에 가세요?</span>
@@ -127,6 +127,7 @@
                             </option>
                         </select>
 
+
                         <select id="time1" v-model="selectedTime1" class="form-select custom-time-select"
                             @change="onTime1Change">
                             <option value="" disabled selected hidden>시간</option>
@@ -136,6 +137,7 @@
                         </select>
                     </div>
                 </div>
+
 
                 <!-- 몇 시에 돌아오세요? -->
                 <div class="return-time">
@@ -148,6 +150,7 @@
                             </option>
                         </select>
 
+
                         <select id="time2" v-model="selectedTime2" class="form-select custom-time-select"
                             @change="onTime2Change">
                             <option value="" disabled selected hidden>시간</option>
@@ -158,14 +161,15 @@
                     </div>
                 </div>
 
+
                 <!-- 저장취소 버튼 -->
                 <div class="save-cancel">
                     <div class="div-element">
                         <div class="button-div-15" @click="scheduleRegistration()">
-                            <span class="span-schedule-save">일정 저장</span>
+                            <span class="span-schedule-save text-white">일정 저장</span>
                         </div>
                         <div class="button-div-14" @click="cancle">
-                            <span class="span-cancel">취소</span>
+                            <span class="span-cancel text-black">취소</span>
                         </div>
                     </div>
                 </div>
@@ -173,10 +177,13 @@
         </div>
     </div>
 
-    <button class="btn btn-primary" @click="requestRoute"> 경로저장 테스트</button>
-    <button class="btn btn-info" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
+
+    <button class="btn btn-primary test-btn" @click="requestRoute"> 경로저장 테스트</button>
+    <button class="btn btn-info test-btn" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
+
 
 </template>
+
 
 <script setup>
 import "./DP_schedule.css";
@@ -185,8 +192,10 @@ import { lineString, buffer, simplify } from '@turf/turf'
 import DatePickerModal from './DatePickerModal_DP_shcedule.vue'
 import { useRouter } from 'vue-router'
 
+
 const routeCoordinates = sessionStorage.getItem('routeCoordinates')
 const bufferCoordinates = sessionStorage.getItem('bufferCoordinates')
+
 
 function bufferTest() {
     if (!routeCoordinates) {
@@ -197,6 +206,7 @@ function bufferTest() {
     drawRouteOnKakaoMap(mapInstance, coords)
 }
 
+
 // ==========================================================
 // 여기서 test목적으로 구로구청 -> 버거킹 구로구청점을 테스트함
 // 나중에 음성인식 지원되는거면 어떻게 받아오는지만 해주시면 여기에 추가하겠습니다.
@@ -205,6 +215,7 @@ async function requestRoute() {
     try {
         const s = { place_name: '구로구청', x: 126.887055, y: 37.494411 }
         const d = { place_name: '버거킹 구로구청점', x: 126.890072, y: 37.494841 }
+
 
         // 카카오 응답은 x=lng, y=lat (문자열)
         const body = {
@@ -218,6 +229,7 @@ async function requestRoute() {
             resCoordType: 'WGS84GEO',
             searchOption: '0',
         }
+
 
         const resp = await fetch(`/api/route/pedestrian`, {
             method: 'POST',
@@ -234,8 +246,10 @@ async function requestRoute() {
             return
         }
 
+
         // GeoFencingView에서 사용할 좌표를 세션 스토리지로 전달
         sessionStorage.setItem('routeCoordinates', JSON.stringify(data.coordinates))
+
 
         // 출발지/목적지 정보도 세션 스토리지에 저장 (일정 저장 시 사용)
         const locationData = [
@@ -258,6 +272,7 @@ async function requestRoute() {
     }
 }
 
+
 const router = useRouter()
 const mapContainer = ref(null)
 const bufferLevel = ref('1')
@@ -267,11 +282,13 @@ let currentBuffer = null
 let startMarker = null
 let endMarker = null
 
+
 /* 카카오 지도 */
 const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
 onMounted(() => {
     loadKakaoMap(mapContainer.value)
 })
+
 
 function loadKakaoMap(container) {
     const script = document.createElement('script')
@@ -286,6 +303,7 @@ function loadKakaoMap(container) {
                 maxLevel: 14,
             }
             mapInstance = new window.kakao.maps.Map(container, options)
+
 
         })
     }
@@ -302,14 +320,17 @@ function drawRouteOnKakaoMap(map, coords) {
         return
     }
 
+
     // Kakao LatLng 배열로 변환 (new kakao.maps.LatLng(위도, 경도))
     const path = coords.map((c) => new kakao.maps.LatLng(c.latitude, c.longitude))
+
 
     // 기존 경로/버퍼/마커 제거
     if (currentPolyline) currentPolyline.setMap(null)
     if (currentBuffer) currentBuffer.setMap(null)
     if (startMarker) startMarker.setMap(null)
     if (endMarker) endMarker.setMap(null)
+
 
     // Polyline 생성
     currentPolyline = new kakao.maps.Polyline({
@@ -320,17 +341,21 @@ function drawRouteOnKakaoMap(map, coords) {
         strokeStyle: 'solid',
     })
 
+
     // 기존 폴리라인 제거
     if (currentPolyline) {
         currentPolyline.setMap(null)
     }
 
+
     // 지도에 Polyline 표시
     currentPolyline.setMap(map)
+
 
     // 시작점과 끝점에 마커 추가
     const startPoint = coords[0]
     const endPoint = coords[coords.length - 1]
+
 
     startMarker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(startPoint.latitude, startPoint.longitude),
@@ -347,6 +372,7 @@ function drawRouteOnKakaoMap(map, coords) {
         )
     })
 
+
     endMarker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(endPoint.latitude, endPoint.longitude),
         map: map,
@@ -362,14 +388,17 @@ function drawRouteOnKakaoMap(map, coords) {
         )
     })
 
+
     // 버퍼 생성
     createBuffer(map, coords)
+
 
     // 경로 전체가 한 화면에 보이도록 지도 범위 맞추기
     const bounds = new window.kakao.maps.LatLngBounds()
     path.forEach((latLng) => bounds.extend(latLng))
     map.setBounds(bounds)
 }
+
 
 /**
  * Turf.js를 사용해 경로 주변에 버퍼를 생성하고 카카오맵에 폴리곤으로 그립니다.
@@ -379,8 +408,10 @@ function createBuffer(map, coords) {
         // 1) 좌표를 Turf 형식으로 변환 [lng, lat]
         const turfCoords = coords.map(c => [c.longitude, c.latitude])
 
+
         // 2) LineString 생성
         const line = lineString(turfCoords)
+
 
         // 3) 단계별 버퍼 크기 설정 (미터 단위)
         //============================================================//
@@ -389,21 +420,26 @@ function createBuffer(map, coords) {
             '1': 30,   // 30m
         }
 
+
         const bufferSize = bufferSizes['1'] || 30
+
 
         // 4) 버퍼 생성
         const buffered = buffer(line, bufferSize, { units: 'meters' })
+
 
         // 5) 기존 버퍼 제거
         if (currentBuffer) {
             currentBuffer.setMap(null)
         }
 
+
         // 6) GeoJSON Polygon을 카카오맵 폴리곤으로 변환
         const coordinates = buffered.geometry.coordinates[0] // 외곽 링
         const kakaoPath = coordinates.map(coord =>
             new kakao.maps.LatLng(coord[1], coord[0]) // [lng, lat] -> (lat, lng)
         )
+
 
         // 7) 카카오맵 폴리곤 생성
         currentBuffer = new kakao.maps.Polygon({
@@ -415,21 +451,27 @@ function createBuffer(map, coords) {
             fillOpacity: 0.4
         })
 
+
         // 8) 지도에 표시
         currentBuffer.setMap(map)
+
 
         // 9) 버퍼 좌표를 저장 (나중에 위치 판정용)
         sessionStorage.setItem('routeBufferPolygon', JSON.stringify(coordinates))
 
+
         console.log(`버퍼 생성 완료: ${bufferSize}m (${bufferLevel.value}단계)`)
+
 
     } catch (error) {
         console.error('버퍼 생성 중 오류:', error)
     }
 }
 
+
 // ==========================================================
 // 출발장소 도착장소 로직 끝
+
 
 // 시간설정 로직 부분
 // ==========================================================
@@ -437,14 +479,17 @@ const selectedDay = ref('')
 const ampm = ['오전', '오후']
 const time_ = ['1시', '2시', '3시', '4시', '5시', '6시', '7시', '8시', '9시', '10시', '11시', '12시']
 
+
 const selectedAmpm1 = ref('')
 const selectedAmpm2 = ref('')
 const selectedTime1 = ref('')
 const selectedTime2 = ref('')
 
+
 if (selectedDay.value) {
     customDate.value === '다른 날짜'
 }
+
 
 function checkDay(s) {
     selectedDay.value = s
@@ -453,17 +498,21 @@ function checkDay(s) {
     }
 }
 
+
 function cancle() {
     window.location.reload();
 }
+
 
 function onTime1Change() {
     console.log('시간1 변경:', selectedTime1.value)
 }
 
+
 function onTime2Change() {
     console.log('시간2 변경:', selectedTime2.value)
 }
+
 
 // 
 function save() {
@@ -474,6 +523,7 @@ function save() {
         alert(`시간을 설정해주세요`)
         return
     }
+
 
     if (selectedAmpm1.value === '오후' && selectedAmpm2.value === '오전') {
         alert('오전과 오후가 바뀐걸까요?')
@@ -490,20 +540,24 @@ function save() {
             return
         } else {
 
+
             // 오늘 선택일떄 현재시간보다 빠른일정 등록 방지
             if (selectedDay.value === 'today') {
                 // 현재 시/분 및 오후/오전 계산
                 const now = new Date();
                 let nowHour = now.getHours();
 
+
                 // 현재 오전/오후 및 12시간제 시 계산
                 const nowAmpm = nowHour < 12 ? '오전' : '오후';
                 let nowHour12 = nowHour % 12;
                 if (nowHour12 === 0) nowHour12 = 12; // 0시는 12시
 
+
                 // 사용자 입력(문자열 숫자 -> 실제 숫자!)
                 const pickAmpm = selectedAmpm1.value;
                 const pickHour = Number(selectedTime1.value.replace('시', ''));
+
 
                 // 비교: 오전/오후가 기준, 그리고 시 기준 비교
                 let isPast = false;
@@ -514,6 +568,7 @@ function save() {
                 } else if (pickAmpm === '오전' && nowAmpm === '오후') {
                     isPast = true;
                 }
+
 
                 if (isPast) {
                     alert('현재 시간보다 빠른 일정은 설정할 수 없습니다.');
@@ -536,14 +591,17 @@ function save() {
             const now = new Date();
             let nowHour = now.getHours();
 
+
             // 현재 오전/오후 및 12시간제 시 계산
             const nowAmpm = nowHour < 12 ? '오전' : '오후';
             let nowHour12 = nowHour % 12;
             if (nowHour12 === 0) nowHour12 = 12; // 0시는 12시
 
+
             // 사용자 입력(문자열 숫자 -> 실제 숫자!)
             const pickAmpm = selectedAmpm1.value;
             const pickHour = Number(selectedTime1.value.replace('시', ''));
+
 
             // 비교: 오전/오후가 기준, 그리고 시 기준 비교
             let isPast = false;
@@ -554,6 +612,7 @@ function save() {
             } else if (pickAmpm === '오전' && nowAmpm === '오후') {
                 isPast = true;
             }
+
 
             if (isPast) {
                 alert('현재 시간보다 빠른 일정은 설정할 수 없습니다.');
@@ -569,31 +628,38 @@ function save() {
 const showModal = ref(false)
 const customDate = ref('다른 날짜')
 
+
 function openModal() {
     selectedDay.value = 'other'
     showModal.value = true
 }
 
+
 function closeModal() {
     showModal.value = false
 }
+
 
 // 모달에서 오늘보다 전 일정 선택 방지
 function handleDateConfirm(date) {
     const pickedDate = new Date(date)
 
+
     const today = new Date();
     today.setHours(0, 0, 0, 0)
+
 
     if (pickedDate < today) {
         alert('오늘보다 전 일정은 등록할 수 없어요')
         return
     }
 
+
     customDate.value = date
     selectedDay.value = 'other'
     closeModal()
 }
+
 
 // 일정추가 API
 async function scheduleRegistration(userNo, startLoc, endLoc, date, startTime, endTime) {
@@ -621,29 +687,36 @@ async function scheduleRegistration(userNo, startLoc, endLoc, date, startTime, e
         throw new Error(error.message || `일정 ${isEditMode.value ? '수정' : '저장'}에 실패했습니다.`)
     }
 
+
     const result = await response.json()
     console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 성공:`, result)
 }
+
 
 // 장소입력 출발~도착
 function voiceSearchStart() {
     alert(`시작`)
 }
 
+
 function voiceSearchEnd() {
     alert(`끝`)
 }
+
 
 /* 헤더 */
 function goBack() {
   router.go(-1)
 }
 
+
 function goHome() {
     router.push('/DP');
 }
 
+
 </script>
+
 
 <style scoped>
 .main-container,
@@ -661,9 +734,11 @@ function goHome() {
     /* 뷰포트 너비 초과 방지 */
 }
 
+
 .bd {
     border: dashed 2px violet;
 }
+
 
 .DP_today.active,
 .tomorrow.active,
@@ -673,16 +748,19 @@ function goHome() {
     border-color: rgba(74, 98, 221, 0.85);
 }
 
+
 .span-6.active,
 .span-7.active,
 .span-8.active {
     color: #FFFFFF !important;
 }
 
+
 .span-9.active {
     font-size: 20px;
     color: #FFFFFF !important;
 }
+
 
 /** modal */
 .modal-overlay {
@@ -698,6 +776,7 @@ function goHome() {
     z-index: 9999 !important;
 }
 
+
 .modal-content {
     background: white;
     border-radius: 12px;
@@ -711,12 +790,14 @@ function goHome() {
     /* z-index 적용을 위해 필수 */
 }
 
+
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
+
 
 .close-btn {
     background: none;
@@ -725,9 +806,11 @@ function goHome() {
     cursor: pointer;
 }
 
+
 .modal-body {
     margin-bottom: 20px;
 }
+
 
 .date-input {
     width: 100%;
@@ -737,11 +820,13 @@ function goHome() {
     border-radius: 8px;
 }
 
+
 .modal-footer {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
 }
+
 
 .confirm-btn,
 .cancel-btn {
@@ -752,15 +837,18 @@ function goHome() {
     font-size: 16px;
 }
 
+
 .confirm-btn {
     background: rgba(74, 98, 221, 0.85);
     color: white;
 }
 
+
 .cancel-btn {
     background: #ddd;
     color: #333;
 }
+
 
 /* ===== Bootstrap 5 기반 커스텀 select 스타일 ===== */
 .custom-time-select {
@@ -773,6 +861,7 @@ function goHome() {
     border: 1px solid #ced4da;
     border-radius: 0.375rem;
     height: 100px !important;
+    cursor: pointer;
     /* Bootstrap 5의 form-select 화살표 유지 */
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
@@ -780,15 +869,18 @@ function goHome() {
     background-size: 16px 20px;
 }
 
+
 /* placeholder 색상 (선택 안 된 상태) */
 .custom-time-select option[disabled] {
     color: #6c757d !important;
 }
 
+
 /* 선택된 값 색상 */
 .custom-time-select:not([value=""]) {
     color: #5d656d !important;
 }
+
 
 /* focus 시 스타일 */
 .custom-time-select:focus {
@@ -796,6 +888,7 @@ function goHome() {
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(74, 98, 221, 0.25);
 }
+
 
 /* option 스타일 */
 .custom-time-select option {
@@ -805,6 +898,7 @@ function goHome() {
     font-size: 22px;
 }
 
+
 /* div 레이아웃 */
 .div-a,
 .div-e {
@@ -812,6 +906,7 @@ function goHome() {
     gap: 0.5rem;
     align-items: center;
 }
+
 
 /* 시간 관련 라벨 */
 .how-many-go,
@@ -821,6 +916,7 @@ function goHome() {
     font-weight: 500;
     color: #212529;
 }
+
 
 /* 환자 헤더 */
 .app-header {
@@ -839,15 +935,18 @@ function goHome() {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+
 .app-title {
   font-size: 18px;
   font-weight: 700;
   color: #333;
 }
 
+
 .icon-wrapper {
   cursor: pointer;
 }
+
 
 .icon-wrapper .icon {
   width: 24px;
@@ -855,15 +954,139 @@ function goHome() {
   fill: #000000;
 }
 
+
 .icon-bold {
   font-size: 1.3rem;
   -webkit-text-stroke: 0.8px currentColor;
 }
+
 
 .logo-image {
   height: 32px;
   /* 또는 원하는 크기로 조정 */
   object-fit: contain;
 }
+
+
+/* 날짜 선택 버튼들 */
+.DP_today,
+.tomorrow,
+.day-after-tomorrow,
+.other-date {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+
+.DP_today:hover,
+.tomorrow:hover,
+.day-after-tomorrow:hover,
+.other-date:hover {
+    opacity: 0.8;
+}
+
+
+/* 음성 검색 입력 영역 */
+.input-div,
+.input {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+
+.input-div:hover,
+.input:hover {
+    opacity: 0.8;
+}
+
+
+/* 일정 저장/취소 버튼 스타일 */
+.button-div-15,
+.button-div-14 {
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+
+/* 일정 저장 버튼 - 파란색 */
+.button-div-15 {
+    background: rgba(74, 98, 221, 0.85);
+    color: #FFFFFF;
+    box-shadow: 0 4px 6px rgba(74, 98, 221, 0.3);
+}
+
+
+.button-div-15:hover {
+    background: rgba(74, 98, 221, 1);
+    box-shadow: 0 6px 8px rgba(74, 98, 221, 0.4);
+    transform: translateY(-2px);
+}
+
+
+.button-div-15:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(74, 98, 221, 0.3);
+}
+
+
+/* 취소 버튼 - 회색 */
+.button-div-14 {
+    background: #ddd;
+    color: #333;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+
+.button-div-14:hover {
+    background: #c5c5c5;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+
+.button-div-14:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+
+.span-schedule-save{
+    cursor: pointer;
+}
+
+.span-cancel {
+    cursor: pointer;
+    position: absolute;
+    top: 20px;     /* 위에서부터 거리 */
+    margin-right: 28px;    /* 왼쪽에서부터 거리 */
+}
+
+
+/* 테스트 버튼들 */
+.test-btn {
+    cursor: pointer;
+    margin: 10px 5px;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+
+.test-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+
+.test-btn:active {
+    transform: translateY(0);
+}
+
 
 </style>

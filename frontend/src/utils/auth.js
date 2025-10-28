@@ -53,6 +53,10 @@ export async function logout() {
     await axios.post(`/api/logout`, {}, {
       withCredentials: true
     })
+    
+    // 로그아웃 시 안심존 상태 정리
+    localStorage.removeItem('safeZoneEnabled')
+    
     return true
   } catch (error) {
     console.error('로그아웃 실패:', error)

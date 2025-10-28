@@ -323,4 +323,13 @@
   LIMIT 1
 </select>
 
+<!-- 구독 취소: subscribe_endtime을 현재 시간으로 설정 -->
+<update id="cancelSubscription" parameterType="map">
+    UPDATE guardian_patient_connection
+    SET subscribe_endtime = #{cancelTs, jdbcType=TIMESTAMP}
+    WHERE guardian1_no = #{guardianNo}
+       OR guardian2_no = #{guardianNo}
+       OR guardian3_no = #{guardianNo}
+</update>
+
 </mapper>

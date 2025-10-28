@@ -5,7 +5,7 @@
       <div class="profile-section">
         <ProfileMarker class="profile-icon" />
         <div class="greeting-text">
-          <div class="greeting-title">User 님 안녕하세요!</div>
+          <div class="greeting-title">{{ userName }} 님 안녕하세요!</div>
           <div class="greeting-subtitle">필요한 지원을 찾아보세요</div>
         </div>
       </div>
@@ -68,6 +68,8 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import MoneyMarker from '@/components/MoneyMarker.vue' 
 import BohumMarker from '@/components/BohumMarker.vue' 
 import SangDamMarker from '@/components/SangDamMarker.vue' 
@@ -75,6 +77,33 @@ import HospitalMarker from '@/components/HospitalMarker.vue'
 import ProfileMarker from '@/components/ProfileMarker.vue' 
 
 const router = useRouter()
+
+// ✅ 추가: 사용자 정보 저장
+const userData = ref(null)
+
+// ✅ 수정: computed에서 userData 사용
+const userName = computed(() => {
+  return userData.value?.name || 'User'
+})
+
+// ✅ 추가: 사용자 정보 로드 함수
+const loadUserData = async () => {
+  try {
+    const response = await axios.get('/api/user/me')
+    userData.value = response.data
+  } catch (error) {
+    console.error('사용자 정보 로드 실패:', error)
+    if (error.response?.status === 401) {
+      alert('로그인이 필요합니다.')
+      router.push('/login')
+    }
+  }
+}
+
+// ✅ 추가: 컴포넌트 마운트 시 데이터 로드
+onMounted(() => {
+  loadUserData()
+})
 
 function goBenefit() {
   router.push('/benefit')
@@ -94,9 +123,10 @@ function goHospitalCare() {
 .dashboard {
   max-width: 500px;
   margin: 0 auto;
-  margin-top: 35px;
+  margin-top: -15px;
   padding: 16px;
   background: #f7f8fa;
+  max-height: 650px;
 }
 
 /* 상단 카드 */
@@ -106,6 +136,7 @@ function goHospitalCare() {
   padding: 16px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   margin-bottom: 16px;
+  margin-top: -8px;
 }
 .profile-section {
   display: flex;
@@ -135,6 +166,7 @@ function goHospitalCare() {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
+  
 }
 .summary-btn {
   flex: 1;
@@ -160,6 +192,7 @@ function goHospitalCare() {
 .summary-label {
   font-size: 15px;
   font-weight: 500;
+  letter-spacing: -1.5px;
 }
 .summary-count {
   font-size: 24px;
@@ -203,12 +236,12 @@ function goHospitalCare() {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 230px;
+  height: 205px;
 }
 .func-icon {
   width: 60px;
   height: 60px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .func-title {
   font-size: 20px;
