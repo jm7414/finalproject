@@ -38,6 +38,7 @@ import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
 import DP_ModifyInfo from '@/views/DP_ModifyInfo.vue'
+import HospitalCare from '@/views/HospitalCare.vue'
 import GD_ModifyInfo from '@/views/GD_ModifyInfo.vue'
 import GD_AdminDP from '@/views/GD_AdminDP.vue'
 
@@ -214,6 +215,12 @@ const router = createRouter({
       path: '/heartCare',
       name: 'heartCare',
       component: HeartCare,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
+    {
+      path: '/hospitalCare',
+      name: 'hospitalCare',
+      component: HospitalCare,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {

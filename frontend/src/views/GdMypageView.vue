@@ -6,8 +6,9 @@
           <!-- 상단 프로필 영역 -->
           <div class="content-section">
             <div class="content-1">
+              <!-- 지현수정: 프로필 사진 동적 표시 -->
               <div class="image">
-                <div class="frame"></div>
+                <div class="frame" :style="frameStyle"></div>
               </div>
               <div class="flex-column">
                 <div class="content-2">
@@ -34,7 +35,7 @@
               </div>
             </div>
 
-            <!-- 환자 초대코드 연결 (수정됨) -->
+            <!-- 환자 초대코드 연결 -->
             <div class="div-a" @click="goToGdc" style="cursor: pointer;">
               <div class="div-b">
                 <div class="div-c">
@@ -133,9 +134,29 @@ const router = useRouter()
 const userData = ref(null)
 const subscriptionData = ref(null)
 
+// 지현수정: 프로필 사진 URL 상태 추가
+const profilePhotoUrl = ref('')
+
 // Computed 속성
 const guardianName = computed(() => {
   return userData.value?.name || 'User'
+})
+
+// 지현수정: 프로필 사진 스타일 (배경 이미지)
+const frameStyle = computed(() => {
+  if (profilePhotoUrl.value) {
+    return {
+      backgroundImage: `url(${profilePhotoUrl.value})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center top' // 상단 중앙 정렬
+    }
+  }
+  // 기본 이미지
+  return {
+    backgroundImage: 'url(https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-16/WtZK7A4Uep.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center'
+  }
 })
 
 const subscriptionStatus = computed(() => {
@@ -152,14 +173,11 @@ const currentPlan = computed(() => {
     : '베이직 플랜 이용중'
 })
 
-// 수정: subscriptionStatus가 0이면 '-' 표시
 const nextPaymentDate = computed(() => {
-  // 구독 상태가 아니면 '-' 표시
   if (subscriptionStatus.value !== 1) {
     return '-'
   }
 
-  // 구독 상태인데 날짜 정보가 없으면 '-' 표시
   if (!subscriptionData.value?.subscriptionEndTime) {
     return '-'
   }
@@ -177,6 +195,9 @@ const loadMyPageData = async () => {
     // 1. 사용자 기본 정보 조회
     const userResponse = await axios.get('/api/user/me')
     userData.value = userResponse.data
+
+    // 지현수정: 프로필 사진 URL 저장
+    profilePhotoUrl.value = userResponse.data.profilePhoto || ''
 
     // 2. 구독 정보 조회 (보호자인 경우)
     if (userData.value.roleNo === 1) {
@@ -216,8 +237,6 @@ const goToAdminDP = () => {
   router.push('/gdadmindp')
 }
 
-const u = (p: string) => encodeURI(p)
-
 const goToBilling = () => {
   router.push('/basicplan')
 }
@@ -255,17 +274,13 @@ const handleLogout = async () => {
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  /* 화면에 딱 맞게 */
   max-width: 480px;
-  /* 모바일 최대폭 */
   max-height: 720px;
   margin-top: -30px;
   background: #fff;
   border: none;
-  /* 테두리 제거 */
   border-radius: 0;
   overflow: hidden;
-  /* 가로 스크롤 방지 */
 }
 
 .body,
@@ -277,7 +292,6 @@ const handleLogout = async () => {
   width: 100% !important;
   height: auto;
   overflow: visible;
-  /* 내부 스크롤 제거 */
 }
 
 input,
@@ -296,9 +310,7 @@ button {
 .content-1 {
   position: relative;
   width: calc(100% - 32px);
-  /* 좌우 16px 마진 기준 */
   height: 64px;
-  /* 살짝 줄여서 스크롤 여유 확보 */
   margin: 24px 0 0 16px;
 }
 
@@ -313,12 +325,15 @@ button {
   justify-content: center;
 }
 
+/* 지현수정: 프로필 이미지 스타일 - 상단 중앙 정렬 */
 .frame {
   width: 64px;
   height: 64px;
   border-radius: 9999px;
   overflow: hidden;
-  background: url(https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-16/WtZK7A4Uep.png) no-repeat center/cover;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
 }
 
 .flex-column {
@@ -359,7 +374,6 @@ button {
   width: calc(100% - 32px);
   height: 0;
   margin: 16px 0 0 16px;
-  /* 살짝 간격 축소 */
 }
 
 /* =========== 메뉴 리스트 =========== */
@@ -368,7 +382,6 @@ button {
   background: #fff;
 }
 
-/* 각 행 높이 살짝 축소(73px -> 64px), 폭은 가변 */
 .content-4,
 .div-a,
 .div-12,
@@ -378,12 +391,9 @@ button {
   width: calc(100% - 32px);
   height: 64px;
   margin: 6px 0 0 16px;
-  /* 상단 여백 살짝 줄임 */
   border-top: 1px solid #d9d9d9;
-  /* 살짝 더 진한 회색으로 변경 */
 }
 
-/* 왼쪽 파란 네모(아이콘 박스) */
 .div-5,
 .div-c,
 .div-14,
@@ -401,14 +411,12 @@ button {
   border-radius: 8px;
 }
 
-/* 아이콘 크기/색 */
 .menu-bi {
   font-size: 20px;
   color: #171717;
   line-height: 1;
 }
 
-/* 라벨들 */
 .my-info-edit,
 .patient-invite-code-connection,
 .patient-info-management,
@@ -423,7 +431,6 @@ button {
   white-space: nowrap;
 }
 
-/* 오른쪽 꺾쇠: 오른쪽 고정 + 수직 중앙정렬 (수정됨 - icon-gdc 추가) */
 .icon-7,
 .icon-gdc,
 .i-18,
@@ -445,7 +452,7 @@ button {
   color: #6c757d !important;
 }
 
-/* =========== 로그아웃 스타일 추가 =========== */
+/* =========== 로그아웃 =========== */
 .div-logout {
   position: relative;
   width: calc(100% - 32px);
@@ -505,15 +512,11 @@ button {
   margin: 20px 0 16px 16px;
   background: #fafafa;
   border: 2px solid rgba(74, 98, 221, 0.85);
-  /* 파란색 테두리 추가 */
   border-radius: 8px;
-  /* 내부 스크롤 방지 */
   overflow: visible;
-  /* 절대 positioned 자식 높이 보완 */
   min-height: 158px;
 }
 
-/* 제목 줄 */
 .div-2e {
   position: relative;
   width: calc(100% - 34px);
@@ -530,7 +533,6 @@ button {
   color: #171717;
 }
 
-/* 활성 배지: 오른쪽 고정 (좌우 스크롤 방지) */
 .div-2f {
   position: absolute;
   top: 2px;
@@ -560,7 +562,6 @@ button {
   white-space: nowrap;
 }
 
-/* 본문 텍스트 블럭 */
 .div-30 {
   position: absolute;
   top: 56px;
