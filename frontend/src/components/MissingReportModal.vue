@@ -159,14 +159,15 @@ function closeModal() {
             class="form-input"
           />
         </section>
-      </div>
-
-      <div class="modal-footer">
+        <div class="modal-footer">
         <button @click="submitReport" class="action-button primary" :disabled="isUploading">
           <span>⚠️</span> 
           {{ isUploading ? '신고 중...' : '긴급 실종 신고' }}
         </button>
       </div>
+      </div>
+
+
 
     </div>
   </div>
@@ -291,14 +292,9 @@ function closeModal() {
 .guide-box p { font-size: 11px; color: #525252; margin: 0; line-height: 1.4; }
 
 /* 푸터 (버튼) */
-.modal-footer {
-  padding: 16px;
-  border-top: 1px solid #E5E5E5;
-  flex-shrink: 0; /* 높이 고정 */
-}
 .action-button {
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 12px; background: #525252; color: #FFFFFF;
+  width: 100%; margin-bottom: 90px; padding: 12px; background: #525252; color: #FFFFFF;
   border: none; border-radius: 8px; font-size: 16px; font-weight: 500;
   cursor: pointer;
 }
