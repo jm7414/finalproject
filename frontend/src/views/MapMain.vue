@@ -48,6 +48,7 @@
       @go-to-my-page="goToMyPage"
       @report-missing="reportMissing"
       @go-to-connect="goToConnect"
+      @statusUpdated="fetchPatientInfo"
     />
 
     <!-- 안심존 상태 카드 -->
@@ -94,7 +95,8 @@ const patientInfo = ref({
   name: '',
   userNo: null,
   isOnline: false,
-  lastActivity: null
+  lastActivity: null,
+  user_status: 0 // 환자 상태변경 기본값
 })
 
 // 환자 위치 관련 변수들은 usePatientLocation composable에서 관리
@@ -338,7 +340,8 @@ async function fetchPatientInfo() {
       name: patient.name || '',
       userNo: patient.userNo,
       isOnline: false, // 초기에는 오프라인으로 설정 (위치 조회 후 업데이트)
-      lastActivity: null // 초기에는 null로 설정 (위치 조회 후 업데이트)
+      lastActivity: null, // 초기에는 null로 설정 (위치 조회 후 업데이트)
+      user_status: patient.user_status || 0 // 실종신고 기능 때문에 추가함
     }
     
     return patient.userNo

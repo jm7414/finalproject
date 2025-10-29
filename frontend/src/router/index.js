@@ -6,6 +6,7 @@ import GeoFencingView from '@/views/GeoFencingView.vue'
 import SearchRouteView from '@/views/SearchRouteView.vue'
 import Signup from '@/views/SignUp.vue'
 import Login from '@/views/Login.vue'
+import MissingReport from '@/components/MissingReport.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
@@ -37,6 +38,7 @@ import HeartCare from '@/views/heartCare.vue'
 import DP_schedule from '@/views/DP_schedule.vue'
 import Benefit from '@/views/Benefit.vue'
 import DP_ModifyInfo from '@/views/DP_ModifyInfo.vue'
+import HospitalCare from '@/views/HospitalCare.vue'
 import GD_ModifyInfo from '@/views/GD_ModifyInfo.vue'
 import GD_AdminDP from '@/views/GD_AdminDP.vue'
 
@@ -94,6 +96,13 @@ const router = createRouter({
     },
     
     // 병욱 게시판 시작
+{       
+      path: '/MissingReport',
+      name: 'MissingReport',
+      
+      component: MissingReport,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
     {
       path: '/CommunityView',
       name: 'CommunityView',
@@ -206,6 +215,12 @@ const router = createRouter({
       path: '/heartCare',
       name: 'heartCare',
       component: HeartCare,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
+    {
+      path: '/hospitalCare',
+      name: 'hospitalCare',
+      component: HospitalCare,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
