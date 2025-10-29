@@ -36,18 +36,18 @@ public class MissingPersonController {
         return ResponseEntity.ok(missingPersons);
     }
 
-    // /**
-    //  * 특정 실종 신고 ID로 상세 정보를 조회하는 API
-    //  */
-    // @GetMapping("/{missingPostId}")
-    // public ResponseEntity<MissingPersonDto> getMissingPersonDetailById(@PathVariable Integer missingPostId) {
-    //     MissingPersonDto missingPersonDetail = missingPersonService.getMissingPersonDetailById(missingPostId); // Service에 이 메서드 필요
-    //     if (missingPersonDetail != null) {
-    //         return ResponseEntity.ok(missingPersonDetail);
-    //     } else {
-    //         return ResponseEntity.notFound().build();
-    //     }
-    // }
+    /**
+     * 특정 실종 신고 ID로 상세 정보를 조회하는 API
+     */
+@GetMapping("/{missingPostId}")
+  public ResponseEntity<MissingPersonDto> getMissingPersonDetailById(@PathVariable Integer missingPostId) {
+    MissingPersonDto missingPersonDetail = missingPersonService.getMissingPersonDetailById(missingPostId);
+    if (missingPersonDetail != null) {
+      return ResponseEntity.ok(missingPersonDetail);
+    } else {
+      return ResponseEntity.notFound().build();
+    }
+  }
 
     /**
      * 새로운 실종 신고를 접수하고 해당 사용자의 user_status를 1로 변경하는 API
@@ -68,7 +68,8 @@ public class MissingPersonController {
         }
 
         try {
-            MissingPersonDto createdReport = missingPersonService.createMissingPersonReportAndUpdateStatus(missingPersonDto, reporterUserId);
+            MissingPersonDto createdReport = missingPersonService
+                    .createMissingPersonReportAndUpdateStatus(missingPersonDto, reporterUserId);
             return new ResponseEntity<>(createdReport, HttpStatus.CREATED);
         } catch (Exception e) {
             System.err.println("실종 신고 처리 중 오류 발생: " + e.getMessage());

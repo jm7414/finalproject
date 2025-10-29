@@ -96,80 +96,51 @@
             </div>
         </div>
 
-        <!-- 컨텐츠 영역 -->
+        <!-- 컨텐츠 영역 김병욱 시작-->
         <div class="content-section">
             <!-- 실종자 정보 -->
             <div v-if="selectedType === 'info'" class="missing-person-info">
-                <div class="info-header-section">
-                    <div class="profile-image-wrapper">
-                        <img class="profile-image" src="../assets/logo.svg" alt="실종자 사진" />
-                        <div class="profile-border-glow"></div>
-                    </div>
 
-                    <div class="basic-info-wrapper">
-                        <div class="name-age-row">
-                            <h2 class="person-name">김○○ (78세)</h2>
-                        </div>
-                        <p class="age-info">
-                            <i class="bi bi-clock"></i>
-                            {{ Math.floor(elapsedMinutes / 60) }}시간 전
-                        </p>
-                        <p class="missing-datetime">
-                            <i class="bi bi-calendar-event"></i>
-                            실종일시: {{ missingTime }}
-                        </p>
-                        <p class="missing-location">
-                            <i class="bi bi-geo-alt"></i>
-                            실종장소: 서울 강남구 역삼동
-                        </p>
+                    <div v-if="personLoading" class="status-message">정보를 불러오는 중...</div>
+                    <div v-else-if="personError" class="status-message error">{{ personError }}</div>
+
+                    <div v-else-if="personDetail" class="detail-content-wrapper">
+                        <section class="info-section">
+                            <h2>실종자 사진</h2>
+                            <div class="photo-container">
+                                <img :src="personDetail.photoPath || defaultPersonImage" :alt="personDetail.patientName" class="missing-photo">
+                            </div>
+                        </section>
+
+                        <section class="info-section">
+                            <h2>실종자 정보</h2>
+                            <div class="info-box">
+                                <div class="info-row">
+                                    <span>이름</span>
+                                    <span>{{ personDetail.patientName || '정보 없음' }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span>나이</span>
+                                    <span>{{ calculateAge(personDetail.patientBirthDate) }}세</span>
+                                </div>
+                                <div class="info-row">
+                                    <span>[DB] 실종시간 (확인용)</span>
+                                    <span>{{ missingTimeDB }}</span>
+                                </div>
+                                <div class="info-row detail-description">
+                                    <span>상세정보</span>
+                                    <p>{{ formatDescription(personDetail.description) }}</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
+                    
+                    <div v-else class="status-message">해당 실종자 정보를 찾을 수 없습니다.</div>
                 </div>
 
-
-
-
-                <!-- 병욱 작업공간 확보  시작 -->
-
-
-
-                <div class="detail-sections">
-                    <div class="info-item glass-card">
-                        <div class="info-badge">
-                            <i class="bi bi-person-badge"></i>
-                            <span class="badge-label">신체 특징</span>
-                        </div>
-                        <span class="info-content">키 160cm, 지적장애</span>
+                <div v-if="selectedType === 'map'" class="prediction-list">
                     </div>
 
-                    <div class="info-item glass-card">
-                        <div class="info-badge">
-                            <i class="bi bi-bag"></i>
-                            <span class="badge-label">착의사항</span>
-                        </div>
-                        <span class="info-content">회색 티셔츠, 흰색 운동화</span>
-                    </div>
-
-                    <div class="info-item glass-card">
-                        <div class="info-badge">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            <span class="badge-label">특이사항</span>
-                        </div>
-                        <span class="info-content">키 160cm, 지적장애</span>
-                    </div>
-
-                    <div class="info-item glass-card">
-                        <div class="info-badge">
-                            <i class="bi bi-people"></i>
-                            <span class="badge-label">함께하는 이웃</span>
-                        </div>
-                        <span class="info-content">3명</span>
-                        <button class="btn btn-info modern-btn" @click="wherePeople">
-                            <i class="bi bi-arrow-right-circle"></i>
-                            함께하는 사람 보기
-                        </button>
-                    </div>
-                </div>
-            </div>
 
 
                 <!-- 병욱 작업공간 확보  끝 -->
@@ -302,12 +273,84 @@
 
 
 
+//  상태 변수 (이름 충돌 없음)
+const personDetail = ref(null) 
+const personLoading = ref(true)
+const personError = ref(null) 
+const defaultPersonImage = '/default-person.png'
+
+// 시간 변수
+const missingTimeDB = ref(null)
+
+// API 호출 함수
+async function fetchMissingPersonDetail() {
+  personLoading.value = true
+  personError.value = null
+  try {
+    const response = await axios.get(`/api/missing-persons/${user_no.value}`, {
+      withCredentials: true
+    })
+    personDetail.value = response.data
+
+    // API 응답에서 'reportedAt' 값을 'missingTimeDB'에 저장
+    if (response.data && response.data.reportedAt) {
+      missingTimeDB.value = response.data.reportedAt
+    }
+
+ } catch (err) {
+    console.error("실종자 상세 정보를 불러오는 데 실패했습니다:", err)
+    personError.value = "상세 정보를 불러올 수 없습니다."
+  } finally {
+    personLoading.value = false
+  }
+}
+
+// (Detail) 뒤로가기 함수
+function goBack() {
+  router.back()
+}
+
+// (Detail) 나이 계산 함수
+function calculateAge(birthDateString) {
+  if (!birthDateString) return '?';
+  try {
+    const birthDate = new Date(birthDateString);
+    if (isNaN(birthDate)) return '?';
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : '?';
+  } catch(e) { return '?'; }
+}
+
+// (Detail) 설명 포맷팅 함수
+function formatDescription(desc) {
+  if (!desc) return '상세 정보 없음';
+  return String(desc).replace(/\\n/g, '\n'); 
+}
+
+
+
+
 // 병욱 작업공간 확보 끝
+
+
+
+
 import { ref, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
 
+import { useRoute, useRouter } from 'vue-router'    // 추가 : 라우터
+
+const route = useRoute()
+const router = useRouter()
+
 const selectedType = ref('info')
-const user_no = ref(3)
+// const user_no = ref(3)                           추가 : 임시 주석처리 
+const user_no = ref(route.params.id)                // 추가 : id 받기
 const missingTime = ref('2025-10-17 12:00')
 const sortBy = ref('probability')
 const filterEasyAccess = ref(false)
@@ -1311,6 +1354,8 @@ onMounted(() => {
         })
     }
     document.head.appendChild(script)
+
+    fetchMissingPersonDetail()              // 추가 : 실종자기능 
 })
 </script>
 <style scoped>
@@ -2147,6 +2192,139 @@ onMounted(() => {
 .location-distance i {
     font-size: 14px;
     color: #667eea;
+}
+.missing-person-info {
+  width: 100%;
+  height: 100%; /* .content-section의 높이를 100% 채움 */
+  background-color: #FFFFFF; /* ◀ 지도가 비치지 않게 흰색 배경 */
+  padding: 0 16px 16px 16px; /* 좌우 패딩 + 하단 패딩 */
+  box-sizing: border-box; /* 패딩이 크기를 벗어나지 않게 */
+  
+  /* 컨텐츠가 길어지면 이 영역만 스크롤 */
+  overflow-y: auto; 
+  
+  /* (선택사항) .content-section이 flex라면 필요할 수 있음 */
+  display: flex;
+  flex-direction: column; 
+}
+
+/* (이식) 헤더 스타일 */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 0; /* 좌우 패딩은 부모(.missing-person-info)가 관리 */
+  border-bottom: 1px solid #E5E5E5;
+  
+  /* * [중요] 기존 PredictLocation.vue의 .header와 충돌을 피하기 위해
+   * position: relative / sticky 속성을 여기서는 사용하지 않습니다.
+   * 부모 컨테이너 안에서 자연스럽게 배치되도록 합니다.
+   */
+}
+.back-button {
+  background: none; border: none; padding: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.title {
+  font-size: 18px; font-weight: 600; color: #171717; margin: 0;
+  /* position: absolute 제거 -> flex 중앙 정렬로 변경 */
+  flex-grow: 1;
+  text-align: center;
+  /* back-button 크기만큼 오른쪽으로 밀어 정확한 중앙 정렬 */
+  margin-right: 32px; 
+}
+
+/* (이식) 로딩 / 에러 메시지 */
+.status-message { 
+  padding: 50px 0; 
+  text-align: center; 
+  color: #737373; 
+}
+.status-message.error { color: red; }
+
+/* (이식) 상세 정보 컨텐츠 래퍼 */
+.detail-content-wrapper {
+  padding-top: 24px; /* 헤더와의 간격 */
+  flex-grow: 1;
+}
+
+/* (이식) 정보 섹션 (실종자 정보, 사진) */
+.info-section {
+  margin-bottom: 32px;
+}
+.info-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #171717;
+  margin: 0 0 12px 0;
+}
+
+/* (이식) 실종자 정보 박스 */
+.info-box {
+  background: #FAFAFA;
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 14px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.info-row:last-child { margin-bottom: 0; }
+.info-row span:first-child {
+  color: #525252;
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+.info-row span:last-child {
+  color: #171717;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-all; /* 값이 너무 길 경우 줄바꿈 */
+}
+.info-row.detail-description {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.info-row.detail-description span:first-child { margin-bottom: 6px; }
+.info-row.detail-description p {
+  margin: 0;
+  color: #525252;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  text-align: left;
+  width: 100%; /* 부모 너비에 맞춤 */
+}
+
+/* (이식) 실종자 사진 */
+.photo-container {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+  background-color: #f0f0f0; /* 배경색 추가 */
+}
+.missing-photo {
+  display: block;
+  width: 100%;
+  height: auto; 
+  max-height: 400px; /* 사진이 너무 크지 않게 (선택사항) */
+  object-fit: contain; /* ◀ contain으로 비율 유지 (cover 아님) */
+}
+.map-area{
+  width: 100%;
+  flex-grow: 1;
+
+
+}
+.content-section{
+  flex-grow: 1;
+  padding: 17px 16px;
+  padding-bottom: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
 }
 </style>
 

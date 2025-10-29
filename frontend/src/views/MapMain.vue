@@ -325,23 +325,30 @@ async function fetchPatientInfo() {
     
     const patient = await response.json()
     
-    // 메시지만 있는 경우 (환자가 없는 경우)
-    if (patient.message) {
-      console.warn(patient.message)
-      isPatientConnected.value = false
-      return null
-    }
-    
-    // 환자 연결 상태 업데이트
-    isPatientConnected.value = true
-    
-    // 환자 정보 업데이트
-    patientInfo.value = {
-      name: patient.name || '',
-      userNo: patient.userNo,
-      isOnline: false, // 초기에는 오프라인으로 설정 (위치 조회 후 업데이트)
-      lastActivity: null, // 초기에는 null로 설정 (위치 조회 후 업데이트)
-      user_status: patient.user_status || 0 // 실종신고 기능 때문에 추가함
+// 메시지만 있는 경우 (환자가 없는 경우)
+    if (patient.message) {
+      console.warn(patient.message)
+      isPatientConnected.value = false
+      patientInfo.value = { name: '', userNo: null, isOnline: false, lastActivity: null, user_status: 0 }; 
+      return null // 환자가 없으므로 함수 종료
+    } 
+    else { 
+      console.log("API 응답 (patient 객체):", JSON.stringify(patient, null, 2)); // 응답 데이터 확인용 로그
+
+      // 환자 연결 상태 업데이트
+      isPatientConnected.value = true
+      
+      // 환자 정보 업데이트
+      patientInfo.value = {
+        name: patient.name || '', 
+        userNo: patient.userNo, 
+        isOnline: patient.isOnline ?? false, 
+        lastActivity: patient.lastActivity || null, 
+        user_status: patient.userStatus === 1 ? 1 : 0 
+      }
+      console.log("업데이트된 patientInfo.value:", JSON.stringify(patientInfo.value, null, 2));
+      
+      return patient.userNo // 환자 번호 반환
     }
     
     return patient.userNo

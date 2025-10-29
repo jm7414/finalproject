@@ -2,7 +2,7 @@
   <div class="mobile-frame">
     <div class="app-layout">
       <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
-      <main class="main-content" :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage}">
+      <main class="main-content" :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage || MissingReport || PredictLocation}">
         <RouterView />
       </main>
       <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
@@ -66,6 +66,16 @@ const isDpSchedule = computed(() => {
 
 const isDpConnect = computed(() => {
   return route.name === 'dpc'
+})
+
+// 실종자 상세정보 입력 페이지
+const MissingReport = computed(() => {
+  return route.name === 'MissingReport'
+})
+
+// 실종자 상세정보(예상위치) 페이지
+const PredictLocation = computed(() => {
+  return route.name === 'predict-location'
 })
 
 /* ===== 안심존 이탈 알림 시스템 ===== */

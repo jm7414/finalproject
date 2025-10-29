@@ -43,7 +43,7 @@ function goToMissingDetail(missingPostId) {
       return;
   }
   // 상세 페이지 경로 확인 및 수정 필요
-  router.push(`/CommunityMissingDetail/${missingPostId}`);
+  router.push(`/predict-location/${missingPostId}`);
 }
 
 function formatTimeAgo(dateString) {
@@ -73,7 +73,8 @@ function formatDateTime(dateString) {
         const date = new Date(dateString);
         if (isNaN(date)) return '날짜 형식 오류';
         return date.toLocaleString('ko-KR', {
-          year: 'numeric', month: 'numeric', day: 'numeric',
+          // year: 'numeric' 년도는 빼는게 이쁠 듯
+          month: 'numeric', day: 'numeric',
           hour: 'numeric', minute: '2-digit', hour12: true
         });
      } catch(e) {
@@ -124,6 +125,7 @@ function calculateAge(birthDateString) {
             <h3>{{ person.patientName || '이름 없음' }} ({{ calculateAge(person.patientBirthDate) }}세)</h3>
             <span>{{ formatTimeAgo(person.reportedAt) }}</span>
             <p>실종일시: {{ formatDateTime(person.reportedAt) }}</p>
+            
             </div>
         </div>
         <div class="card-extra-info">

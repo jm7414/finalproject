@@ -97,7 +97,7 @@ const router = createRouter({
     
     // 병욱 게시판 시작
 {       
-      path: '/MissingReport',
+      path: '/MissingReport/:id',
       name: 'MissingReport',
       
       component: MissingReport,
@@ -111,7 +111,7 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
-      path: '/predict-location',
+      path: '/predict-location/:id',
       name: 'predict-location',
       component: PredictLocation,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
@@ -122,12 +122,12 @@ const router = createRouter({
       component: CommunityMissing,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-    {
-      path: '/CommunityMissingDetail/:id',
-      name: 'CommunityMissingDetail',
-      component: CommunityMissingDetail,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용      
-    },     
+    // {
+    //   path: '/CommunityMissingDetail/:id',
+    //   name: 'CommunityMissingDetail',
+    //   component: CommunityMissingDetail,
+    //   meta: { requiresAuth: true, roles: [1] } // 보호자 전용      
+    // },     
     {
       path: '/post/:id',
       name: 'CommunityPost',
