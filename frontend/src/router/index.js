@@ -11,7 +11,7 @@ import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
-import CommunityMissingDetail from '@/components/CommunityMissingDetail.vue'
+import CommunityMissingDetail from '@/components/MissingDetailModal.vue'
 import CommunityPost from '@/components/CommunityPost.vue'
 import CommunityEvent from '@/components/CommunityEvent.vue'
 import TotalSupport from '@/views/TotalSupport.vue'
@@ -97,7 +97,7 @@ const router = createRouter({
     
     // 병욱 게시판 시작
 {       
-      path: '/MissingReport',
+      path: '/MissingReport/:id',
       name: 'MissingReport',
       
       component: MissingReport,
@@ -111,7 +111,7 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
-      path: '/predict-location',
+      path: '/predict-location/:id',
       name: 'predict-location',
       component: PredictLocation,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
@@ -121,13 +121,7 @@ const router = createRouter({
       name: 'CommunityMissing',
       component: CommunityMissing,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
-    },
-    {
-      path: '/CommunityMissingDetail/:id',
-      name: 'CommunityMissingDetail',
-      component: CommunityMissingDetail,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용      
-    },     
+    },  
     {
       path: '/post/:id',
       name: 'CommunityPost',

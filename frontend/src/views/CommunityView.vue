@@ -3,11 +3,11 @@ import { ref } from 'vue';
 
 // 3개의 '채널' 컴포넌트를 모두 불러옵니다. (경로는 실제 파일 위치에 맞게 조정하세요)
 import CommunityMissing from '@/components/CommunityMissing.vue';
-import CommunityBoard from '@/components/CommunityBoard.vue'; // CommunityPost 대신 CommunityBoard로 가정
+import CommunityBoard from '@/components/CommunityBoard.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
 // 기본으로 보여줄 탭(채널)을 'Post'로 설정
-const activeTab = ref('Missing'); 
+const activeTab = ref('Post'); 
 
 // 탭(채널)을 변경하는 함수
 function changeTab(tabName) {
