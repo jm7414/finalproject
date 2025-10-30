@@ -48,7 +48,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      redirect: '/login',
+      component: Login,
     },
     {
       path: '/gdc',
@@ -122,12 +122,6 @@ const router = createRouter({
       component: CommunityMissing,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-    // {
-    //   path: '/CommunityMissingDetail/:id',
-    //   name: 'CommunityMissingDetail',
-    //   component: CommunityMissingDetail,
-    //   meta: { requiresAuth: true, roles: [1] } // 보호자 전용      
-    // },     
     {
       path: '/post/:id',
       name: 'CommunityPost',
