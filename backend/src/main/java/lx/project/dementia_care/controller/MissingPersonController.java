@@ -50,6 +50,43 @@ public class MissingPersonController {
   }
 
     /**
+     * [추가] 환자 번호(user_no)로 최신 실종 신고를 조회하는 API
+     * GET /api/missing-persons/patient/{patientUserNo}/latest
+     * 
+     * 용도: 프론트엔드에서 환자 ID는 알지만 실종 신고 ID를 모를 때 사용
+     * 예시: /api/missing-persons/patient/4/latest
+     * 
+     * @param patientUserNo 환자의 user_no
+     * @return 해당 환자의 가장 최근 실종 신고 정보 (없으면 404)
+     */
+    @GetMapping("/patient/{patientUserNo}/latest")
+    public ResponseEntity<MissingPersonDto> getLatestMissingReportByPatient(
+            @PathVariable Integer patientUserNo) {
+        
+        try {
+            // Service의 기존 메서드 활용 (이미 구현되어 있음)
+            MissingPersonDto latestReport = missingPersonService.getMissingPersonDetailById(patientUserNo);
+            
+            // 실제로는 환자 번호로 조회해야 하므로 DAO 직접 호출
+            // (Service에는 getMissingPersonDetailById가 missingPostId를 받으므로 적절하지 않음)
+            // 대신 DAO의 findLatestMissingReportByPatientNo 사용
+            latestReport = missingPersonService.findLatestReportByPatientNo(patientUserNo);
+            
+            if (latestReport != null) {
+                return ResponseEntity.ok(latestReport);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(null);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("환자 번호로 최신 실종 신고 조회 중 오류: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * 새로운 실종 신고를 접수하고 해당 사용자의 user_status를 1로 변경하는 API
      */
     @PostMapping("/report")

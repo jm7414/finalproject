@@ -140,7 +140,6 @@ public class MissingPersonService {
             System.err.println("환자 정보 조회 중 오류 발생: " + e.getMessage());
         }
 
-
         // 5. 환자 정보가 있다면, DTO에 환자 정보를 추가(Merge)합니다.
         if (patientUser != null) {
             reportDetails.setPatientName(patientUser.getName());
@@ -201,6 +200,47 @@ public class MissingPersonService {
         // DAO를 호출하여 참여자 목록 조회
         List<UserVO> participants = missingPersonDAO.findParticipantsByMissingPostId(missingPostId);
         return participants;
+    }
+
+    /**
+     * [추가] 환자 번호로 최신 실종 신고를 조회하는 메서드
+     * 
+     * 기존의 getMissingPersonDetailById는 missingPostId를 받지만,
+     * 이 메서드는 patientUserNo(환자 번호)를 받아서 조회합니다.
+     * 
+     * @param patientUserNo 환자의 user_no
+     * @return 환자의 최신 실종 신고 정보 (환자 정보 포함)
+     */
+    @Transactional(readOnly = true)
+    public MissingPersonDto findLatestReportByPatientNo(Integer patientUserNo) {
+        // 1. DAO를 통해 환자 번호로 최신 실종 신고 조회
+        MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(patientUserNo);
+        
+        // 2. 신고 정보가 없으면 null 반환
+        if (reportDetails == null) {
+            return null;
+        }
+        
+        // 3. 환자 정보 추가 (기존 getMissingPersonDetailById 로직과 동일)
+        UserVO patientUser = null;
+        try {
+            patientUser = userDAO.findByUserNo(patientUserNo);
+        } catch (Exception e) {
+            System.err.println("환자 정보 조회 중 오류 발생: " + e.getMessage());
+        }
+        
+        // 4. 환자 정보를 DTO에 추가
+        if (patientUser != null) {
+            reportDetails.setPatientName(patientUser.getName());
+            reportDetails.setPatientBirthDate(patientUser.getBirthDate());
+            
+            // 신고 사진이 없다면 사용자 프로필 사진 사용
+            if (reportDetails.getPhotoPath() == null || reportDetails.getPhotoPath().isEmpty()) {
+                reportDetails.setPhotoPath(patientUser.getProfilePhoto());
+            }
+        }
+        
+        return reportDetails;
     }
 
 }

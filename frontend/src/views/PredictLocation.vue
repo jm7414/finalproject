@@ -280,13 +280,26 @@
 <script setup>
 import { useRoute } from 'vue-router'
 const route = useRoute()
-const userNo = ref(route.params.id)
+
+// ============================================================================
+// [수정] ID 관리 변수 - 환자 번호와 실종 신고 ID를 명확히 구분
+// ============================================================================
+//  문제: 기존 userNo는 route.params.id를 받았는데, 이게 환자번호인지 실종신고ID인지 불명확
+//  해결: 두 가지 ID를 명확히 분리
+const patientUserNo = ref(null)      // 환자의 user_no (users 테이블)
+const missingPostId = ref(null)      // 실종 신고 ID (missing_post 테이블)
 
 // 병욱 작업공간 확보 시작 
+// [수정] 이제 missingPostId를 명확히 사용
 async function fetchParticipants() {
-    console.log(`참여자 목록 조회 시도: missingPostId=${userNo.value}`); // user_no가 missingPostId 역할
+    if (!missingPostId.value) {
+        console.warn('⚠️ missingPostId가 없어서 참여자 조회를 건너뜁니다.')
+        return
+    }
+    
+    console.log(`참여자 목록 조회 시도: missingPostId=${missingPostId.value}`)
     try {
-        const response = await axios.get(`/api/missing-persons/${userNo.value}/participants`, {
+        const response = await axios.get(`/api/missing-persons/${missingPostId.value}/participants`, {
             withCredentials: true
         });
 
@@ -317,20 +330,27 @@ const defaultPersonImage = '@/default-person.png'
 // 시간 변수
 const missingTimeDB = ref(null)
 
-// 추가 : 실종자 정보 API 호출 함수
+// ============================================================================
+// [수정] 실종자 정보 API 호출 함수 - missingPostId를 사용하도록 변경
+// ============================================================================
 async function fetchMissingPersonDetail() {
+    if (!missingPostId.value) {
+        console.warn('⚠️ missingPostId가 없어서 실종자 정보 조회를 건너뜁니다.')
+        personLoading.value = false
+        return
+    }
+    
     personLoading.value = true
     personError.value = null
 
-    console.log(`사용자 번호 : ${JSON.parse(userNo.value)}`)
-    console.log(`사용자 번호 : ${JSON.parse(userNo.value)}`)
+    console.log(`실종 신고 ID로 상세 정보 조회: missingPostId=${missingPostId.value}`)
     try {
-        const response = await axios.get(`/api/missing-persons/${userNo}`, {
+        const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
             withCredentials: true
         })
         personDetail.value = response.data
 
-        console.log(personDetail)
+        console.log(' 실종자 상세 정보:', personDetail.value)
 
         // API 응답에서 'reportedAt' 값을 'missingTimeDB'에 저장
         if (response.data && response.data.reportedAt) {
@@ -338,9 +358,70 @@ async function fetchMissingPersonDetail() {
         }
 
     } catch (err) {
-        console.error("실종자 상세 정보를 불러오는 데 실패했습니다:", err)
+        console.error(" 실종자 상세 정보를 불러오는 데 실패했습니다:", err)
         personError.value = "상세 정보를 불러올 수 없습니다."
     } finally {
+        personLoading.value = false
+    }
+}
+
+// ============================================================================
+// [추가] 보호자 → 환자 → 실종신고 순서로 데이터 조회하는 새 함수
+// ============================================================================
+//  데이터 흐름:
+// 1. 로그인한 보호자의 환자 조회 (/api/user/my-patient)
+// 2. 환자 번호로 최신 실종 신고 조회 (/api/missing-persons/patient/{patientUserNo}/latest)
+// 3. 실종 신고 ID를 저장하여 다른 API 호출에 사용
+async function fetchPatientAndMissingReport() {
+    try {
+        console.log('📋 Step 1: 보호자가 관리하는 환자 조회 중...')
+        
+        // Step 1: 보호자가 관리하는 환자 조회
+        const patientResponse = await axios.get('/api/user/my-patient', {
+            withCredentials: true
+        })
+        
+        if (!patientResponse.data || !patientResponse.data.userNo) {
+            console.error(' 관리하는 환자가 없습니다.')
+            personError.value = '관리하는 환자 정보를 찾을 수 없습니다.'
+            personLoading.value = false
+            return
+        }
+        
+        patientUserNo.value = patientResponse.data.userNo
+        console.log(` 환자 정보 조회 성공: patientUserNo=${patientUserNo.value}`)
+        
+        // Step 2: 환자 번호로 최신 실종 신고 조회
+        console.log(' Step 2: 환자의 최신 실종 신고 조회 중...')
+        const missingReportResponse = await axios.get(
+            `/api/missing-persons/patient/${patientUserNo.value}/latest`,
+            { withCredentials: true }
+        )
+        
+        if (!missingReportResponse.data || !missingReportResponse.data.missingPostId) {
+            console.error(' 실종 신고 정보가 없습니다.')
+            personError.value = '실종 신고 정보를 찾을 수 없습니다.'
+            personLoading.value = false
+            return
+        }
+        
+        missingPostId.value = missingReportResponse.data.missingPostId
+        console.log(` 실종 신고 조회 성공: missingPostId=${missingPostId.value}`)
+        
+        // Step 3: 이제 missingPostId가 준비되었으니 다른 정보들을 조회
+        console.log(' Step 3: 실종자 상세 정보 및 참여자 목록 조회 중...')
+        await fetchMissingPersonDetail()  // 실종자 상세 정보
+        await fetchParticipants()         // 함께 찾는 사람들
+        
+    } catch (error) {
+        console.error(' 데이터 조회 중 오류 발생:', error)
+        if (error.response && error.response.status === 401) {
+            personError.value = '로그인이 필요합니다.'
+        } else if (error.response && error.response.status === 404) {
+            personError.value = '환자 또는 실종 신고 정보를 찾을 수 없습니다.'
+        } else {
+            personError.value = '데이터를 불러오는 중 오류가 발생했습니다.'
+        }
         personLoading.value = false
     }
 }
@@ -911,8 +992,7 @@ async function fetchPrediction() {
 // ========================================================================================
 
 onMounted(() => {
-    fetchParticipants();                    // 추가 : 함께찾기 기능
-    fetchMissingPersonDetail()              // 추가 : 실종자기능 
+    fetchPatientAndMissingReport()
 
     loadKakaoMap(mapContainer.value)
     // 페이지 로드 시 자동으로 데이터 가져오기
