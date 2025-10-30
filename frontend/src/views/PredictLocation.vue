@@ -156,7 +156,7 @@
                                 <i class="bi bi-people"></i>
                                 <span class="badge-label">함께하는 이웃</span>
                             </div>
-                            <span class="info-content">3명</span>
+                            <span class="info-content">{{ (personDetail && personDetail.searchTogetherCount != null) ? personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
                                 <button class="btn btn-info modern-btn" @click="wherePeople">
                                     <i class="bi bi-arrow-right-circle"></i>
@@ -305,7 +305,14 @@ async function fetchParticipants() {
 
         // --- 요청 성공 시 콘솔에 출력 ---
         console.log('✅ 함께 찾는 사람들:', response.data);
-
+        // 참여자 수만 상태에 반영
+        if (Array.isArray(response.data)) {
+            participantsCount.value = response.data.length
+        } else if (response.data && typeof response.data === 'object') {
+            participantsCount.value = (response.data.count ?? response.data.total ?? 0)
+        } else {
+            participantsCount.value = 0
+        }
 
     } catch (error) {
         console.error("❌ 참여자 목록 조회 실패:", error);
@@ -326,6 +333,7 @@ const personDetail = ref(null)
 const personLoading = ref(true)
 const personError = ref(null)
 const defaultPersonImage = '@/default-person.png'
+const participantsCount = ref(0)
 
 // 시간 변수
 const missingTimeDB = ref(null)
@@ -517,7 +525,7 @@ const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 
 // Tmap API Key
-const TMAP_API_KEY = 'dcWZUHevJw6z8GD6zXhNb3X3pDjyDqs99YDxMbHh   aa'
+const TMAP_API_KEY = 'dcWZUHevJw6z8GD6zXhNb3X3pDjyDqs99YDxMbHh'
 
 // ========================================================================================
 // 데이터 상태 관리
