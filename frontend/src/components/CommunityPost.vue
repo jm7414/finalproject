@@ -1,6 +1,6 @@
 <script setup>
 // 제공해주신 스크립트 코드를 그대로 사용합니다.
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -42,7 +42,35 @@ onMounted(() => {
     fetchCurrentUser(),
     fetchPost(),
     fetchComments()
+
   ]);
+  console.log("컴포넌트 마운트됨. 데이터 로딩 시작..."); // 시작 로그
+
+  // 3가지 요청을 동시에 보냅니다.
+  Promise.all([
+    fetchCurrentUser(),
+    fetchPost(),
+    fetchComments()
+  ])
+  .then(() => {
+    // 모든 요청이 성공적으로 완료된 후에 이 부분이 실행됩니다.
+    console.log("✅ 모든 초기 데이터 로딩 완료:");
+    console.log("   - 현재 사용자(currentUser):", currentUser.value);
+    console.log("   - 게시물(post):", post.value);
+    console.log("   - 댓글(comments):", comments.value);
+  })
+  .catch(error => {
+    // Promise.all 내의 요청 중 하나라도 실패하면 이 부분이 실행됩니다.
+    console.error("❌ 초기 데이터 로딩 중 오류 발생:", error);
+    // 각 fetch 함수 내부에서도 오류 로깅을 하고 있으므로,
+    // 여기서 추가적인 상세 로깅이 필요 없을 수 있습니다.
+    // 하지만 어떤 요청에서 문제가 발생했는지 확인하기 위해 남겨두는 것이 좋습니다.
+    console.log("   - 현재 사용자(currentUser) 상태:", currentUser.value);
+    console.log("   - 게시물(post) 상태:", post.value);
+    console.log("   - 댓글(comments) 상태:", comments.value);
+  });
+
+  console.log("onMounted 훅 실행 완료.");
 });
 
 // --- 데이터 로딩 함수들 ---
@@ -217,7 +245,7 @@ async function deleteComment(commentId) {
       <div class="post-footer">
         <div class="stats">
           <span @click="toggleLike" class="like-btn">❤️ {{ post.likes }}</span>
-          <span>👁️ {{ post.views }}</span>
+          <span>👁️‍🗨️ {{ post.views }}</span>
         </div>
         <span class="comment-count">댓글 {{ comments.length }}개</span>
       </div>
@@ -249,7 +277,7 @@ async function deleteComment(commentId) {
              v-if="currentUser && (comment.userId === currentUser.userNo || currentUser.userNo === 1)"
              @click="deleteComment(comment.commentId)"
              class="comment-delete-btn">
-             ...
+
            </button>
         </div>
       </div>
@@ -258,15 +286,21 @@ async function deleteComment(commentId) {
       </div>
     </section>
   </div>
+
+  
 </template>
 
 <style scoped>
 /* 전체 페이지 컨테이너 */
 .page-container {
-  width: 375px;
-  margin: 0 auto;
+  width: 100%;
+  margin-top: -20px;
   background: #FAFAFA;
   font-family: 'Inter', sans-serif;
+  height: calc(100vh - 90px - 90px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding-bottom: 60px;
 }
 
 .status-container {
