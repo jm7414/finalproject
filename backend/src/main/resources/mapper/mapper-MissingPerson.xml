@@ -119,4 +119,22 @@
             mp.missing_post_id = #{missingPostId}
     </select>
 
+    <insert id="addSearchTogetherEntry" parameterType="map">
+        INSERT INTO search_Together (missing_post_id, user_id)
+        VALUES (#{missingPostId}, #{userId})
+    </insert>
+
+    <select id="findParticipantsByMissingPostId" parameterType="int" resultType="lx.project.dementia_care.vo.UserVO">
+        SELECT
+            u.user_no,
+            u.user_id,
+            u.name
+        FROM
+            users u
+        JOIN
+            search_Together st ON u.user_no = st.user_id
+        WHERE
+            st.missing_post_id = #{missingPostId}
+    </select>
+
 </mapper>

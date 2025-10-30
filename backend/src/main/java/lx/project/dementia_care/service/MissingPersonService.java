@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +20,6 @@ import lx.project.dementia_care.vo.UserVO;
 @Service
 public class MissingPersonService {
 
-    // 두 개의 DAO를 모두 주입받음
     @Autowired
     private UserDAO userDAO;
     @Autowired
@@ -36,7 +37,7 @@ public class MissingPersonService {
         // 2. 각 사용자에 대해 MissingPersonDAO를 통해 최신 실종 신고 정보를 가져와 합칩니다.
         List<MissingPersonDto> results = new ArrayList<>();
         for (UserVO user : missingUsers) {
-            // MissingPersonDAO에 userNo로 최신 신고 1건을 찾는 메서드가 필요합니다. (아래 가정)
+            // MissingPersonDAO에 userNo로 최신 신고 1건을 찾는 메서드가 필요합니다.
             MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(user.getUserNo());
 
             // MissingPersonDto를 만들고 UserVO와 reportDetails 정보를 합칩니다.
@@ -94,7 +95,6 @@ public class MissingPersonService {
      */
     @Transactional
     public void updateStatusAndUserStatus(Integer missingPostId, String newStatus, Integer currentUserId) throws AccessDeniedException {
-        // (선택사항) 권한 확인 로직 추가 가능
         
         // 1. MissingPersonDAO를 통해 신고 상태 변경
         missingPersonDAO.updateMissingStatus(missingPostId, newStatus);
@@ -109,7 +109,7 @@ public class MissingPersonService {
         }
     }
 
-/**
+    /**
      * 특정 실종 신고 ID (missingPostId)로 
      * 신고 정보와 환자 정보를 조합하여 상세 조회합니다.
      */
@@ -155,4 +155,52 @@ public class MissingPersonService {
         // 7. 정보가 조합된 DTO를 반환합니다.
         return reportDetails;
     }
+
+    /**
+     * 사용자가 특정 실종 신고의 '함께 찾기'에 참여합니다.
+     * @param missingPostId 참여할 실종 신고 ID
+     * @param userId 참여하는 사용자 ID
+     * @return true: 새로 참여 성공 / false: 이미 참여 중
+     * @throws IllegalArgumentException 실종 신고 ID가 존재하지 않거나 유효하지 않을 때
+     */
+    @Transactional
+    public boolean joinSearchTogether(Integer missingPostId, Integer userId) {
+        // missingPostId가 실제로 DB에 존재하는지 확인
+        MissingPersonDto existingPost = missingPersonDAO.findMissingReportById(missingPostId);
+        if (existingPost == null) {
+            throw new IllegalArgumentException("존재하지 않는 실종 신고 ID입니다: " + missingPostId);
+        }
+
+        try {
+            // DAO를 호출하여 search_Together 테이블에 INSERT 시도
+            missingPersonDAO.addSearchTogetherEntry(missingPostId, userId);
+            return true;
+        } catch (DuplicateKeyException e) {
+            //  이미 참여 중인 경우 예외를 잡아서 false 반환
+            System.out.println("이미 참여 중인 사용자입니다 (missingPostId: " + missingPostId + ", userId: " + userId + ")");
+            return false;
+        } catch (DataIntegrityViolationException e) {
+            // 만약 missing_post_id나 user_id가 FK 제약조건을 위반하는 경우
+             System.err.println("함께 찾기 FK 오류 (missingPostId: " + missingPostId + ", userId: " + userId + "): " + e.getMessage());
+            throw new IllegalArgumentException("유효하지 않은 실종 신고 ID 또는 사용자 ID 입니다.");
+        }
+    }
+
+    /**
+     * 특정 실종 신고에 참여하는 사용자 목록을 조회합니다.
+     * @param missingPostId 실종 신고 ID
+     * @return 참여자 정보 목록 (UserVO 리스트)
+     * @throws IllegalArgumentException 실종 신고 ID가 존재하지 않을 때
+     */
+    @Transactional(readOnly = true) // 읽기 전용 트랜잭션
+    public List<UserVO> findParticipants(Integer missingPostId) {
+        MissingPersonDto existingPost = missingPersonDAO.findMissingReportById(missingPostId);
+        if (existingPost == null) {
+            throw new IllegalArgumentException("존재하지 않는 실종 신고 ID입니다: " + missingPostId);
+        }
+        // DAO를 호출하여 참여자 목록 조회
+        List<UserVO> participants = missingPersonDAO.findParticipantsByMissingPostId(missingPostId);
+        return participants;
+    }
+
 }
