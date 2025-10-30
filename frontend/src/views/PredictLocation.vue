@@ -99,7 +99,7 @@
 
                 <div class="info-header-section">
                     <div class="profile-image-wrapper">
-                        <img :src="personDetail.photoPath || defaultPersonImage" :alt="personDetail.patientName" />
+                        <img class="profile-image" :src="personDetail.photoPath || defaultPersonImage" :alt="personDetail.patientName" />
                         <div class="profile-border-glow"></div>
                     </div>
                     <div class="basic-info-wrapper">
@@ -1830,6 +1830,31 @@ function getTimeRangeText(minutes) {
 .toggle-button:not(.active):hover .button-text {
     color: #333333;
 }
+
+/* ==============실종자 정보 ================= */
+.info-header-section {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 28px;
+  align-items: flex-start;
+}
+
+.basic-info-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
