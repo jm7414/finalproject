@@ -48,7 +48,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      redirect: '/login',
+      component: Login,
     },
     {
       path: '/gdc',
