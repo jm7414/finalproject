@@ -94,24 +94,24 @@ const router = createRouter({
       component: Login,
       meta: { requiresGuest: true }
     },
-    
+
     // 병욱 게시판 시작
-{       
-      path: '/MissingReport/:id',
-      name: 'MissingReport',
-      
-      component: MissingReport,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
-    },
+    {
+      path: '/MissingReport/:id',
+      name: 'MissingReport',
+
+      component: MissingReport,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
     {
       path: '/CommunityView',
       name: 'CommunityView',
-      
+
       component: CommunityView,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
-      path: '/predict-location/:id',
+      path: '/predict-location',
       name: 'predict-location',
       component: PredictLocation,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
@@ -149,9 +149,9 @@ const router = createRouter({
       path: '/post/edit/:id', // '/post/edit/1' 과 같은 개념
       name: 'PostEdit',
       component: CommunityPostWrite // PostWrite 재활용 가능
-    },          
+    },
     // 병욱 게시판 끝
-    
+
     {
       path: '/geo-fencing',
       name: 'geo-fencing',
@@ -164,7 +164,7 @@ const router = createRouter({
       component: SearchRouteView,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-    
+
     // 주형 종합지원, 지원금안내페이지, 기록, 리포트 수정 시작
     {
       path: '/total-support',
@@ -190,9 +190,9 @@ const router = createRouter({
       component: Report,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-    
-    
-    
+
+
+
     {
       path: '/loan',
       name: 'loan',
@@ -235,7 +235,7 @@ const router = createRouter({
       name: 'dpmypage',
       component: DpMypageView,
       meta: { requiresAuth: true, roles: [2, 3] } // 환자(2), 구독자(3) 전용
-    },    
+    },
     {
       path: '/dpmodifyinfo',
       name: 'dpmodifyinfo',
@@ -319,7 +319,7 @@ router.beforeEach(async (to, from, next) => {
     next()
     return
   }
-  
+
   const isLoggedIn = await isAuthenticated()
 
 
@@ -341,7 +341,7 @@ router.beforeEach(async (to, from, next) => {
       return
     }
   }
-  
+
   // 루트 경로 접근 시 로그인 상태에 따라 리다이렉트
   if (to.path === '/') {
     if (isLoggedIn) {
