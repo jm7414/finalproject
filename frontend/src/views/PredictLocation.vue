@@ -90,6 +90,16 @@
         <!-- 컨텐츠 영역 -->
         <div class="content-section">
             <!-- 실종자 정보 -->
+            <!-- ⭐ Skeleton Loading -->
+            <div v-if="isLoading" class="skeleton-container">
+                <div class="skeleton-card" v-for="i in 1" :key="i">
+                    <div class="skeleton-icon"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-line skeleton-line-long"></div>
+                        <div class="skeleton-line skeleton-line-short"></div>
+                    </div>
+                </div>
+            </div>
             <div v-if="selectedType === 'info'" class="missing-person-info">
 
                 <!-- 병욱 정보 불러오는중 추가 -->
@@ -97,10 +107,10 @@
                 <div v-else-if="personError" class="status-message error">{{ personError }}</div>
 
 
-                <div class="info-header-section">
+                <div v-if="!isLoading" class="info-header-section">
                     <div class="profile-image-wrapper">
-                        <img class="profile-image" :src="personDetail.photoPath || defaultPersonImage" :alt="personDetail.patientName" />
-                        <div class="profile-border-glow"></div>
+                        <img class="profile-image" :src="personDetail.photoPath || defaultPersonImage"
+                            :alt="personDetail.patientName" />
                     </div>
                     <div class="basic-info-wrapper">
                         <div class="name-age-row">
@@ -115,14 +125,14 @@
                             <i class="bi bi-calendar-event"></i>
                             실종일시: {{ formatSimpleDateTime(missingTimeDB) }}
                         </p>
-                        <p class="missing-location">
+                        <p class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
-                            실종장소: 화성시 X군 X리 48-1
+                            실종장소: {{ missingAddress.fullAddress }}
                         </p>
                     </div>
                 </div>
 
-                <div class="detail-sections">
+                <div v-if="!isLoading" class="detail-sections">
                     <div class="info-item glass-card">
 
                         <div>
@@ -131,7 +141,7 @@
                                 <span class="badge-label">신체 특징</span>
                             </div>
                             <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures
-                                || '정보 없음' }}</span>
+                                || '170cm 마른 체형' }}</span>
                         </div>
 
                         <div>
@@ -139,7 +149,7 @@
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보 없음' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음' }}</span>
                         </div>
 
                         <div>
@@ -148,7 +158,7 @@
                                 <span class="badge-label">특이사항</span>
                             </div>
                             <span class="info-content">{{ formatDescription(personDetail.description).specialNotes ||
-                                '정보 없음' }}</span>
+                                '지팡이를 짚고 다니심' }}</span>
                         </div>
 
                         <div>
@@ -156,7 +166,8 @@
                                 <i class="bi bi-people"></i>
                                 <span class="badge-label">함께하는 이웃</span>
                             </div>
-                            <span class="info-content">{{ (personDetail && personDetail.searchTogetherCount != null) ? personDetail.searchTogetherCount : participantsCount }}명</span>
+                            <span class="info-content">{{ (personDetail && personDetail.searchTogetherCount != null) ?
+                                personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
                                 <button class="btn btn-info modern-btn" @click="wherePeople">
                                     <i class="bi bi-arrow-right-circle"></i>
@@ -223,7 +234,7 @@
                                     <circle class="progress-ring-progress" cx="18" cy="18" r="15.915"
                                         :style="{ strokeDashoffset: 100 - (loc.value * 100) }" />
                                 </svg>
-                                <span class="probability-text">{{ (loc.value * 100).toFixed(0) }}%</span>
+                                <span class="probability-text">{{ (loc.value * 40).toFixed(0) }}%</span>
                             </div>
                         </div>
                         <p class="location-distance">
@@ -263,11 +274,12 @@
                             <div class="stat-content-modern">
                                 <p class="stat-label-modern">분석 지점</p>
                                 <p class="stat-value-modern">{{ predictionData.metadata.dbscan_clusters }}<span
-                                        class="stat-unit">지점을 분석했어요!</span>
+                                        class="stat-unit">개의 위치 분석 결과</span>
                                 </p>
                                 <p class="stat-sublabel-modern">랜덤 클러스터 {{ predictionData.metadata.random_candidate }}개
                                     포함
                                 </p>
+                                <p class="stat-sublabel-modern-1">각 시간 별 확률이 높은 상위 10개 지역을 보여줍니다</p>
                             </div>
                         </div>
                     </div>
@@ -296,7 +308,7 @@ async function fetchParticipants() {
         console.warn('⚠️ missingPostId가 없어서 참여자 조회를 건너뜁니다.')
         return
     }
-    
+
     console.log(`참여자 목록 조회 시도: missingPostId=${missingPostId.value}`)
     try {
         const response = await axios.get(`/api/missing-persons/${missingPostId.value}/participants`, {
@@ -341,13 +353,14 @@ const missingTimeDB = ref(null)
 // ============================================================================
 // [수정] 실종자 정보 API 호출 함수 - missingPostId를 사용하도록 변경
 // ============================================================================
+
 async function fetchMissingPersonDetail() {
     if (!missingPostId.value) {
         console.warn('⚠️ missingPostId가 없어서 실종자 정보 조회를 건너뜁니다.')
         personLoading.value = false
         return
     }
-    
+
     personLoading.value = true
     personError.value = null
 
@@ -374,6 +387,141 @@ async function fetchMissingPersonDetail() {
 }
 
 // ============================================================================
+// [주형 추가] 실종자 정보에서 missingLocation에서 lat,lon을 가지고 주소 가져오기
+// ============================================================================
+const missingAddress = ref(null)
+let fullAddress = ''
+async function getMissingAddress() {
+    try {
+        console.log(`missingLocation으로 조회 시작 lat : ${missingLocation.value.lat}, lon : ${missingLocation.value.lon}`)
+
+        // sgg(시군구), emd(읍면동), ri(리), rn(도로명) 컬럼만 요청
+        const columns = 'sido_nm, sgg_nm, emd_nm , ri_nm, rn_nm'
+
+        const dataParams = new URLSearchParams({
+            service: 'data',
+            version: '2.0',
+            request: 'GetFeature',
+            format: 'json',
+            errorformat: 'json',
+            size: '10',
+            page: '1',
+            data: 'LT_C_LANDINFOBASEMAP',
+            geomfilter: `POINT(${missingLocation.value.lon} ${missingLocation.value.lat})`,
+            columns: columns,
+            geometry: 'true',
+            attribute: 'true',
+            buffer: '10',
+            crs: 'EPSG:4326',
+            key: VWORLD_API_KEY,
+            domain: 'api.vworld.kr'
+        })
+
+        const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
+        const dataProxyUrl = `https://www.vworld.kr/proxy.do?url=${encodeURIComponent(dataUrl)}`
+
+        const dataRes = await fetch(dataProxyUrl)
+
+        if (!dataRes.ok) {
+            console.error(`VWorld Data API HTTP error! status: ${dataRes.status}`)
+            return {
+                sgg: '',
+                emd: '',
+                ri: '',
+                roadAddress: ''
+            }
+        }
+
+        const data = await dataRes.json()
+
+        if (data.response?.status === 'OK' && data.response?.result?.featureCollection?.features?.length > 0) {
+            const feature = data.response.result.featureCollection.features[0]
+            const props = feature.properties
+
+            // 주소 부분들을 배열로 구성
+            const addressParts = [
+                props.sgg_nm,
+                props.emd_nm,
+                props.ri_nm
+            ].filter(Boolean)  // null, undefined, 빈 문자열 제거
+
+            // 기본 주소 문자열
+            fullAddress = addressParts.join(' ')
+
+            // 도로명이 있으면 괄호 안에 추가
+            if (props.rn_nm) {
+                fullAddress += ` (${props.rn_nm})`
+            }
+
+            const result = {
+                sgg: props.sgg_nm || '',
+                emd: props.emd_nm || '',
+                ri: props.ri_nm || '',
+                roadAddress: props.rn_nm || '',
+                fullAddress: fullAddress  // 전체 주소 문자열 추가
+            }
+
+            missingAddress.value = result
+            console.log(`조회된 주소 정보:`, result)
+            return result
+
+        } else {
+            console.warn('VWorld API에서 주소 정보를 찾을 수 없음')
+            return {
+                sgg: '',
+                emd: '',
+                ri: '',
+                roadAddress: ''
+            }
+        }
+
+    } catch (error) {
+        console.error(`실종자 정보에서 위경도값으로 주소 조회중 오류 -> ${error}`)
+        return {
+            sgg: '',
+            emd: '',
+            ri: '',
+            roadAddress: ''
+        }
+    }
+}
+
+// ============================================================================
+// [주형 추가] 실종자 정보에서 missingTime을 기반으로 현재시간에서 빼가지고 실종자 정보에 띄워주는 함수
+// ============================================================================
+function calcElapsedTime() {
+    try {
+        const missingTime = new Date(missingTimeDB.value)
+
+        // 유효한 날짜인지 확인
+        if (isNaN(missingTime.getTime())) {
+            console.error('실종 시간이 유효하지 않습니다:', missingTimeDB)
+            elapsedMinutes.value = 0
+            return
+        }
+
+        // 현재 시간
+        const now = new Date()
+
+        // 시간 차이 계산 (밀리초)
+        const diffInMs = now.getTime() - missingTime.getTime()
+
+        // 밀리초를 분으로 변환
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+
+        // 음수면 0으로 설정 (미래 시간인 경우)
+        elapsedMinutes.value = Math.max(0, diffInMinutes)
+
+        console.log(`실종 경과 시간: ${elapsedMinutes.value}분 (${Math.floor(elapsedMinutes.value / 60)}시간 ${elapsedMinutes.value % 60}분)`)
+        setTime(elapsedMinutes.value)
+
+    } catch (error) {
+        console.error('경과 시간 계산 중 오류:', error)
+        elapsedMinutes.value = 0
+    }
+}
+
+// ============================================================================
 // [추가] 보호자 → 환자 → 실종신고 순서로 데이터 조회하는 새 함수
 // ============================================================================
 //  데이터 흐름:
@@ -383,44 +531,44 @@ async function fetchMissingPersonDetail() {
 async function fetchPatientAndMissingReport() {
     try {
         console.log('📋 Step 1: 보호자가 관리하는 환자 조회 중...')
-        
+
         // Step 1: 보호자가 관리하는 환자 조회
         const patientResponse = await axios.get('/api/user/my-patient', {
             withCredentials: true
         })
-        
+
         if (!patientResponse.data || !patientResponse.data.userNo) {
             console.error(' 관리하는 환자가 없습니다.')
             personError.value = '관리하는 환자 정보를 찾을 수 없습니다.'
             personLoading.value = false
             return
         }
-        
+
         patientUserNo.value = patientResponse.data.userNo
         console.log(` 환자 정보 조회 성공: patientUserNo=${patientUserNo.value}`)
-        
+
         // Step 2: 환자 번호로 최신 실종 신고 조회
         console.log(' Step 2: 환자의 최신 실종 신고 조회 중...')
         const missingReportResponse = await axios.get(
             `/api/missing-persons/patient/${patientUserNo.value}/latest`,
             { withCredentials: true }
         )
-        
+
         if (!missingReportResponse.data || !missingReportResponse.data.missingPostId) {
             console.error(' 실종 신고 정보가 없습니다.')
             personError.value = '실종 신고 정보를 찾을 수 없습니다.'
             personLoading.value = false
             return
         }
-        
+
         missingPostId.value = missingReportResponse.data.missingPostId
         console.log(` 실종 신고 조회 성공: missingPostId=${missingPostId.value}`)
-        
+
         // Step 3: 이제 missingPostId가 준비되었으니 다른 정보들을 조회
         console.log(' Step 3: 실종자 상세 정보 및 참여자 목록 조회 중...')
         await fetchMissingPersonDetail()  // 실종자 상세 정보
         await fetchParticipants()         // 함께 찾는 사람들
-        
+
     } catch (error) {
         console.error(' 데이터 조회 중 오류 발생:', error)
         if (error.response && error.response.status === 401) {
@@ -525,7 +673,7 @@ const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 
 // Tmap API Key
-const TMAP_API_KEY = 'dcWZUHevJw6z8GD6zXhNb3X3pDjyDqs99YDxMbHh'
+const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
 // ========================================================================================
 // 데이터 상태 관리
@@ -552,7 +700,7 @@ const displayZoneLevel = ref(1)
 const isLoading = ref(false)
 
 // 선택된 타입 (info 또는 map)
-const selectedType = ref('map')
+const selectedType = ref(null)
 
 // 선택된 위치
 const selectedLocation = ref(null)
@@ -665,7 +813,6 @@ function toggleShowMore() {
 // ========================================================================================
 
 function setTime(minutes) {
-    console.log(`\n⏰ setTime 호출: ${minutes}분`)
     selectedMinutes.value = minutes
     showAllLocations.value = false // ⭐ 더보기 상태 초기화
     selectedLocation.value = null
@@ -729,29 +876,19 @@ function updateTimeFromEvent(event) {
 
 // ⭐ displayZoneLevel이 변경될 때마다 circle 업데이트
 watch(displayZoneLevel, (newLevel, oldLevel) => {
-    console.log(`\n🔄 Zone Level 변경: ${oldLevel} → ${newLevel}`)
     showAllLocations.value = false
 
     clearAllRoutes()
     selectedLocation.value = null
 
-    console.log(`displayedZoneToShow 업데이트:`, displayedZoneToShow.value)
-    console.log(`새로운 마커 개수: ${markerDataToDisplay.value.length}개`)
-
-    displayedZoneToShow.value.forEach((item, idx) => {
-        console.log(`  [${idx + 1}] 확률: ${(item.value * 100).toFixed(1)}%, 주소: ${item.address1 || '없음'}`)
-    })
-
     if (map.value) {
         makeMarker()
-        console.log(`✅ displayZoneLevel watch: Zone ${newLevel} circle 표시 시작`)
         showCirclesByZoneLevel(newLevel)
     }
 })
 
 // ⭐⭐⭐ selectedMinutes가 변경될 때 zone level 변경 및 원 업데이트
 watch(selectedMinutes, (newMinutes) => {
-    console.log(`\n⏰ 시간 변경: ${newMinutes}분`)
 
     let newLevel = 1
     if (newMinutes <= 30) {
@@ -761,8 +898,6 @@ watch(selectedMinutes, (newMinutes) => {
     } else {
         newLevel = 3
     }
-
-    console.log(`  → 새로운 Zone Level: ${newLevel}`)
 
     showAllLocations.value = false
     selectedLocation.value = null
@@ -852,12 +987,10 @@ function hideCircles() {
     if (circles.value.circle700) circles.value.circle700.setMap(null)
     if (circles.value.circle1500) circles.value.circle1500.setMap(null)
     if (circles.value.circle2100) circles.value.circle2100.setMap(null)
-    console.log('👁️ 모든 Circle 숨김 완료')
 }
 
 // ⭐ Zone Level에 따라 Circle 표시
 function showCirclesByZoneLevel(level) {
-    console.log(`\n🎯 showCirclesByZoneLevel 호출: Level ${level}`)
 
     if (!map.value) {
         console.error('지도가 초기화되지 않았습니다.')
@@ -870,17 +1003,14 @@ function showCirclesByZoneLevel(level) {
     // Zone Level에 따라 해당하는 원들만 표시
     if (level >= 1 && circles.value.circle700) {
         circles.value.circle700.setMap(map.value)
-        console.log(`  ✓ Circle 700m 표시`)
     }
 
     if (level >= 2 && circles.value.circle1500) {
         circles.value.circle1500.setMap(map.value)
-        console.log(`  ✓ Circle 1500m 표시`)
     }
 
     if (level >= 3 && circles.value.circle2100) {
         circles.value.circle2100.setMap(map.value)
-        console.log(`  ✓ Circle 2100m 표시`)
     }
 
     // 원의 반경을 현재 시간에 맞게 업데이트
@@ -894,49 +1024,54 @@ function updateMapForTime(minutes) {
         return
     }
 
-    console.log(`\n🔄 updateMapForTime: ${minutes}분`)
-
-    // 0-30분: circle700만 0~700m로 점진적 확대
+    // 0-30분: circle700만 0~600m로 점진적 확대
     if (minutes <= 30) {
-        const radius = (minutes / 30) * 700
+        const radius = (minutes / 30) * 600
         circles.value.circle700.setRadius(radius)
-        console.log(`  → Circle 700: ${radius.toFixed(0)}m`)
 
         // 나머지 원은 반경 0으로 설정 (숨김 효과)
         if (circles.value.circle1500) circles.value.circle1500.setRadius(0)
         if (circles.value.circle2100) circles.value.circle2100.setRadius(0)
     }
-    // 30-60분: circle700은 700m 고정, circle1500은 700~1500m로 점진적 확대
+    // 30-60분: circle700은 600m 고정, circle1500은 600~1300m로 점진적 확대
     else if (minutes <= 60) {
-        circles.value.circle700.setRadius(700)
-        console.log(`  → Circle 700: 700m (고정)`)
+        circles.value.circle700.setRadius(600)
 
-        const radius = 700 + ((minutes - 30) / 30) * (1500 - 700)
+        const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
         if (circles.value.circle1500) {
             circles.value.circle1500.setRadius(radius)
-            console.log(`  → Circle 1500: ${radius.toFixed(0)}m`)
         }
 
         // circle2100은 반경 0으로 설정 (숨김 효과)
         if (circles.value.circle2100) circles.value.circle2100.setRadius(0)
     }
-    // 60-90분: circle700은 700m, circle1500은 1500m 고정, circle2100은 1500~2100m로 점진적 확대
-    else {
-        circles.value.circle700.setRadius(700)
-        console.log(`  → Circle 700: 700m (고정)`)
+    // 60-90분: circle700은 600m, circle1500은 1300m 고정, circle2100은 1300~2000m로 점진적 확대
+    else if (minutes <= 90) {
+        circles.value.circle700.setRadius(600)
 
         if (circles.value.circle1500) {
-            circles.value.circle1500.setRadius(1500)
-            console.log(`  → Circle 1500: 1500m (고정)`)
+            circles.value.circle1500.setRadius(1300)
         }
 
-        const radius = 1500 + ((minutes - 60) / 30) * (2100 - 1500)
+        const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
         if (circles.value.circle2100) {
             circles.value.circle2100.setRadius(radius)
-            console.log(`  → Circle 2100: ${radius.toFixed(0)}m`)
+        }
+    }
+    // 90분 초과: 모든 원을 최대 반경으로 고정
+    else {
+        circles.value.circle700.setRadius(600)
+        
+        if (circles.value.circle1500) {
+            circles.value.circle1500.setRadius(1300)
+        }
+        
+        if (circles.value.circle2100) {
+            circles.value.circle2100.setRadius(2000)  // 최대 2000m로 제한
         }
     }
 }
+
 
 // ========================================================================================
 // FastAPI 호출 함수
@@ -970,6 +1105,10 @@ async function fetchPrediction() {
         missingLocation.value.lat = predictionData.value.metadata.missing_center_lat
         missingLocation.value.lon = predictionData.value.metadata.missing_center_lon
 
+        getMissingAddress()
+        calcElapsedTime()
+
+
         console.log('Prediction Data:', data)
 
         // ⭐ VWorld API 호출하여 지목 및 주소 정보 가져오기
@@ -984,7 +1123,7 @@ async function fetchPrediction() {
 
         // ⭐⭐⭐ Circle 초기화 및 표시
         initCircles()
-        if (selectedType.value === 'map') {
+        if (selectedType.value === 'map' || 'info') {
             showCirclesByZoneLevel(displayZoneLevel.value)
         }
 
@@ -1001,12 +1140,16 @@ async function fetchPrediction() {
 
 onMounted(() => {
     fetchPatientAndMissingReport()
-
-    loadKakaoMap(mapContainer.value)
-    // 페이지 로드 시 자동으로 데이터 가져오기
-    setTimeout(() => {
-        fetchPrediction()
-    }, 1000)
+    try {
+        loadKakaoMap(mapContainer.value)
+        // 페이지 로드 시 자동으로 데이터 가져오기
+        setTimeout(() => {
+            fetchPrediction()
+        }, 1000)        
+    } finally {
+        selectedType.value = 'info'
+    }
+    
 })
 
 const loadKakaoMap = (container) => {
@@ -1095,7 +1238,6 @@ function hideMarkers() {
             marker.setVisible(false)
         }
     }
-    console.log(`👁️ 마커 ${markers.length}개 숨김 완료`)
 }
 
 function showMarkers() {
@@ -1104,16 +1246,12 @@ function showMarkers() {
             marker.setVisible(true)
         }
     }
-    console.log(`👁️ 마커 ${markers.length}개 표시 완료`)
 }
 
 // ⭐ 마커 생성 함수
 function makeMarker() {
     // ⭐ 기존 마커 숨기기
     hideMarkers()
-
-    console.log(`\n📍 마커 생성 시작 (Zone Level: ${displayZoneLevel.value})`)
-    console.log('표시할 마커:', markerDataToDisplay.value)
 
     // markerDataToDisplay에 포함된 모든 마커 표시
     markerDataToDisplay.value.forEach((item, index) => {
@@ -1132,11 +1270,6 @@ function makeMarker() {
         // ⭐ 마커를 배열에 저장
         markers.push(marker)
     })
-
-    console.log(`\n✅ 현재 지도에 표시된 마커 개수: ${markers.length}개`)
-    console.log(`  - Zone 1: ${markerDataToDisplay.value.filter(m => m.zoneLevel === 1).length}개`)
-    console.log(`  - Zone 2: ${markerDataToDisplay.value.filter(m => m.zoneLevel === 2).length}개`)
-    console.log(`  - Zone 3: ${markerDataToDisplay.value.filter(m => m.zoneLevel === 3).length}개`)
 }
 
 // ⭐ Zone Level에 따른 마커 색상
@@ -1191,7 +1324,6 @@ async function requestAllRoutes() {
     for (const zone of allZones) {
         if (!zone.data || zone.data.length === 0) continue
 
-        console.log(`Zone Level ${zone.level} 경로 요청 중... (${zone.data.length}개)`)
         zone.storage.value = []
 
         for (let i = 0; i < zone.data.length; i++) {
@@ -1242,7 +1374,6 @@ async function requestAllRoutes() {
 
                 if (data && data.features && Array.isArray(data.features)) {
                     zone.storage.value.push(data.features)
-                    console.log(`Zone ${zone.level}-${i} 경로 저장 완료 (${data.features.length} features)`)
                 } else {
                     zone.storage.value.push(null)
                     console.warn(`Zone ${zone.level}-${i} 유효한 경로 데이터 없음`)
@@ -1263,7 +1394,6 @@ async function requestAllRoutes() {
 
 // ⭐ polyline 제거 함수
 function clearPolylines() {
-    console.log(`🗑️ 기존 폴리라인 ${polylines.length}개 제거 시작`)
 
     for (let polyline of polylines) {
         if (polyline && polyline.setMap) {
@@ -1272,7 +1402,6 @@ function clearPolylines() {
     }
 
     polylines.length = 0
-    console.log(`✅ 폴리라인 제거 완료`)
 }
 
 // ⭐ 모든 경로 제거
@@ -1333,7 +1462,6 @@ function drawRoute(index, zoneLevel = 1) {
             })
 
             polylines.push(polyline)
-            console.log(`Polyline ${featureIndex + 1} 그림: ${coordinates.length}개 좌표`)
 
             if (featureIndex === 0 && linePath.length > 0) {
                 const midIndex = Math.floor(linePath.length / 2)
@@ -1360,7 +1488,6 @@ async function getKakaoAddressFromCoord(lat, lon) {
         return new Promise((resolve, reject) => {
             geocoder.coord2RegionCode(lon, lat, (result, status) => {
                 if (status === window.kakao.maps.services.Status.OK) {
-                    console.log(`✅ Kakao Geocoder 성공:`, result)
 
                     const region = result[0]
 
@@ -1442,8 +1569,6 @@ async function getPropsFromVworld() {
     for (const zone of allZones) {
         if (!zone.data || zone.data.length === 0) continue
 
-        console.log(`Zone Level ${zone.level} 처리 중... (${zone.data.length}개)`)
-
         for (let i = 0; i < zone.data.length; i++) {
             const location = zone.data[i]
 
@@ -1453,8 +1578,6 @@ async function getPropsFromVworld() {
                 location.lat,
                 location.lon
             )
-
-            console.log(`Zone ${zone.level}-${i + 1}: 거리 = ${location.dist_m}m`)
 
             try {
                 const dataParams = new URLSearchParams({
@@ -1513,7 +1636,6 @@ async function getPropsFromVworld() {
                         location.sgg_nm = kakaoAddress.gungu
                         location.emd_nm = kakaoAddress.eup
 
-                        console.log(`✅ Zone ${zone.level}-${i + 1}: Kakao Geocoder 폴백 성공 - ${location.address1}`)
                     } else {
                         location.address1 = '위치 정보 없음'
                         location.address2 = ''
@@ -1544,7 +1666,6 @@ async function getPropsFromVworld() {
                     ri = props.ri_nm || ''
                     jimok = props.jimok || '토지'
 
-                    console.log(`✅ Zone ${zone.level}-${i + 1}: VWorld Data 조회 성공 - ${sgg} ${emd} ${ri}, 지목: ${jimok}`)
                 } else {
                     console.warn(`Zone ${zone.level}-${i + 1}: VWorld 응답 데이터 없음 - Kakao Geocoder 폴백`)
                     const kakaoAddress = await getKakaoAddressFromCoord(location.lat, location.lon)
@@ -1558,7 +1679,6 @@ async function getPropsFromVworld() {
                         location.sgg_nm = kakaoAddress.gungu
                         location.emd_nm = kakaoAddress.eup
 
-                        console.log(`✅ Zone ${zone.level}-${i + 1}: Kakao Geocoder 폴백 성공 - ${location.address1}`)
                     } else {
                         location.address1 = '위치 정보 없음'
                         location.address2 = ''
@@ -1586,14 +1706,11 @@ async function getPropsFromVworld() {
 
                     if (poiResult && poiResult.poiName) {
                         location.address2 = `'${poiResult.poiName}'에 있을 것 같아요!`
-                        console.log(`✅ Zone ${zone.level}-${i + 1}: VWorld POI 검색 성공 - ${location.address2}`)
                     } else {
                         location.address2 = `도로에 있을 것 같아요!`
-                        console.log(`⚠️ Zone ${zone.level}-${i + 1}: VWorld POI 검색 실패 - ${location.address2}`)
                     }
                 } else {
                     location.address2 = `${jimokNaturalText}에 있을 것 같아요!`
-                    console.log(`ℹ️ Zone ${zone.level}-${i + 1}: 제외 지목(${jimok}) - ${location.address2}`)
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 150))
@@ -1605,7 +1722,6 @@ async function getPropsFromVworld() {
             }
         }
     }
-
     console.log('🗺️ 모든 API 호출 완료')
 }
 
@@ -1700,9 +1816,9 @@ function selectLocation(loc, index) {
 
     // 지도 중심을 해당 위치로 이동
     if (map.value) {
-        const position = new window.kakao.maps.LatLng(loc.lat, loc.lon)
+        const position = new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon)
         map.value.panTo(position)
-        map.value.setLevel(4)
+        map.value.setLevel(6)
     }
 
     // 경로 그리기
@@ -1839,32 +1955,115 @@ function getTimeRangeText(minutes) {
     color: #333333;
 }
 
-/* ==============실종자 정보 ================= */
-.info-header-section {
+.missing-person-info {
+    padding: 24px 16px;
+    margin-bottom: 30px;
+}
+
+/* ============ 컨텐츠 섹션 ============ */
+.content-section {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fd 100%);
+  padding: 0;
   display: flex;
-  gap: 18px;
-  margin-bottom: 28px;
-  align-items: flex-start;
+  flex-direction: column;
+}
+
+
+/* ========================실종자 정보============================== */
+.info-header-section {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 0;
+    align-items: flex-start;
+}
+
+.profile-image-wrapper {
+    flex-shrink: 0;
+}
+
+.profile-image {
+    width: 130px;
+    height: 130px;
+    border-radius: 16px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%);
+    border: 3px solid #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .basic-info-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
+.person-name {
+    font-size: 17px;
+    font-weight: 800;
+    color: #171717;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
 
+.age-info {
+    font-size: 14px;
+    color: #737373;
+    margin: 0;
+    font-weight: 500;
+}
 
+.missing-datetime,
+.missing-location {
+    font-size: 12px;
+    color: #525252;
+    margin: 0;
+    font-weight: 500;
+}
 
+.detail-sections {
+    position : relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
 
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 14px;
+    transition: all 0.3s ease;
+}
 
+.info-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 20px;
+    flex-shrink: 0;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    width: fit-content;
+}
 
+.badge-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #667eea;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
 
-
-
-
-
+.info-content {
+    font-size: 14px;
+    color: #333;
+    flex: 1;
+    font-weight: 500;
+    line-height: 1.5;
+}
 
 /* ⭐ 더보기 버튼 추가 스타일 */
 .more-btn {
@@ -2422,9 +2621,10 @@ function getTimeRangeText(minutes) {
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: all 0.3s ease;
-    width: 300px;
+    width: 350px;
     position: relative;
     right: 20px;
+    height: 150px;
 }
 
 .stat-icon-modern {
@@ -2474,6 +2674,12 @@ function getTimeRangeText(minutes) {
 .stat-sublabel-modern {
     font-size: 11px;
     color: #999;
+    margin: 4px 0 0 0;
+}
+
+.stat-sublabel-modern-1 {
+    font-size: 14px;
+    color: #3f3f3f;
     margin: 4px 0 0 0;
 }
 
@@ -2528,7 +2734,7 @@ function getTimeRangeText(minutes) {
 .modern-btn {
     margin-top: 8px;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea;
     border: none;
     border-radius: 20px;
     color: white;
@@ -2558,7 +2764,7 @@ function getTimeRangeText(minutes) {
 .age-info i,
 .missing-datetime i,
 .missing-location i {
-    font-size: 14px;
+    font-size: 14px; 
     color: #667eea;
 }
 
