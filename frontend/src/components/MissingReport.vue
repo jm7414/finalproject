@@ -173,13 +173,13 @@ function goBack() {
 <style scoped>
 /* 전체 페이지 레이아웃 */
 .page-container {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  max-width: 465px;
-  margin: 0 auto;
-  background-color: #FAFAFA;
+  margin-top: 80px;
+  background: #FAFAFA;
   font-family: 'Inter', sans-serif;
+  height: calc(100vh - 90px - 90px);
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 /* 폼 영역 */

@@ -48,42 +48,13 @@ function closeMissingDetailModal() {
 }
 
 // 5. 모달의 '함께 찾기' 이벤트 처리 -> PredictLocation으로 이동
-async function navigateToPredictLocation(missingPostId) { // async 추가
-  if (missingPostId === null || missingPostId === undefined) {
+function navigateToPredictLocation(missingPostId) {
+  if (missingPostId !== null && missingPostId !== undefined) {
+    router.push(`/predict-location/`);
+    closeMissingDetailModal(); // 이동 후 모달 닫기
+  } else {
     console.error("ID가 없어 PredictLocation으로 이동할 수 없습니다.");
     alert("오류: 페이지 이동에 필요한 ID가 없습니다.");
-    return;
-  }
-
-  try {
-    // 백엔드 API 호출
-    console.log(`함께 찾기 참여 시도: missingPostId=${missingPostId}`);
-    // API 주소 확인 필요: /api/missing-persons/{missingPostId}/join
-    const response = await axios.post(`/api/missing-persons/${missingPostId}/join`,
-        {}, // POST 요청 본문이 비어있다면 빈 객체 전달
-        { withCredentials: true } // 로그인 상태 유지를 위해 필요
-    );
-    console.log('함께 찾기 API 응답:', response.data);
-    // 백엔드 응답 메시지 확인 (예: "참여했습니다" 또는 "이미 참여 중입니다")
-    // alert(response.data.message); // 필요 시 사용자에게 알림
-
-    // --- API 호출 성공 후 페이지 이동 ---
-    router.push(`/predict-location/${missingPostId}`);
-    closeMissingDetailModal(); // 이동 후 모달 닫기
-
-  } catch (error) {
-    // API 호출 실패 시 에러 처리
-    console.error("함께 찾기 API 호출 실패:", error);
-    if (error.response) {
-      // 서버에서 응답은 왔지만 실패한 경우 
-      alert(`함께 찾기 처리 중 오류 발생: ${error.response.data.message || '서버 오류'}`);
-    } else if (error.request) {
-      // 요청은 보냈으나 응답을 받지 못한 경우 (네트워크 오류 등)
-      alert("서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.");
-    } else {
-      // 요청 설정 중 오류 발생
-      alert("요청 처리 중 오류가 발생했습니다.");
-    }
   }
 }
 
