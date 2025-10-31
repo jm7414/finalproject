@@ -1,5 +1,27 @@
 <template>
     <div class="page-container">
+        
+        <!-- ⭐ 전체 화면 로딩 오버레이 추가 -->
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-content">
+                <div class="loading-animation">
+                    <div class="map-marker-pulse">
+                        <i class="bi bi-geo-alt-fill"></i>
+                    </div>
+                    <div class="search-circles">
+                        <div class="circle circle-1"></div>
+                        <div class="circle circle-2"></div>
+                        <div class="circle circle-3"></div>
+                    </div>
+                </div>
+                <h3 class="loading-title">위치 분석 중</h3>
+                <p class="loading-message">환자분의 위치를 통해 실종시 예측 지점을 분석하고 있어요!</p>
+                <p class="loading-submessage">약 20초 정도 기다려주세요</p>
+                <div class="loading-progress">
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- 지도 영역 -->
         <div ref="mapContainer" class="map-area"></div>
@@ -119,7 +141,7 @@
                         </div>
                         <p class="age-info">
                             <i class="bi bi-clock"></i>
-                            {{ Math.floor(elapsedMinutes / 60) }}시간 전
+                            {{ elapsedTimeText }}
                         </p>
                         <p class="missing-datetime">
                             <i class="bi bi-calendar-event"></i>
@@ -371,15 +393,16 @@ async function fetchMissingPersonDetail() {
         })
         personDetail.value = response.data
 
-        console.log(' 실종자 상세 정보:', personDetail.value)
+        console.log('✅ 실종자 상세 정보:', personDetail.value)
 
         // API 응답에서 'reportedAt' 값을 'missingTimeDB'에 저장
         if (response.data && response.data.reportedAt) {
-            missingTimeDB.value = response.data.reportedAt
+            missingTimeDB.value = new Date(response.data.reportedAt).getTime()
+            console.log('변환된 timestamp:', missingTimeDB.value)
         }
 
     } catch (err) {
-        console.error(" 실종자 상세 정보를 불러오는 데 실패했습니다:", err)
+        console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err)
         personError.value = "상세 정보를 불러올 수 없습니다."
     } finally {
         personLoading.value = false
@@ -489,14 +512,17 @@ async function getMissingAddress() {
 // ============================================================================
 // [주형 추가] 실종자 정보에서 missingTime을 기반으로 현재시간에서 빼가지고 실종자 정보에 띄워주는 함수
 // ============================================================================
+// ref로 경과 시간 문자열 저장
+const elapsedTimeText = ref('')
+
 function calcElapsedTime() {
     try {
         const missingTime = new Date(missingTimeDB.value)
 
         // 유효한 날짜인지 확인
         if (isNaN(missingTime.getTime())) {
-            console.error('실종 시간이 유효하지 않습니다:', missingTimeDB)
-            elapsedMinutes.value = 0
+            console.error('❌ 실종 시간이 유효하지 않습니다:', missingTimeDB.value)
+            elapsedTimeText.value = '시간 불명'
             return
         }
 
@@ -510,16 +536,25 @@ function calcElapsedTime() {
         const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
 
         // 음수면 0으로 설정 (미래 시간인 경우)
-        elapsedMinutes.value = Math.max(0, diffInMinutes)
+        const minutes = Math.max(0, diffInMinutes)
+        
+        // 분 또는 시간으로 표시하기
+        if (minutes < 60) {
+            elapsedTimeText.value = `${minutes}분 전`
+        } else {
+            const hours = Math.floor(minutes / 60)
+            elapsedTimeText.value = `약 ${hours}시간 전`
+        }
 
-        console.log(`실종 경과 시간: ${elapsedMinutes.value}분 (${Math.floor(elapsedMinutes.value / 60)}시간 ${elapsedMinutes.value % 60}분)`)
-        setTime(elapsedMinutes.value)
+        console.log(`⏱️ 경과 시간: ${minutes}분 → 표시: ${elapsedTimeText.value}`)
+        setTime(minutes)  // 필요하면 여기서도 원본 분 단위 값 저장
 
     } catch (error) {
-        console.error('경과 시간 계산 중 오류:', error)
-        elapsedMinutes.value = 0
+        console.error('❌ 경과 시간 계산 중 오류:', error)
+        elapsedTimeText.value = '시간 불명'
     }
 }
+
 
 // ============================================================================
 // [추가] 보호자 → 환자 → 실종신고 순서로 데이터 조회하는 새 함수
@@ -538,39 +573,39 @@ async function fetchPatientAndMissingReport() {
         })
 
         if (!patientResponse.data || !patientResponse.data.userNo) {
-            console.error(' 관리하는 환자가 없습니다.')
+            console.error('❌ 관리하는 환자가 없습니다.')
             personError.value = '관리하는 환자 정보를 찾을 수 없습니다.'
             personLoading.value = false
             return
         }
 
         patientUserNo.value = patientResponse.data.userNo
-        console.log(` 환자 정보 조회 성공: patientUserNo=${patientUserNo.value}`)
+        console.log(`✅ 환자 정보 조회 성공: patientUserNo=${patientUserNo.value}`)
 
         // Step 2: 환자 번호로 최신 실종 신고 조회
-        console.log(' Step 2: 환자의 최신 실종 신고 조회 중...')
+        console.log('📋 Step 2: 환자의 최신 실종 신고 조회 중...')
         const missingReportResponse = await axios.get(
             `/api/missing-persons/patient/${patientUserNo.value}/latest`,
             { withCredentials: true }
         )
 
         if (!missingReportResponse.data || !missingReportResponse.data.missingPostId) {
-            console.error(' 실종 신고 정보가 없습니다.')
+            console.error('❌ 실종 신고 정보가 없습니다.')
             personError.value = '실종 신고 정보를 찾을 수 없습니다.'
             personLoading.value = false
             return
         }
 
         missingPostId.value = missingReportResponse.data.missingPostId
-        console.log(` 실종 신고 조회 성공: missingPostId=${missingPostId.value}`)
+        console.log(`✅ 실종 신고 조회 성공: missingPostId=${missingPostId.value}`)
 
         // Step 3: 이제 missingPostId가 준비되었으니 다른 정보들을 조회
-        console.log(' Step 3: 실종자 상세 정보 및 참여자 목록 조회 중...')
+        console.log('📋 Step 3: 실종자 상세 정보 및 참여자 목록 조회 중...')
         await fetchMissingPersonDetail()  // 실종자 상세 정보
         await fetchParticipants()         // 함께 찾는 사람들
 
     } catch (error) {
-        console.error(' 데이터 조회 중 오류 발생:', error)
+        console.error('❌ 데이터 조회 중 오류 발생:', error)
         if (error.response && error.response.status === 401) {
             personError.value = '로그인이 필요합니다.'
         } else if (error.response && error.response.status === 404) {
@@ -1161,7 +1196,7 @@ const loadKakaoMap = (container) => {
         window.kakao.maps.load(() => {
             const options = {
                 center: new window.kakao.maps.LatLng(37.234257, 126.681727),
-                level: 3,
+                level: 5,
             }
 
             map.value = new window.kakao.maps.Map(container, options)
@@ -1498,13 +1533,13 @@ async function getKakaoAddressFromCoord(lat, lon) {
                         name: region.region_name || ''
                     }
 
-                    console.log(`지역 정보: ${address.sido} ${address.gungu} ${address.eup}`)
+                    console.log(`✅ 지역 정보: ${address.sido} ${address.gungu} ${address.eup}`)
                     resolve(address)
                 } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
-                    console.warn(`Kakao Geocoder: 결과 없음`)
+                    console.warn(`⚠️ Kakao Geocoder: 결과 없음`)
                     resolve(null)
                 } else if (status === window.kakao.maps.services.Status.ERROR) {
-                    console.error(`Kakao Geocoder: 에러 발생`)
+                    console.error(`❌ Kakao Geocoder: 에러 발생`)
                     reject(new Error('Kakao Geocoder 에러'))
                 }
             })
@@ -1879,6 +1914,182 @@ function getTimeRangeText(minutes) {
     background: linear-gradient(180deg, #f8f9fd 0%, #ffffff 100%);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-y: auto;
+    scrollbar-width: none;  /* 스크롤바 숨기기 */
+}
+
+/* ⭐⭐⭐ 전체 화면 로딩 오버레이 스타일 ⭐⭐⭐ */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.loading-content {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+}
+
+.loading-animation {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 30px;
+}
+
+.map-marker-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 2s ease-in-out infinite;
+    z-index: 2;
+}
+
+.map-marker-pulse i {
+    font-size: 32px;
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        box-shadow: 0 0 0 15px rgba(102, 126, 234, 0);
+    }
+}
+
+.search-circles {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+}
+
+.circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 3px solid;
+    border-radius: 50%;
+    animation: ripple 2s ease-out infinite;
+}
+
+.circle-1 {
+    width: 80px;
+    height: 80px;
+    border-color: rgba(102, 126, 234, 0.6);
+    animation-delay: 0s;
+}
+
+.circle-2 {
+    width: 100px;
+    height: 100px;
+    border-color: rgba(102, 126, 234, 0.4);
+    animation-delay: 0.5s;
+}
+
+.circle-3 {
+    width: 120px;
+    height: 120px;
+    border-color: rgba(102, 126, 234, 0.2);
+    animation-delay: 1s;
+}
+
+@keyframes ripple {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
+    }
+}
+
+.loading-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #333;
+    margin: 0 0 12px 0;
+    letter-spacing: -0.5px;
+}
+
+.loading-message {
+    font-size: 16px;
+    font-weight: 500;
+    color: #666;
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+.loading-submessage {
+    font-size: 14px;
+    font-weight: 400;
+    color: #999;
+    margin: 0 0 30px 0;
+}
+
+.loading-progress {
+    width: 100%;
+    height: 6px;
+    background: #e8ebf2;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    animation: progressAnimation 2s ease-in-out infinite;
+}
+
+@keyframes progressAnimation {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 .map-area {
@@ -2643,6 +2854,7 @@ function getTimeRangeText(minutes) {
 
 .stat-content-modern {
     flex: 1;
+    margin-bottom: 30px;
 }
 
 .stat-label-modern {
