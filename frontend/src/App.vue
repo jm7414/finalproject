@@ -546,6 +546,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 90px 5px 80px 5px;
+  scrollbar-width: none;  /* 스크롤바 숨기기 */
 }
 
 /* padding 제거가 필요한 페이지 */
