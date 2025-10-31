@@ -253,13 +253,24 @@ function goHospitalCare() {
   color: #666;
 }
 .func-link {
+  width: 100px;
   align-self: flex-end;
-  background: rgba(59,130,246,0.1);
-  border: none;
+  background: rgba(59, 130, 246, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 3px 5px 3px 5px;
   color: #3b82f6;
   font-size: 16px;
   font-weight: 500;
-  border-radius: 5%;
+  border-radius: 12px;
   cursor: pointer;
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.func-link:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.2);
 }
 </style>
