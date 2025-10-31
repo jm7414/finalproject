@@ -2,29 +2,25 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-
-// 기본 이미지
-// import defaultPersonImage from '../assets/@';
+import MissingDetailModal from './MissingDetailModal.vue'; // 1. 모달 컴포넌트 import
 
 const router = useRouter();
-const missingPeople = ref([]); // 서버로부터 받을 MissingPersonDto 배열
+const missingPeople = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
-// 컴포넌트 마운트 시 실종자 목록 불러오기
 onMounted(() => {
   fetchMissingPeople();
 });
 
-// 백엔드 API 호출 함수
+// 백엔드 API 호출 함수 (기존과 동일)
 async function fetchMissingPeople() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`/api/missing-persons`, { // 최종 API 주소 확인
+    const response = await axios.get(`/api/missing-persons`, {
       withCredentials: true
     });
-    // 서버 응답 데이터 확인 (디버깅용)
     console.log("서버 응답:", JSON.stringify(response.data, null, 2));
     missingPeople.value = response.data;
   } catch (err) {
@@ -35,15 +31,60 @@ async function fetchMissingPeople() {
   }
 }
 
-// 상세 페이지 이동 함수 (경로는 실제 라우터 설정에 맞게 수정)
-function goToMissingDetail(missingPostId) {
+// 2. 모달 상태 및 선택된 사람 정보
+const selectedPerson = ref(null);
+const isModalVisible = ref(false);
+
+// 3. 모달 열기 함수
+function openMissingDetailModal(person) {
+  selectedPerson.value = person;
+  isModalVisible.value = true;
+}
+
+// 4. 모달 닫기 함수
+function closeMissingDetailModal() {
+  isModalVisible.value = false;
+  selectedPerson.value = null;
+}
+
+// 5. 모달의 '함께 찾기' 이벤트 처리 -> PredictLocation으로 이동
+async function navigateToPredictLocation(missingPostId) { // async 추가
   if (missingPostId === null || missingPostId === undefined) {
-      console.error("상세 페이지로 이동할 ID가 없습니다. 데이터:", missingPostId);
-      alert("상세 정보를 표시할 수 없습니다 (ID 누락)."); // 사용자에게 알림
-      return;
+    console.error("ID가 없어 PredictLocation으로 이동할 수 없습니다.");
+    alert("오류: 페이지 이동에 필요한 ID가 없습니다.");
+    return;
   }
-  // 상세 페이지 경로 확인 및 수정 필요
-  router.push(`/CommunityMissingDetail/${missingPostId}`);
+
+  try {
+    // 백엔드 API 호출
+    console.log(`함께 찾기 참여 시도: missingPostId=${missingPostId}`);
+    // API 주소 확인 필요: /api/missing-persons/{missingPostId}/join
+    const response = await axios.post(`/api/missing-persons/${missingPostId}/join`,
+        {}, // POST 요청 본문이 비어있다면 빈 객체 전달
+        { withCredentials: true } // 로그인 상태 유지를 위해 필요
+    );
+    console.log('함께 찾기 API 응답:', response.data);
+    // 백엔드 응답 메시지 확인 (예: "참여했습니다" 또는 "이미 참여 중입니다")
+    // alert(response.data.message); // 필요 시 사용자에게 알림
+
+    // --- API 호출 성공 후 페이지 이동 ---
+    router.push(`/predict-location/${missingPostId}`);
+    closeMissingDetailModal(); // 이동 후 모달 닫기
+
+  } catch (error) {
+    // API 호출 실패 시 에러 처리
+    console.error("함께 찾기 API 호출 실패:", error);
+    if (error.response) {
+      // 서버에서 응답은 왔지만 실패한 경우 
+      alert(`함께 찾기 처리 중 오류 발생: ${error.response.data.message || '서버 오류'}`);
+    } else if (error.request) {
+      // 요청은 보냈으나 응답을 받지 못한 경우 (네트워크 오류 등)
+      alert("서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.");
+    } else {
+      // 요청 설정 중 오류 발생
+      alert("요청 처리 중 오류가 발생했습니다.");
+    }
+  }
 }
 
 function formatTimeAgo(dateString) {
@@ -62,18 +103,20 @@ function formatTimeAgo(dateString) {
     if (minutes > 0) return `${minutes}분 전`;
     return "방금 전";
   } catch (e) {
-      console.error("시간 계산 오류:", e, dateString);
-      return '시간 계산 오류';
+    console.error("시간 계산 오류:", e, dateString);
+    return '시간 계산 오류';
   }
 }
 
+// 날짜/시간 표시 함수 (예: "10월 29일 오후 5:48")
 function formatDateTime(dateString) {
     if (!dateString) return '정보 없음';
      try {
         const date = new Date(dateString);
         if (isNaN(date)) return '날짜 형식 오류';
         return date.toLocaleString('ko-KR', {
-          year: 'numeric', month: 'numeric', day: 'numeric',
+          year: 'numeric', // 년도 제외
+          month: 'numeric', day: 'numeric',
           hour: 'numeric', minute: '2-digit', hour12: true
         });
      } catch(e) {
@@ -82,6 +125,7 @@ function formatDateTime(dateString) {
      }
 }
 
+// 나이 계산 함수
 function calculateAge(birthDateString) {
   if (!birthDateString) return '?';
   try {
@@ -93,67 +137,69 @@ function calculateAge(birthDateString) {
       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      return age >= 0 ? age : '?';
+      return age >= 0 ? age : '?'; // 계산 결과가 음수면 '?' 반환
   } catch(e) {
       console.error("나이 계산 오류:", e, birthDateString);
       return '?';
   }
 }
 
+const defaultPersonImage = '/default-person.png';
+
 </script>
 
 <template>
   <div class="missing-page-container">
-    <section class="urgent-notice">
-      <div class="notice-icon">🚨</div>
-      <div class="notice-text">
-        <p class="main-text">긴급 실종신고</p>
-        <p class="sub-text" v-if="!loading">실종신고 {{ missingPeople.length }}건이 등록되었습니다</p>
-      </div>
-    </section>
 
     <main class="missing-list">
-      <div v-if="loading" class="status-message">실종자 목록을 불러오는 중입니다...</div>
+      <div v-if="loading" class="status-message">...</div>
       <div v-else-if="error" class="status-message error">{{ error }}</div>
-      <div v-else-if="missingPeople.length === 0" class="status-message">등록된 실종신고가 없습니다.</div>
+      <div v-else-if="missingPeople.length === 0" class="status-message">...</div>
 
-      <div v-else v-for="person in missingPeople" :key="person.missingPostId" class="card" @click="goToMissingDetail(person.missingPostId)">
+      <div v-else v-for="person in missingPeople" :key="person.missingPostId" class="card"
+        @click="openMissingDetailModal(person)">
         <div class="card-main-info">
           <img :src="person.photoPath || defaultPersonImage" :alt="person.patientName" class="person-image">
           <div class="person-details">
             <h3>{{ person.patientName || '이름 없음' }} ({{ calculateAge(person.patientBirthDate) }}세)</h3>
             <span>{{ formatTimeAgo(person.reportedAt) }}</span>
             <p>실종일시: {{ formatDateTime(person.reportedAt) }}</p>
-            </div>
+          </div>
         </div>
         <div class="card-extra-info">
           <div class="info-item full-description">
-              <span class="tag">상세정보</span>
-              <p>{{ person.description?.trim().replace(/\\n/g, '\n') || '정보 없음' }}</p>
+            <span class="tag">상세정보</span>
+            <p>{{ person.description?.trim().replace(/\\n/g, '\n') || '정보 없음' }}</p>
           </div>
-           <div class="info-item">
-             <span class="tag">함께하는 이웃</span>
-             <p>{{ person.searchTogetherCount || 0 }}명</p>
-           </div>
+          <div class="info-item">
+            <span class="tag">함께하는 이웃</span>
+            <p>{{ person.searchTogetherCount || 0 }}명</p>
+          </div>
         </div>
-        <button class="map-button" @click.stop="goToMissingDetail(person.missingPostId)">
+        <button class="map-button" @click.stop="openMissingDetailModal(person)">
           📍 상세 정보 보기
         </button>
       </div>
-      </main>
+    </main>
 
-    </div>
+    <MissingDetailModal v-if="isModalVisible" :person="selectedPerson" @close="closeMissingDetailModal"
+      @join-search="navigateToPredictLocation" />
+
+  </div>
 </template>
 
 <style scoped>
 /* 전체 레이아웃 */
 .missing-page-container {
   width: 100%;
-  max-width: 500px; /* 최대 너비 제한 (선택사항) */
-  margin: 0 auto;   /* 가운데 정렬 (선택사항) */
+  max-width: 500px;
+  /* 최대 너비 제한 (선택사항) */
+  margin: 0 auto;
+  /* 가운데 정렬 (선택사항) */
   background: #FAFAFA;
   font-family: 'Inter', sans-serif;
-  padding-bottom: 20px; /* 하단 여백 추가 */
+  padding-bottom: 20px;
+  /* 하단 여백 추가 */
 }
 
 /* 긴급 알림 섹션 */
@@ -165,11 +211,29 @@ function calculateAge(birthDateString) {
   background: #F5F5F5;
   border-bottom: 1px solid #E5E5E5;
 }
-.notice-icon { font-size: 20px; }
-.notice-text { flex-grow: 1; }
-.notice-text p { margin: 0; }
-.main-text { font-size: 14px; color: #262626; font-weight: bold; }
-.sub-text { font-size: 12px; color: #525252; }
+
+.notice-icon {
+  font-size: 20px;
+}
+
+.notice-text {
+  flex-grow: 1;
+}
+
+.notice-text p {
+  margin: 0;
+}
+
+.main-text {
+  font-size: 14px;
+  color: #262626;
+  font-weight: bold;
+}
+
+.sub-text {
+  font-size: 12px;
+  color: #525252;
+}
 
 /* 실종자 목록 */
 .missing-list {
@@ -178,14 +242,22 @@ function calculateAge(birthDateString) {
   flex-direction: column;
   gap: 16px;
 }
-.status-message { padding: 40px; text-align: center; color: #737373; }
-.error { color: red; }
+
+.status-message {
+  padding: 40px;
+  text-align: center;
+  color: #737373;
+}
+
+.error {
+  color: red;
+}
 
 /* 실종자 카드 */
 .card {
   display: flex;
   flex-direction: column;
-  padding: 17px;
+  padding: 15px;
   background: #FFFFFF;
   border: 1px solid #E5E5E5;
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
@@ -193,6 +265,7 @@ function calculateAge(birthDateString) {
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
@@ -203,6 +276,7 @@ function calculateAge(birthDateString) {
   gap: 16px;
   margin-bottom: 16px;
 }
+
 .person-image {
   width: 106px;
   height: 106px;
@@ -211,57 +285,87 @@ function calculateAge(birthDateString) {
   background-color: #D4D4D4;
   flex-shrink: 0;
 }
+
 .person-details {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1; /* 남는 공간 차지 */
-  min-width: 0; /* 내용 넘침 방지 */
+  flex: 1;
+  /* 남는 공간 차지 */
+  min-width: 0;
+  /* 내용 넘침 방지 */
 }
+
 .person-details h3 {
   font-size: 16px;
   font-weight: bold;
   color: #171717;
   margin: 0;
 }
-.person-details span { font-size: 14px; color: #525252; }
-.person-details p { font-size: 14px; color: #525252; margin: 0; }
+
+.person-details span {
+  font-size: 14px;
+  color: #525252;
+}
+
+.person-details p {
+  font-size: 14px;
+  color: #525252;
+  margin: 0;
+}
 
 .card-extra-info {
   display: flex;
   flex-direction: column;
-  gap: 10px; /* 간격 조정 */
+  gap: 10px;
+  /* 간격 조정 */
   margin-bottom: 16px;
 }
+
 .info-item {
   display: flex;
   gap: 8px;
 }
+
 .tag {
-  padding: 3px 10px; /* 패딩 조정 */
-  background: #EEEEEE; /* 배경색 변경 */
-  border-radius: 12px; /* 더 둥글게 */
+  padding: 3px 10px;
+  /* 패딩 조정 */
+  background: #EEEEEE;
+  /* 배경색 변경 */
+  border-radius: 12px;
+  /* 더 둥글게 */
   font-size: 12px;
-  color: #333333; /* 글자색 변경 */
+  color: #333333;
+  /* 글자색 변경 */
   flex-shrink: 0;
-  height: fit-content; /* 내용 높이에 맞춤 */
+  height: fit-content;
+  /* 내용 높이에 맞춤 */
 }
+
 .info-item p {
   margin: 0;
   font-size: 14px;
   color: #525252;
-  line-height: 1.6; /* 줄간격 */
-  white-space: pre-wrap; /* \n 줄바꿈 처리 */
-  flex: 1; /* 남는 공간 차지 */
-  min-width: 0; /* 내용 넘침 방지 */
-  word-break: break-all; /* 긴 단어 줄바꿈 처리 */
+  line-height: 1.6;
+  /* 줄간격 */
+  white-space: pre-wrap;
+  /* \n 줄바꿈 처리 */
+  flex: 1;
+  /* 남는 공간 차지 */
+  min-width: 0;
+  /* 내용 넘침 방지 */
+  word-break: break-all;
+  /* 긴 단어 줄바꿈 처리 */
 }
+
 /* 상세정보는 태그를 위쪽에 맞춤 */
 .full-description {
   align-items: flex-start;
 }
+
 .full-description .tag {
-   margin-top: 2px; /* 위치 미세 조정 */
+  margin-top: 2px;
+  /* 위치 미세 조정 */
 }
 
 

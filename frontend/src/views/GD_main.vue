@@ -2,15 +2,6 @@
 <template>
   <div class="container-sm py-3" style="max-width:414px; position:relative;">
 
-    <!-- 🔴 히든 토글: 아주 작은 동그라미(우상단) -->
-    <button class="position-absolute rounded-circle border-0" @click="toggleTestEvent" aria-label="테스트 이벤트 토글"
-      title="테스트 이벤트" style="
-        top:6px; right:6px; width:18px; height:18px;
-        background:#ff4d4f; opacity:.65; z-index:50;
-        box-shadow:0 0 0 1px rgba(0,0,0,.08);
-      ">
-    </button>
-
     <!-- (요청) 실종 제보 카드: 상태 문구보다 위로 이동 -->
     <div v-if="missingEvent" class="card border-0 shadow-sm mb-3">
       <div class="row g-3 align-items-center p-3">

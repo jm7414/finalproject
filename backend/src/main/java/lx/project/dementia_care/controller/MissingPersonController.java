@@ -36,18 +36,55 @@ public class MissingPersonController {
         return ResponseEntity.ok(missingPersons);
     }
 
-    // /**
-    //  * 특정 실종 신고 ID로 상세 정보를 조회하는 API
-    //  */
-    // @GetMapping("/{missingPostId}")
-    // public ResponseEntity<MissingPersonDto> getMissingPersonDetailById(@PathVariable Integer missingPostId) {
-    //     MissingPersonDto missingPersonDetail = missingPersonService.getMissingPersonDetailById(missingPostId); // Service에 이 메서드 필요
-    //     if (missingPersonDetail != null) {
-    //         return ResponseEntity.ok(missingPersonDetail);
-    //     } else {
-    //         return ResponseEntity.notFound().build();
-    //     }
-    // }
+    /**
+     * 특정 실종 신고 ID로 상세 정보를 조회하는 API
+     */
+@GetMapping("/{missingPostId}")
+  public ResponseEntity<MissingPersonDto> getMissingPersonDetailById(@PathVariable Integer missingPostId) {
+    MissingPersonDto missingPersonDetail = missingPersonService.getMissingPersonDetailById(missingPostId);
+    if (missingPersonDetail != null) {
+      return ResponseEntity.ok(missingPersonDetail);
+    } else {
+      return ResponseEntity.notFound().build();
+    }
+  }
+
+    /**
+     * [추가] 환자 번호(user_no)로 최신 실종 신고를 조회하는 API
+     * GET /api/missing-persons/patient/{patientUserNo}/latest
+     * 
+     * 용도: 프론트엔드에서 환자 ID는 알지만 실종 신고 ID를 모를 때 사용
+     * 예시: /api/missing-persons/patient/4/latest
+     * 
+     * @param patientUserNo 환자의 user_no
+     * @return 해당 환자의 가장 최근 실종 신고 정보 (없으면 404)
+     */
+    @GetMapping("/patient/{patientUserNo}/latest")
+    public ResponseEntity<MissingPersonDto> getLatestMissingReportByPatient(
+            @PathVariable Integer patientUserNo) {
+        
+        try {
+            // Service의 기존 메서드 활용 (이미 구현되어 있음)
+            MissingPersonDto latestReport = missingPersonService.getMissingPersonDetailById(patientUserNo);
+            
+            // 실제로는 환자 번호로 조회해야 하므로 DAO 직접 호출
+            // (Service에는 getMissingPersonDetailById가 missingPostId를 받으므로 적절하지 않음)
+            // 대신 DAO의 findLatestMissingReportByPatientNo 사용
+            latestReport = missingPersonService.findLatestReportByPatientNo(patientUserNo);
+            
+            if (latestReport != null) {
+                return ResponseEntity.ok(latestReport);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(null);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("환자 번호로 최신 실종 신고 조회 중 오류: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     /**
      * 새로운 실종 신고를 접수하고 해당 사용자의 user_status를 1로 변경하는 API
@@ -68,7 +105,8 @@ public class MissingPersonController {
         }
 
         try {
-            MissingPersonDto createdReport = missingPersonService.createMissingPersonReportAndUpdateStatus(missingPersonDto, reporterUserId);
+            MissingPersonDto createdReport = missingPersonService
+                    .createMissingPersonReportAndUpdateStatus(missingPersonDto, reporterUserId);
             return new ResponseEntity<>(createdReport, HttpStatus.CREATED);
         } catch (Exception e) {
             System.err.println("실종 신고 처리 중 오류 발생: " + e.getMessage());
@@ -105,4 +143,75 @@ public class MissingPersonController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+
+    /**
+     * 사용자가 특정 실종 신고의 '함께 찾기'에 참여하는 API
+     * POST /api/missing-persons/{missingPostId}/join
+     */
+    @PostMapping("/{missingPostId}/join")
+    public ResponseEntity<Map<String, Object>> joinSearchTogether(
+            @PathVariable Integer missingPostId,
+            Authentication authentication) {
+
+        // 1. 로그인 확인
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "로그인이 필요합니다."));
+        }
+
+        // 2. 현재 사용자 ID 가져오기
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        Integer userId = userVO.getUserNo();
+
+        try {
+            // 3. Service 호출 
+            boolean joined = missingPersonService.joinSearchTogether(missingPostId, userId);
+
+            if (joined) {
+                // 새로 참여한 경우
+                return ResponseEntity.status(HttpStatus.CREATED) // 201 Created
+                        .body(Map.of("success", true, "message", "함께 찾기에 참여했습니다.")); // tlsrltn
+            } else {
+                // 이미 참여 중인 경우 
+                return ResponseEntity.ok() // 200 OK
+                        .body(Map.of("success", true, "message", "이미 참여 중입니다."));
+            }
+
+        } catch (IllegalArgumentException e) {
+            // Service에서 실종 신고 ID를 찾지 못한 경우 등
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            // 기타 예외 처리
+            System.err.println("함께 찾기 처리 중 오류 발생: " + e.getMessage());
+            e.printStackTrace(); // 상세 로그 출력
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "처리 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * 특정 실종 신고에 참여하는 사용자 목록을 조회하는 API
+     * GET /api/missing-persons/{missingPostId}/participants
+     */
+    @GetMapping("/{missingPostId}/participants")
+    public ResponseEntity<?> getParticipants(
+            @PathVariable Integer missingPostId) {
+
+        try {
+            // Service 호출하여 참여자 목록 조회
+            List<UserVO> participants = missingPersonService.findParticipants(missingPostId);
+            return ResponseEntity.ok(participants); // 조회된 목록 반환
+
+        } catch (IllegalArgumentException e) {
+            // Service에서 실종 신고 ID 못 찾은 경우
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            // 기타 예외 처리
+            System.err.println("참여자 목록 조회 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "참여자 목록 조회 중 오류 발생"));
+        }
+    }
+
 }

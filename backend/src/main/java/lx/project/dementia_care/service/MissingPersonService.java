@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +20,6 @@ import lx.project.dementia_care.vo.UserVO;
 @Service
 public class MissingPersonService {
 
-    // 두 개의 DAO를 모두 주입받음
     @Autowired
     private UserDAO userDAO;
     @Autowired
@@ -36,7 +37,7 @@ public class MissingPersonService {
         // 2. 각 사용자에 대해 MissingPersonDAO를 통해 최신 실종 신고 정보를 가져와 합칩니다.
         List<MissingPersonDto> results = new ArrayList<>();
         for (UserVO user : missingUsers) {
-            // MissingPersonDAO에 userNo로 최신 신고 1건을 찾는 메서드가 필요합니다. (아래 가정)
+            // MissingPersonDAO에 userNo로 최신 신고 1건을 찾는 메서드가 필요합니다.
             MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(user.getUserNo());
 
             // MissingPersonDto를 만들고 UserVO와 reportDetails 정보를 합칩니다.
@@ -94,7 +95,6 @@ public class MissingPersonService {
      */
     @Transactional
     public void updateStatusAndUserStatus(Integer missingPostId, String newStatus, Integer currentUserId) throws AccessDeniedException {
-        // (선택사항) 권한 확인 로직 추가 가능
         
         // 1. MissingPersonDAO를 통해 신고 상태 변경
         missingPersonDAO.updateMissingStatus(missingPostId, newStatus);
@@ -110,12 +110,137 @@ public class MissingPersonService {
     }
 
     /**
-     * user_status가 1인 ('실종' 상태) 사용자 목록을 조회합니다.
+     * 특정 실종 신고 ID (missingPostId)로 
+     * 신고 정보와 환자 정보를 조합하여 상세 조회합니다.
      */
     @Transactional(readOnly = true)
-    public List<UserVO> findMissingStatusUsers() { 
-        return userDAO.findMissingUsers();
+    public MissingPersonDto getMissingPersonDetailById(Integer missingPostId) {
+        
+        // 1. DAO를 통해 ID로 기본 신고 정보를 조회합니다.
+        MissingPersonDto reportDetails = missingPersonDAO.findMissingReportById(missingPostId);
+
+        // 2. 신고 정보가 없으면 null을 반환합니다 (Controller에서 404 처리).
+        if (reportDetails == null) {
+            return null;
+        }
+
+        // 3. 신고 정보에 연결된 환자 ID(patientUserNo)를 가져옵니다.
+        Integer patientUserNo = reportDetails.getPatientUserNo();
+        if (patientUserNo == null) {
+            return reportDetails; // 환자 ID가 없으면 신고 정보만 반환
+        }
+
+        // 4. 환자 ID로 UserDAO를 통해 환자의 상세 정보(UserVO)를 조회합니다.
+        UserVO patientUser = null;
+        try {
+             // UserDAO의 findByUserNo는 Exception을 던질 수 있으므로 try-catch
+            patientUser = userDAO.findByUserNo(patientUserNo);
+        } catch (Exception e) {
+            // 예외 처리 (로그 남기기 등)
+            System.err.println("환자 정보 조회 중 오류 발생: " + e.getMessage());
+        }
+
+        // 5. 환자 정보가 있다면, DTO에 환자 정보를 추가(Merge)합니다.
+        if (patientUser != null) {
+            reportDetails.setPatientName(patientUser.getName());
+            reportDetails.setPatientBirthDate(patientUser.getBirthDate());
+
+            // 신고 사진(photoPath)이 없다면 사용자 프로필 사진(profilePhoto)을 사용
+            if (reportDetails.getPhotoPath() == null || reportDetails.getPhotoPath().isEmpty()) {
+                reportDetails.setPhotoPath(patientUser.getProfilePhoto());
+            }
+        }
+        
+        // 7. 정보가 조합된 DTO를 반환합니다.
+        return reportDetails;
     }
 
-    
+    /**
+     * 사용자가 특정 실종 신고의 '함께 찾기'에 참여합니다.
+     * @param missingPostId 참여할 실종 신고 ID
+     * @param userId 참여하는 사용자 ID
+     * @return true: 새로 참여 성공 / false: 이미 참여 중
+     * @throws IllegalArgumentException 실종 신고 ID가 존재하지 않거나 유효하지 않을 때
+     */
+    @Transactional
+    public boolean joinSearchTogether(Integer missingPostId, Integer userId) {
+        // missingPostId가 실제로 DB에 존재하는지 확인
+        MissingPersonDto existingPost = missingPersonDAO.findMissingReportById(missingPostId);
+        if (existingPost == null) {
+            throw new IllegalArgumentException("존재하지 않는 실종 신고 ID입니다: " + missingPostId);
+        }
+
+        try {
+            // DAO를 호출하여 search_Together 테이블에 INSERT 시도
+            missingPersonDAO.addSearchTogetherEntry(missingPostId, userId);
+            return true;
+        } catch (DuplicateKeyException e) {
+            //  이미 참여 중인 경우 예외를 잡아서 false 반환
+            System.out.println("이미 참여 중인 사용자입니다 (missingPostId: " + missingPostId + ", userId: " + userId + ")");
+            return false;
+        } catch (DataIntegrityViolationException e) {
+            // 만약 missing_post_id나 user_id가 FK 제약조건을 위반하는 경우
+             System.err.println("함께 찾기 FK 오류 (missingPostId: " + missingPostId + ", userId: " + userId + "): " + e.getMessage());
+            throw new IllegalArgumentException("유효하지 않은 실종 신고 ID 또는 사용자 ID 입니다.");
+        }
+    }
+
+    /**
+     * 특정 실종 신고에 참여하는 사용자 목록을 조회합니다.
+     * @param missingPostId 실종 신고 ID
+     * @return 참여자 정보 목록 (UserVO 리스트)
+     * @throws IllegalArgumentException 실종 신고 ID가 존재하지 않을 때
+     */
+    @Transactional(readOnly = true) // 읽기 전용 트랜잭션
+    public List<UserVO> findParticipants(Integer missingPostId) {
+        MissingPersonDto existingPost = missingPersonDAO.findMissingReportById(missingPostId);
+        if (existingPost == null) {
+            throw new IllegalArgumentException("존재하지 않는 실종 신고 ID입니다: " + missingPostId);
+        }
+        // DAO를 호출하여 참여자 목록 조회
+        List<UserVO> participants = missingPersonDAO.findParticipantsByMissingPostId(missingPostId);
+        return participants;
+    }
+
+    /**
+     * [추가] 환자 번호로 최신 실종 신고를 조회하는 메서드
+     * 
+     * 기존의 getMissingPersonDetailById는 missingPostId를 받지만,
+     * 이 메서드는 patientUserNo(환자 번호)를 받아서 조회합니다.
+     * 
+     * @param patientUserNo 환자의 user_no
+     * @return 환자의 최신 실종 신고 정보 (환자 정보 포함)
+     */
+    @Transactional(readOnly = true)
+    public MissingPersonDto findLatestReportByPatientNo(Integer patientUserNo) {
+        // 1. DAO를 통해 환자 번호로 최신 실종 신고 조회
+        MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(patientUserNo);
+        
+        // 2. 신고 정보가 없으면 null 반환
+        if (reportDetails == null) {
+            return null;
+        }
+        
+        // 3. 환자 정보 추가 (기존 getMissingPersonDetailById 로직과 동일)
+        UserVO patientUser = null;
+        try {
+            patientUser = userDAO.findByUserNo(patientUserNo);
+        } catch (Exception e) {
+            System.err.println("환자 정보 조회 중 오류 발생: " + e.getMessage());
+        }
+        
+        // 4. 환자 정보를 DTO에 추가
+        if (patientUser != null) {
+            reportDetails.setPatientName(patientUser.getName());
+            reportDetails.setPatientBirthDate(patientUser.getBirthDate());
+            
+            // 신고 사진이 없다면 사용자 프로필 사진 사용
+            if (reportDetails.getPhotoPath() == null || reportDetails.getPhotoPath().isEmpty()) {
+                reportDetails.setPhotoPath(patientUser.getProfilePhoto());
+            }
+        }
+        
+        return reportDetails;
+    }
+
 }
