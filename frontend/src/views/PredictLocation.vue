@@ -141,7 +141,7 @@
                         </div>
                         <p class="age-info">
                             <i class="bi bi-clock"></i>
-                            {{ Math.floor(elapsedMinutes / 60) }}시간 전
+                            {{ elapsedTimeText }}
                         </p>
                         <p class="missing-datetime">
                             <i class="bi bi-calendar-event"></i>
@@ -397,7 +397,8 @@ async function fetchMissingPersonDetail() {
 
         // API 응답에서 'reportedAt' 값을 'missingTimeDB'에 저장
         if (response.data && response.data.reportedAt) {
-            missingTimeDB.value = response.data.reportedAt
+            missingTimeDB.value = new Date(response.data.reportedAt).getTime()
+            console.log('변환된 timestamp:', missingTimeDB.value)
         }
 
     } catch (err) {
@@ -511,14 +512,17 @@ async function getMissingAddress() {
 // ============================================================================
 // [주형 추가] 실종자 정보에서 missingTime을 기반으로 현재시간에서 빼가지고 실종자 정보에 띄워주는 함수
 // ============================================================================
+// ref로 경과 시간 문자열 저장
+const elapsedTimeText = ref('')
+
 function calcElapsedTime() {
     try {
         const missingTime = new Date(missingTimeDB.value)
 
         // 유효한 날짜인지 확인
         if (isNaN(missingTime.getTime())) {
-            console.error('실종 시간이 유효하지 않습니다:', missingTimeDB)
-            elapsedMinutes.value = 0
+            console.error('❌ 실종 시간이 유효하지 않습니다:', missingTimeDB.value)
+            elapsedTimeText.value = '시간 불명'
             return
         }
 
@@ -532,16 +536,25 @@ function calcElapsedTime() {
         const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
 
         // 음수면 0으로 설정 (미래 시간인 경우)
-        elapsedMinutes.value = Math.max(0, diffInMinutes)
+        const minutes = Math.max(0, diffInMinutes)
+        
+        // 분 또는 시간으로 표시하기
+        if (minutes < 60) {
+            elapsedTimeText.value = `${minutes}분 전`
+        } else {
+            const hours = Math.floor(minutes / 60)
+            elapsedTimeText.value = `약 ${hours}시간 전`
+        }
 
-        console.log(`실종 경과 시간: ${elapsedMinutes.value}분 (${Math.floor(elapsedMinutes.value / 60)}시간 ${elapsedMinutes.value % 60}분)`)
-        setTime(elapsedMinutes.value)
+        console.log(`⏱️ 경과 시간: ${minutes}분 → 표시: ${elapsedTimeText.value}`)
+        setTime(minutes)  // 필요하면 여기서도 원본 분 단위 값 저장
 
     } catch (error) {
-        console.error('경과 시간 계산 중 오류:', error)
-        elapsedMinutes.value = 0
+        console.error('❌ 경과 시간 계산 중 오류:', error)
+        elapsedTimeText.value = '시간 불명'
     }
 }
+
 
 // ============================================================================
 // [추가] 보호자 → 환자 → 실종신고 순서로 데이터 조회하는 새 함수
@@ -1183,7 +1196,7 @@ const loadKakaoMap = (container) => {
         window.kakao.maps.load(() => {
             const options = {
                 center: new window.kakao.maps.LatLng(37.234257, 126.681727),
-                level: 3,
+                level: 5,
             }
 
             map.value = new window.kakao.maps.Map(container, options)
@@ -1901,6 +1914,7 @@ function getTimeRangeText(minutes) {
     background: linear-gradient(180deg, #f8f9fd 0%, #ffffff 100%);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-y: auto;
+    scrollbar-width: none;  /* 스크롤바 숨기기 */
 }
 
 /* ⭐⭐⭐ 전체 화면 로딩 오버레이 스타일 ⭐⭐⭐ */
