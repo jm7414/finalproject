@@ -21,7 +21,7 @@ const props = defineProps({
 });
 
 // 기능 5: Emits 정의 (부모 알림용 - 새로고침 대신 사용 가능)
-const emit = defineEmits(['goToMyPage', 'goToConnect', 'statusUpdated']);
+const emit = defineEmits(['goToMyPage', 'goToConnect', 'statusUpdated', 'reportMissing']);
 
 // 기능 6: 마지막 활동 시간 포맷팅 함수
 function formatLastActivity(lastActivity) {
