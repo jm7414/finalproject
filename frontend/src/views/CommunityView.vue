@@ -34,7 +34,7 @@ function changeTab(tabName) {
         <div class="main-div-9" 
              :class="{ active: activeTab === 'Event' }" 
              @click="changeTab('Event')">
-          <span class="main-div-a">이벤트</span>
+          <span class="main-div-a">동네소식</span>
         </div>
       </div>
     </div>
