@@ -99,6 +99,7 @@ const monitoringInterval = ref(null)
 const connectedPatientNo = ref(null)
 const patientName = ref('')
 const lastSafeZoneStatus = ref(null) // 'inside' | 'outside' | null
+const lastSafeZoneData = ref(null) // 이전 안심존 데이터 (변경 감지용)
 
 // 안심존 이탈 알림 닫기
 function closeSafeZoneAlert() {
@@ -302,6 +303,35 @@ function isPointInPolygon(lat, lng, polygon) {
   return inside
 }
 
+// 안심존 데이터 비교 (변경 감지용)
+function isSafeZoneChanged(oldData, newData) {
+  if (!oldData || !newData) return true
+  
+  // 기본형 안심존 (Circle) 비교
+  if (oldData.type === 'Circle' && newData.type === 'Circle') {
+    return (
+      oldData.center?.lat !== newData.center?.lat ||
+      oldData.center?.lng !== newData.center?.lng ||
+      oldData.radius !== newData.radius
+    )
+  }
+  
+  // 경로형 안심존 (폴리곤) 비교 - 좌표 배열의 길이나 첫 번째 좌표 비교
+  if (oldData.coordinates && newData.coordinates) {
+    const oldCoords = Array.isArray(oldData) ? oldData : oldData.coordinates
+    const newCoords = Array.isArray(newData) ? newData : newData.coordinates
+    if (oldCoords.length !== newCoords.length) return true
+    if (oldCoords.length > 0 && newCoords.length > 0) {
+      return (
+        oldCoords[0].latitude !== newCoords[0].latitude ||
+        oldCoords[0].longitude !== newCoords[0].longitude
+      )
+    }
+  }
+  
+  return true // 다른 타입이면 변경된 것으로 간주
+}
+
 // 안심존 상태 확인
 async function checkSafeZoneStatus(patientNo, patientLocation) {
   if (!patientLocation) {
@@ -327,6 +357,17 @@ async function checkSafeZoneStatus(patientNo, patientLocation) {
     if (!safeZoneData) {
       return null
     }
+    
+    // 안심존 데이터 변경 감지
+    if (isSafeZoneChanged(lastSafeZoneData.value, safeZoneData)) {
+      // 안심존이 변경되었으면 이전 알림 시간 초기화
+      const alertKey = `safeZoneAlert_${patientNo}`
+      localStorage.removeItem(alertKey)
+      lastSafeZoneStatus.value = null // 상태도 초기화하여 첫 감지 시 알림 가능하도록
+    }
+    
+    // 현재 안심존 데이터 저장
+    lastSafeZoneData.value = safeZoneData
     
     let isInside = false
     
@@ -363,6 +404,7 @@ async function startSafeZoneMonitoring() {
     // 현재 로그인한 사용자 정보 가져오기
     const currentUser = await getCurrentUser()
     if (!currentUser) {
+      console.warn('[안심존] 사용자 정보를 가져올 수 없습니다.')
       return
     }
     
@@ -371,6 +413,7 @@ async function startSafeZoneMonitoring() {
     // 보호자-환자 연결 관계 확인
     const connection = await checkGuardianPatientConnection(currentUser.userNo)
     if (!connection) {
+      console.warn('[안심존] 환자 연결 정보를 가져올 수 없습니다.')
       return
     }
     
@@ -389,13 +432,14 @@ async function startSafeZoneMonitoring() {
     }, 20000) // 20초
     
   } catch (error) {
-    console.error('안심존 모니터링 시작 오류:', error)
+    console.error('[안심존] 모니터링 시작 오류:', error)
   }
 }
 
 // 안심존 상태 확인 및 알림 처리
 async function checkAndAlert() {
   if (!connectedPatientNo.value) {
+    stopSafeZoneMonitoring()
     return
   }
   
@@ -458,7 +502,7 @@ async function checkAndAlert() {
     lastSafeZoneStatus.value = currentStatus
     
   } catch (error) {
-    console.error('안심존 상태 확인 및 알림 처리 오류:', error)
+    console.error('[안심존] 상태 확인 오류:', error)
   }
 }
 
@@ -472,13 +516,17 @@ function stopSafeZoneMonitoring() {
   connectedPatientNo.value = null
   patientName.value = ''
   lastSafeZoneStatus.value = null
+  lastSafeZoneData.value = null
 }
 
 // 컴포넌트 마운트 시 모니터링 시작
 onMounted(async () => {
   // 로그인 페이지가 아닐 때만 모니터링 시작
   if (!isLoginPage.value && !isSignUpPage.value) {
-    await startSafeZoneMonitoring()
+    // 약간의 지연을 주어 인증 상태가 완전히 설정되도록 함
+    setTimeout(async () => {
+      await startSafeZoneMonitoring()
+    }, 500)
   }
 })
 
@@ -489,23 +537,33 @@ onBeforeUnmount(() => {
 
 // 라우트 변경 감지
 const prevRoute = ref(null)
-watch(route, (newRoute, oldRoute) => {
-  // 로그인/회원가입 페이지에서 다른 페이지로 이동할 때 모니터링 시작
-  if (oldRoute && (oldRoute.name === 'login' || oldRoute.name === 'SignUp')) {
-    if (newRoute.name !== 'login' && newRoute.name !== 'SignUp') {
-      startSafeZoneMonitoring()
-    }
+watch(route, async (newRoute, oldRoute) => {
+  // 로그인/회원가입 페이지로 이동할 때 모니터링 중지
+  if (newRoute.name === 'login' || newRoute.name === 'SignUp') {
+    stopSafeZoneMonitoring()
+    prevRoute.value = newRoute
+    return
   }
   
-  // 다른 페이지에서 로그인/회원가입 페이지로 이동할 때 모니터링 중지
-  if (oldRoute && oldRoute.name !== 'login' && oldRoute.name !== 'SignUp') {
-    if (newRoute.name === 'login' || newRoute.name === 'SignUp') {
-      stopSafeZoneMonitoring()
-    }
+  // 로그인/회원가입 페이지에서 다른 페이지로 이동할 때 모니터링 시작
+  if (oldRoute && (oldRoute.name === 'login' || oldRoute.name === 'SignUp')) {
+    setTimeout(async () => {
+      await startSafeZoneMonitoring()
+    }, 500)
+    prevRoute.value = newRoute
+    return
+  }
+  
+  // 다른 경우에도 모니터링이 중지되어 있다면 재시작 시도
+  // (예: API 오류로 중단되었거나, 수동으로 중지된 경우)
+  if (!monitoringInterval.value && newRoute.name !== 'login' && newRoute.name !== 'SignUp') {
+    setTimeout(async () => {
+      await startSafeZoneMonitoring()
+    }, 1000) // 1초 지연
   }
   
   prevRoute.value = newRoute
-})
+}, { immediate: false })
 </script>
 
 <style>
@@ -546,6 +604,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 90px 5px 80px 5px;
+  scrollbar-width: none;  /* 스크롤바 숨기기 */
 }
 
 /* padding 제거가 필요한 페이지 */
