@@ -41,6 +41,7 @@ import DP_ModifyInfo from '@/views/DP_ModifyInfo.vue'
 import HospitalCare from '@/views/HospitalCare.vue'
 import GD_ModifyInfo from '@/views/GD_ModifyInfo.vue'
 import GD_AdminDP from '@/views/GD_AdminDP.vue'
+import NH_main from '@/views/NH_main.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -81,6 +82,12 @@ const router = createRouter({
       name: 'GD',
       component: GD_main,
       meta: { requiresAuth: true, roles: [1] } // 보호자(1) 전용
+    },
+    {
+      path: '/NH',
+      name: 'NH',
+      component: NH_main,
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
     {
       path: '/SignUp',
