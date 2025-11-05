@@ -5,6 +5,7 @@ export function usePatientLocation(options = {}) {
     patientUserNo,
     patientInfo,
     mapInstance,
+    simulationState = null, // 시뮬레이션 상태 (선택적)
     onLocationUpdate = () => {},
     onPatientInfoUpdate = () => {},
     onError = () => {}
@@ -41,6 +42,73 @@ export function usePatientLocation(options = {}) {
       return
     }
     
+    // 시뮬레이션 모드 확인 (MapMain.vue에서 전달된 상태 또는 localStorage)
+    let simState = null
+    if (simulationState && simulationState.value && simulationState.value.isSimulating) {
+      simState = simulationState.value
+    } else {
+      // localStorage에서 시뮬레이션 상태 확인 (GD_main.vue와 공유)
+      const saved = localStorage.getItem('simulationState')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          if (parsed.locationState === 'disconnected') {
+            simState = { locationState: 'disconnected', isSimulating: true }
+          } else if (parsed.currentPosition) {
+            simState = { 
+              locationState: parsed.locationState || 'center',
+              currentPosition: parsed.currentPosition,
+              isSimulating: true
+            }
+          }
+        } catch (e) {
+          console.error('시뮬레이션 상태 파싱 오류:', e)
+        }
+      }
+    }
+    
+    if (simState && simState.isSimulating) {
+      if (simState.locationState === 'disconnected') {
+        // 연결 끊김 상태: 위치를 null로 설정
+        patientLocation.value = null
+        if (patientMarker.value) {
+          patientMarker.value.setMap(null)
+        }
+        // 환자 정보를 오프라인으로 설정 (즉시)
+        if (patientInfo.value.userNo) {
+          patientInfo.value.isOnline = false
+          patientInfo.value.lastActivity = null
+          onPatientInfoUpdate(patientInfo.value)
+        }
+        return
+      }
+      
+      // 시뮬레이션 위치 반환
+      const simPos = simState.currentPosition || { lat: 37.494381, lng: 126.887690 }
+      const location = {
+        userNo: patientUserNo.value,
+        latitude: simPos.lat,
+        longitude: simPos.lng,
+        timestamp: Date.now(),
+        status: 'online'
+      }
+      
+      patientLocation.value = location
+      updatePatientMarker(location)
+      
+      // 환자 정보 업데이트
+      if (patientInfo.value.userNo === location.userNo) {
+        patientInfo.value.isOnline = true
+        patientInfo.value.lastActivity = new Date(location.timestamp)
+        onPatientInfoUpdate(patientInfo.value)
+      }
+      
+      // 위치 업데이트 콜백 호출
+      onLocationUpdate(location)
+      return
+    }
+    
+    // 실제 API 호출 (시뮬레이션 모드가 아닐 때)
     try {
       const response = await fetch(`/api/location/patient/${patientUserNo.value}`, {
         method: 'GET',

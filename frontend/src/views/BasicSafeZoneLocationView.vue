@@ -248,18 +248,37 @@ async function usePatientLocation() {
       return
     }
     
-    // 환자 위치 조회
-    const response = await fetch(`/api/location/patient/${patient.userNo}`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      alert(`${patientName.value}님의 현재 위치를 확인할 수 없습니다.`)
-      return
+    // 시뮬레이션 모드 확인 (localStorage에서 시뮬레이션 위치 확인)
+    let location = null
+    const savedSimState = localStorage.getItem('simulationState')
+    if (savedSimState) {
+      try {
+        const parsed = JSON.parse(savedSimState)
+        if (parsed.currentPosition && parsed.locationState !== 'disconnected') {
+          // 시뮬레이션 위치 사용
+          location = {
+            latitude: parsed.currentPosition.lat,
+            longitude: parsed.currentPosition.lng,
+            timestamp: Date.now(),
+            status: 'online'
+          }
+          console.log('[시뮬레이션] 시뮬레이션 위치 사용:', location)
+        }
+      } catch (e) {
+        console.error('시뮬레이션 상태 파싱 오류:', e)
+      }
     }
     
-    const location = await response.json()
+    // 시뮬레이션 위치가 없으면 기본 위치 사용 (시연용: 구로 라크라센타)
+    if (!location) {
+      console.log('[시뮬레이션] localStorage에 시뮬레이션 상태가 없어 기본 위치 사용')
+      location = {
+        latitude: 37.494381,
+        longitude: 126.887690,
+        timestamp: Date.now(),
+        status: 'online'
+      }
+    }
     
     if (!location || !location.latitude || !location.longitude) {
       alert(`${patientName.value}님의 현재 위치를 확인할 수 없습니다.`)

@@ -29,7 +29,6 @@ else:
     plt.rc('font', family='NanumGothic')
 plt.rcParams['axes.unicode_minus'] = False
 
-
 class RoadBasedGPSGenerator:
     """실제 도로 네트워크 기반 GPS 생성기 (고도 고려 + 야간 시간대 완전 보장)"""
     
@@ -704,8 +703,8 @@ def main():
     
     # 1. 생성기 초기화
     generator = RoadBasedGPSGenerator(
-        center_lat=37.234257,
-        center_lon=126.681727,
+        center_lat=37.494377,
+        center_lon=126.887684,
         distance=3000,
         use_elevation=True,
         elevation_weight=2.0

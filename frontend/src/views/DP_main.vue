@@ -150,6 +150,10 @@ const isMyInfoModalOpen = ref(false)
 const locationUpdateInterval = ref(null)
 const locationPermissionGranted = ref(false)
 
+// 시연용 위치 상태
+const isSimulationMode = ref(true) // 시연 모드 활성화
+const simulationLocationState = ref('center') // 'center' | 'away'
+
 /** ====== 공통 fetch ====== */
 async function request(url, options = {}) {
   const res = await fetch(url, { credentials: 'include', ...options })
@@ -260,20 +264,19 @@ function stopLocationTracking() {
   }
 }
 
-// 현재 위치 업데이트
-function updateLocation() {
-  if (!navigator.geolocation) {
-    console.error('Geolocation이 지원되지 않습니다.')
-    return
+// 현재 위치 업데이트 (시연용: 구로 라크라센타 고정 위치)
+async function updateLocation() {
+  // 시연용: 항상 구로 라크라센타 위치로 전송
+  const DEMO_LOCATION = {
+    latitude: 37.494381,
+    longitude: 126.887690
   }
   
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
       try {
         const locationData = {
           userNo: patientUserNo.value,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+      latitude: DEMO_LOCATION.latitude,
+      longitude: DEMO_LOCATION.longitude,
           timestamp: Date.now()
         }
 
@@ -289,20 +292,12 @@ function updateLocation() {
 
         if (!response.ok) {
           console.error('위치 업데이트 실패:', response.status)
+    } else {
+      console.log('[시연] 환자 위치 전송:', DEMO_LOCATION)
         }
       } catch (error) {
         console.error('위치 전송 오류:', error)
       }
-    },
-    (error) => {
-      console.error('위치 조회 실패:', error.message)
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,        // 타임아웃 증가 (정확한 위치를 위해)
-      maximumAge: 0          // 캐시 사용 안함 (항상 새로운 위치 요청)
-    }
-  )
 }
 
 /** ====== 초기 로드 ====== */

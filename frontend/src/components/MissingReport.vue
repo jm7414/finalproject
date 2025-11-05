@@ -12,7 +12,10 @@ const route = useRoute();
 const patientNo = ref(null);
 const missingDate = ref(''); // 날짜 입력용
 const missingTime = ref(''); // 시간 입력용
-const description = ref('');
+// 실종자 정보 입력 필드 (신체 특징, 착의사항, 특이사항)
+const physicalFeatures = ref(''); // 신체 특징
+const clothing = ref(''); // 착의사항
+const specialNotes = ref(''); // 특이사항
 const reporterContact = ref('');
 const photoFile = ref(null);
 const imagePreviewUrl = ref(null);
@@ -64,8 +67,13 @@ async function submitReport() {
   if (!patientNo.value) {
     alert('신고 대상 환자 정보가 없습니다.'); return;
   }
-  if (!missingDate.value || !missingTime.value || !description.value || !reporterContact.value) {
-    alert('실종 날짜, 실종 시간, 특이사항, 신고자 연락처를 모두 입력해주세요.'); return;
+  if (!missingDate.value || !missingTime.value || !reporterContact.value) {
+    alert('실종 날짜, 실종 시간, 신고자 연락처를 모두 입력해주세요.'); return;
+  }
+  
+  // 신체 특징, 착의사항, 특이사항 중 최소 하나는 입력해야 함
+  if (!physicalFeatures.value && !clothing.value && !specialNotes.value) {
+    alert('신체 특징, 착의사항, 특이사항 중 최소 하나는 입력해주세요.'); return;
   }
 
   // 날짜와 시간을 ISO 8601 형식으로 결합
@@ -80,11 +88,25 @@ async function submitReport() {
       uploadedImageUrl = await upload(photoFile.value);
     }
 
+    // 3개 필드를 구조화된 형식으로 합치기 (DB의 description 컬럼에 저장)
+    // 형식: "신체 특징: {값}\n착의사항: {값}\n특이사항: {값}"
+    const descriptionParts = [];
+    if (physicalFeatures.value.trim()) {
+      descriptionParts.push(`신체 특징: ${physicalFeatures.value.trim()}`);
+    }
+    if (clothing.value.trim()) {
+      descriptionParts.push(`착의사항: ${clothing.value.trim()}`);
+    }
+    if (specialNotes.value.trim()) {
+      descriptionParts.push(`특이사항: ${specialNotes.value.trim()}`);
+    }
+    const formattedDescription = descriptionParts.join('\n');
+
     // API 전송 데이터 준비
     const reportData = {
       patientUserNo: patientNo.value,
       photoPath: uploadedImageUrl,
-      description: description.value,
+      description: formattedDescription,
       status: "실종",
     };
 
@@ -149,9 +171,39 @@ function goBack() {
       </div>
 
       <section class="form-section">
-        <label for="description" class="form-label small mb-1">특이사항</label>
-        <textarea id="description" v-model="description" placeholder="실종자를 찾는데 도움이 될 수 있는 모든 정보를 입력해주세요"
-          class="form-control content-textarea" maxlength="1000" rows="4"></textarea>
+        <label for="physical-features" class="form-label small mb-1">신체 특징</label>
+        <textarea 
+          id="physical-features" 
+          v-model="physicalFeatures" 
+          placeholder="예: 170cm, 마른 체형, 안경 착용 등"
+          class="form-control content-textarea" 
+          maxlength="500" 
+          rows="3">
+        </textarea>
+      </section>
+
+      <section class="form-section">
+        <label for="clothing" class="form-label small mb-1">착의사항</label>
+        <textarea 
+          id="clothing" 
+          v-model="clothing" 
+          placeholder="예: 빨간색 티셔츠, 검은색 바지, 흰색 운동화 등"
+          class="form-control content-textarea" 
+          maxlength="500" 
+          rows="3">
+        </textarea>
+      </section>
+
+      <section class="form-section">
+        <label for="special-notes" class="form-label small mb-1">특이사항</label>
+        <textarea 
+          id="special-notes" 
+          v-model="specialNotes" 
+          placeholder="예: 지팡이를 짚고 다니셔요"
+          class="form-control content-textarea" 
+          maxlength="500" 
+          rows="3">
+        </textarea>
       </section>
 
       <section class="form-section">

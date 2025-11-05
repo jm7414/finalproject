@@ -73,6 +73,7 @@
       @select-schedule="selectSchedule"
     />
   </div>
+
 </template>
 
 <script setup>
@@ -99,6 +100,7 @@ const patientInfo = ref({
   user_status: 0 // 환자 상태변경 기본값
 })
 
+
 // 환자 위치 관련 변수들은 usePatientLocation composable에서 관리
 
 // 안심존 상태 관련
@@ -116,6 +118,17 @@ let previewSafeZone = null // 미리보기 안심존
 // 안심존 활성화 상태 관리
 const isSafeZoneEnabled = ref(true) // 안심존 활성화 상태
 const isPatientConnected = ref(false) // 환자 연결 상태
+
+// 시연용 시뮬레이션 상태 관리
+const simulationState = ref({
+  isSimulating: true, // 시뮬레이션 모드 활성화
+  locationState: 'center', // 'center' | 'away' | 'disconnected'
+  currentPosition: { lat: 37.494381, lng: 126.887690 }, // 현재 시뮬레이션 위치
+  targetPosition: { lat: 37.493677, lng: 126.885879 }, // 이탈 목표 위치
+  centerPosition: { lat: 37.494381, lng: 126.887690 }, // 복귀 위치
+  isMoving: false, // 이동 중 여부
+  moveInterval: null // 이동 인터벌
+})
 
 // 안심존 범위 설정 컨트롤 상태
 const isSafeZoneControlExpanded = ref(false)
@@ -211,6 +224,7 @@ const {
   patientUserNo,
   patientInfo,
   mapInstance,
+  simulationState, // 시뮬레이션 상태 전달
   onLocationUpdate: (location) => {
     // 위치 업데이트 시 안심존 상태 확인
     checkPatientInSafeZone()
@@ -224,10 +238,32 @@ const {
 })
 
 onMounted(async () => {
+  // 키보드 이벤트 리스너 등록 (시뮬레이션용)
+  window.addEventListener('keydown', handleKeyDown)
+  
   // localStorage에서 안심존 상태 불러오기
   const saved = localStorage.getItem('safeZoneEnabled')
   if (saved !== null) {
     isSafeZoneEnabled.value = JSON.parse(saved)
+  }
+  
+  // 시뮬레이션 상태 초기화 및 localStorage에 저장 (기본값: 라크라센타)
+  const savedSimState = localStorage.getItem('simulationState')
+  if (!savedSimState) {
+    // 시뮬레이션 상태가 없으면 초기화하여 저장
+    simulationState.value = {
+      isSimulating: true,
+      locationState: 'center',
+      currentPosition: { lat: 37.494381, lng: 126.887690 },
+      targetPosition: { lat: 37.493677, lng: 126.885879 },
+      centerPosition: { lat: 37.494381, lng: 126.887690 },
+      isMoving: false,
+      moveInterval: null
+    }
+    localStorage.setItem('simulationState', JSON.stringify({
+      locationState: simulationState.value.locationState,
+      currentPosition: simulationState.value.currentPosition
+    }))
   }
   
   // 일정 데이터 로드
@@ -259,6 +295,12 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  // 키보드 이벤트 리스너 제거
+  window.removeEventListener('keydown', handleKeyDown)
+  // 이동 인터벌 정리
+  if (simulationState.value.moveInterval) {
+    clearInterval(simulationState.value.moveInterval)
+  }
   // 바텀시트 정리
   cleanupBottomSheet()
   // 환자 위치 추적 중지 (usePatientLocation에서 자동으로 처리됨)
@@ -914,13 +956,24 @@ function checkPatientInSafeZone() {
     return
   }
   
-  // 환자 위치나 안심존이 없는 경우
-  if (!patientLocation.value || !currentActiveZone.value) {
+  // 환자 위치가 없는 경우
+  if (!patientLocation.value) {
     safeZoneStatus.value = {
       isInside: false,
       status: '위치 확인 중',
       color: '#F59E0B',
       bgColor: '#FEF3C7'
+    }
+    return
+  }
+  
+  // 안심존이 없는 경우 (환자 위치는 있음)
+  if (!currentActiveZone.value) {
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '안심존 미설정',
+      color: '#9CA3AF',
+      bgColor: '#F3F4F6'
     }
     return
   }
@@ -1071,6 +1124,278 @@ function reportMissing() {
  function goToMyPage() {
    router.push('/gdmypage')
  }
+
+/* ===== 시연용 시뮬레이션 기능 ===== */
+
+// 두 점 간의 거리 계산 (미터)
+function calculateDistanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000 // 지구 반지름 (미터)
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
+
+// 두 점 사이의 각도 계산 (라디안)
+function calculateBearing(lat1, lng1, lat2, lng2) {
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const lat1Rad = lat1 * Math.PI / 180
+  const lat2Rad = lat2 * Math.PI / 180
+  const y = Math.sin(dLng) * Math.cos(lat2Rad)
+  const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
+  return Math.atan2(y, x)
+}
+
+// 목표 위치로 이동 시작 (사람 속도: 1.4m/s, 3초마다 업데이트)
+function startMovingToTarget() {
+  if (simulationState.value.isMoving) return
+  
+  const speedMps = 1.4 // 1.4m/s
+  const updateInterval = 3000 // 3초마다 업데이트
+  const distancePerUpdate = speedMps * (updateInterval / 1000) // 3초 동안 이동 거리 (미터)
+  
+  const startPos = { ...simulationState.value.currentPosition }
+  const target = simulationState.value.locationState === 'center' 
+    ? simulationState.value.targetPosition 
+    : simulationState.value.centerPosition
+  
+  console.log('[시연] 환자 이동 시작:', {
+    시작위치: startPos,
+    목표위치: target,
+    속도: `${speedMps}m/s`,
+    업데이트간격: `${updateInterval}ms`
+  })
+  
+  const totalDistance = calculateDistanceMeters(
+    startPos.lat, startPos.lng, 
+    target.lat, target.lng
+  )
+  
+  if (totalDistance < 1) {
+    // 목표에 거의 도달했으면 즉시 이동
+    simulationState.value.currentPosition = { ...target }
+    simulationState.value.locationState = simulationState.value.locationState === 'center' ? 'away' : 'center'
+    // localStorage에 상태 저장 (GD_main.vue와 공유)
+    localStorage.setItem('simulationState', JSON.stringify({
+      locationState: simulationState.value.locationState,
+      currentPosition: simulationState.value.currentPosition
+    }))
+    // 환자 위치 강제 업데이트
+    if (fetchPatientLocation) {
+      fetchPatientLocation()
+    }
+    return
+  }
+  
+  const bearing = calculateBearing(startPos.lat, startPos.lng, target.lat, target.lng)
+  const totalSteps = Math.ceil(totalDistance / distancePerUpdate)
+  let currentStep = 0
+  
+  simulationState.value.isMoving = true
+  
+  simulationState.value.moveInterval = setInterval(() => {
+    currentStep++
+    const progress = currentStep / totalSteps
+    
+    if (progress >= 1) {
+      // 목표 도달
+      simulationState.value.currentPosition = { ...target }
+      const newState = simulationState.value.locationState === 'center' ? 'away' : 'center'
+      simulationState.value.locationState = newState
+      console.log(`[시연] 환자 이동 완료: ${newState === 'away' ? '안심존 이탈 위치 도달' : '라크라센타 복귀 완료'}`)
+      // localStorage에 상태 저장 (GD_main.vue와 공유)
+      localStorage.setItem('simulationState', JSON.stringify({
+        locationState: simulationState.value.locationState,
+        currentPosition: simulationState.value.currentPosition
+      }))
+      clearInterval(simulationState.value.moveInterval)
+      simulationState.value.moveInterval = null
+      simulationState.value.isMoving = false
+      
+      // 안심존 상태 즉시 확인 (이탈 시 alert 표시를 위해)
+      if (fetchPatientLocation) {
+        fetchPatientLocation().then(() => {
+          setTimeout(async () => {
+            checkPatientInSafeZone()
+            // App.vue의 안심존 모니터링 함수 호출 (전역적으로 접근 가능하도록)
+            if (window.triggerSafeZoneCheck) {
+              await window.triggerSafeZoneCheck()
+            }
+          }, 200)
+        })
+      }
+    } else {
+      console.log(`[시연] 환자 이동 중... (${Math.round(progress * 100)}%)`, {
+        현재위치: simulationState.value.currentPosition,
+        목표위치: target
+      })
+      // 중간 위치 계산
+      const currentDistance = totalDistance * progress
+      const R = 6371000
+      const lat1Rad = startPos.lat * Math.PI / 180
+      const lng1Rad = startPos.lng * Math.PI / 180
+      
+      const newLat = Math.asin(
+        Math.sin(lat1Rad) * Math.cos(currentDistance / R) +
+        Math.cos(lat1Rad) * Math.sin(currentDistance / R) * Math.cos(bearing)
+      ) * 180 / Math.PI
+      
+      const newLng = (lng1Rad + Math.atan2(
+        Math.sin(bearing) * Math.sin(currentDistance / R) * Math.cos(lat1Rad),
+        Math.cos(currentDistance / R) - Math.sin(lat1Rad) * Math.sin(newLat * Math.PI / 180)
+      )) * 180 / Math.PI
+      
+      simulationState.value.currentPosition = { lat: newLat, lng: newLng }
+      // localStorage에 상태 저장 (GD_main.vue와 공유) - 이동 중에도 업데이트
+      localStorage.setItem('simulationState', JSON.stringify({
+        locationState: simulationState.value.locationState,
+        currentPosition: simulationState.value.currentPosition
+      }))
+      
+      // 이동 중에도 안심존 상태 확인 (이탈 시 즉시 alert 표시를 위해)
+      if (fetchPatientLocation) {
+        fetchPatientLocation().then(() => {
+          setTimeout(async () => {
+            checkPatientInSafeZone()
+            // App.vue의 안심존 모니터링 함수 호출
+            if (window.triggerSafeZoneCheck) {
+              await window.triggerSafeZoneCheck()
+            }
+          }, 100)
+        })
+      }
+    }
+  }, updateInterval)
+}
+
+// Ctrl + 1: 위치 이동/복귀 토글
+function handleSimulationToggle() {
+  if (!simulationState.value.isSimulating || !patientUserNo.value) return
+  
+  if (simulationState.value.locationState === 'center') {
+    // 이탈 위치로 이동 시작
+    console.log('[시연] Ctrl+1: 환자 이탈 위치로 이동 시작')
+    startMovingToTarget()
+  } else {
+    // 즉시 복귀
+    console.log('[시연] Ctrl+1: 환자 복귀 (라크라센타로 즉시 이동)')
+    if (simulationState.value.moveInterval) {
+      clearInterval(simulationState.value.moveInterval)
+      simulationState.value.moveInterval = null
+      simulationState.value.isMoving = false
+    }
+    simulationState.value.currentPosition = { ...simulationState.value.centerPosition }
+    simulationState.value.locationState = 'center'
+    // localStorage에 상태 저장 (GD_main.vue와 공유)
+    localStorage.setItem('simulationState', JSON.stringify({
+      locationState: simulationState.value.locationState,
+      currentPosition: simulationState.value.currentPosition
+    }))
+    // 환자 위치 강제 업데이트 및 안심존 상태 확인
+    if (fetchPatientLocation) {
+      fetchPatientLocation().then(() => {
+        // 위치 업데이트 후 안심존 상태 확인
+        setTimeout(() => {
+          checkPatientInSafeZone()
+        }, 100)
+      })
+    }
+  }
+}
+
+// Ctrl + 2: 연결 끊김/복구 토글
+function handleDisconnectToggle() {
+  if (!simulationState.value.isSimulating || !patientUserNo.value) return
+  
+  if (simulationState.value.locationState === 'disconnected') {
+    // 연결 복구: 라크라센타 위치로 복귀
+    console.log('[시연] Ctrl+2: 환자 연결 복구')
+    simulationState.value.locationState = 'center'
+    simulationState.value.currentPosition = { ...simulationState.value.centerPosition }
+    // localStorage에 상태 저장 (GD_main.vue와 공유)
+    localStorage.setItem('simulationState', JSON.stringify({
+      locationState: simulationState.value.locationState,
+      currentPosition: simulationState.value.currentPosition
+    }))
+    // 이동 중지
+    if (simulationState.value.moveInterval) {
+      clearInterval(simulationState.value.moveInterval)
+      simulationState.value.moveInterval = null
+      simulationState.value.isMoving = false
+    }
+    // 환자 정보를 온라인으로 복구
+    patientInfo.value.isOnline = true
+    patientInfo.value.lastActivity = new Date()
+    // 환자 위치 강제 업데이트
+    if (fetchPatientLocation) {
+      fetchPatientLocation()
+    }
+  } else {
+    // 연결 끊김: 즉시 오프라인 처리
+    console.log('[시연] Ctrl+2: 환자 연결 끊김')
+    simulationState.value.locationState = 'disconnected'
+    // localStorage에 상태 저장 (GD_main.vue와 공유)
+    localStorage.setItem('simulationState', JSON.stringify({
+      locationState: simulationState.value.locationState,
+      currentPosition: simulationState.value.currentPosition
+    }))
+    // 이동 중지
+    if (simulationState.value.moveInterval) {
+      clearInterval(simulationState.value.moveInterval)
+      simulationState.value.moveInterval = null
+      simulationState.value.isMoving = false
+    }
+    // 환자 정보를 오프라인으로 설정 (즉시, 시간 대기 없이)
+    patientInfo.value.isOnline = false
+    patientInfo.value.lastActivity = null
+    // 환자 위치를 null로 설정 (지도에서 사라짐)
+    patientLocation.value = null
+    if (patientMarker.value) {
+      patientMarker.value.setMap(null)
+    }
+    // 모달 표시 (App.vue의 전역 함수 호출)
+    setTimeout(() => {
+      if (window.showDisconnectionModal) {
+        window.showDisconnectionModal(patientInfo.value.name || '환자')
+      }
+    }, 100)
+  }
+}
+
+// Ctrl + 3: 현관문 열림 감지 알림
+function handleDoorOpenAlert() {
+  console.log('[시연] Ctrl+3: 현관문 열림 감지 알림')
+  // 모달 표시 (App.vue의 전역 함수 호출)
+  setTimeout(() => {
+    if (window.showDoorOpenModal) {
+      window.showDoorOpenModal()
+    }
+  }, 100)
+}
+
+// 키보드 이벤트 리스너
+function handleKeyDown(event) {
+  // Ctrl + 1: 위치 이동/복귀 토글
+  if (event.ctrlKey && event.key === '1') {
+    event.preventDefault()
+    handleSimulationToggle()
+  }
+  // Ctrl + 2: 연결 끊김/복구 토글
+  if (event.ctrlKey && event.key === '2') {
+    event.preventDefault()
+    handleDisconnectToggle()
+  }
+  // Ctrl + 3: 현관문 열림 감지 알림
+  if (event.ctrlKey && event.key === '3') {
+    event.preventDefault()
+    handleDoorOpenAlert()
+  }
+}
+
+// 키보드 이벤트 등록/해제는 기존 onMounted에 추가됨
 
 </script>
 

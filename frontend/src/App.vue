@@ -16,12 +16,27 @@
     :patient-name="alertPatientName"
     @close="closeSafeZoneAlert"
   />
+  
+  <!-- 환자 연결 끊김 알림 모달 (mobile-frame 밖으로 이동) -->
+  <DisconnectionAlertModal 
+    :show="showDisconnectionAlert"
+    :patient-name="disconnectionPatientName"
+    @close="closeDisconnectionAlert"
+  />
+  
+  <!-- 현관문 열림 감지 알림 모달 (mobile-frame 밖으로 이동) -->
+  <DoorOpenAlertModal 
+    :show="showDoorOpenAlert"
+    @close="closeDoorOpenAlert"
+  />
 </template>
 
 <script setup>
 import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
+import DisconnectionAlertModal from './components/DisconnectionAlertModal.vue';
+import DoorOpenAlertModal from './components/DoorOpenAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 
@@ -94,6 +109,35 @@ const CommunityPostWrite = computed(() => {
 const showSafeZoneAlert = ref(false)
 const alertPatientName = ref('')
 
+// 연결 끊김 모달 상태
+const showDisconnectionAlert = ref(false)
+const disconnectionPatientName = ref('')
+
+// 연결 끊김 모달 닫기
+function closeDisconnectionAlert() {
+  showDisconnectionAlert.value = false
+  disconnectionPatientName.value = ''
+}
+
+// 전역 함수로 등록 (MapMain.vue에서 호출 가능하도록)
+window.showDisconnectionModal = (patientName) => {
+  disconnectionPatientName.value = patientName || '환자'
+  showDisconnectionAlert.value = true
+}
+
+// 현관문 열림 감지 모달 상태
+const showDoorOpenAlert = ref(false)
+
+// 현관문 열림 감지 모달 닫기
+function closeDoorOpenAlert() {
+  showDoorOpenAlert.value = false
+}
+
+// 전역 함수로 등록 (MapMain.vue에서 호출 가능하도록)
+window.showDoorOpenModal = () => {
+  showDoorOpenAlert.value = true
+}
+
 // 안심존 모니터링 상태
 const monitoringInterval = ref(null)
 const connectedPatientNo = ref(null)
@@ -158,6 +202,31 @@ async function checkGuardianPatientConnection(guardianNo) {
 
 // 환자 위치 조회
 async function fetchPatientLocation(patientNo) {
+  // 시뮬레이션 모드 확인 (localStorage)
+  const saved = localStorage.getItem('simulationState')
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed.locationState === 'disconnected') {
+        // 연결 끊김 상태
+        return null
+      } else if (parsed.currentPosition) {
+        // 시뮬레이션 위치 반환
+        const simPos = parsed.currentPosition
+        return {
+          userNo: patientNo,
+          latitude: simPos.lat,
+          longitude: simPos.lng,
+          timestamp: Date.now(),
+          status: 'online'
+        }
+      }
+    } catch (e) {
+      console.error('시뮬레이션 상태 파싱 오류:', e)
+    }
+  }
+  
+  // 실제 API 호출 (시뮬레이션 모드가 아닐 때)
   try {
     const response = await fetch(`/api/location/patient/${patientNo}`, {
       method: 'GET',
@@ -505,6 +574,9 @@ async function checkAndAlert() {
     console.error('[안심존] 상태 확인 오류:', error)
   }
 }
+
+// 전역 함수로 등록 (MapMain.vue에서 호출 가능하도록)
+window.triggerSafeZoneCheck = checkAndAlert
 
 // 안심존 모니터링 중지
 function stopSafeZoneMonitoring() {

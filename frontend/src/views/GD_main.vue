@@ -189,7 +189,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKakaoMap } from '@/composables/useKakaoMap'
 import { useSchedule } from '@/composables/useSchedule'
@@ -230,6 +230,17 @@ const safeZoneStatus = ref({
 
 // 안심존 관련
 let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
+
+// 시연용 시뮬레이션 상태 관리
+const simulationState = ref({
+  isSimulating: true, // 시뮬레이션 모드 활성화
+  locationState: 'center', // 'center' | 'away' | 'disconnected'
+  currentPosition: { lat: 37.494381, lng: 126.887690 }, // 현재 시뮬레이션 위치
+  targetPosition: { lat: 37.493677, lng: 126.885879 }, // 이탈 목표 위치
+  centerPosition: { lat: 37.494381, lng: 126.887690 }, // 복귀 위치
+  isMoving: false, // 이동 중 여부
+  moveInterval: null // 이동 인터벌
+})
 
 /* ===== Kakao Map Loader ===== */
 const {
@@ -278,6 +289,7 @@ const {
   patientUserNo,
   patientInfo: patient,
   mapInstance,
+  simulationState, // 시뮬레이션 상태 전달
   onLocationUpdate: async (location) => {
     // 위치 업데이트 시 안심존 상태 확인
     await checkPatientInSafeZone()
@@ -353,6 +365,11 @@ async function fetchPatientInfo() {
       userNo: patientData.userNo,
       name: patientData.name || '',
       avatarUrl: patientData.profilePhoto || null
+    }
+    
+    // 연결된 경우 위치 추적 시작
+    if (connected.value && patientData.userNo && mapInstance.value) {
+      startPatientLocationTracking()
     }
     
     return patientData.userNo
@@ -746,11 +763,57 @@ function toggleTestEvent() {
 }
 function goToMapMain() { router.push('/map-main') }
 
+/* ===== 연결 상태 변경 감지 ===== */
+// 연결 상태 변경 시 위치 추적 시작/중지
+watch([connected, patientUserNo], ([newConnected, newPatientUserNo]) => {
+  if (newConnected && newPatientUserNo && mapInstance.value) {
+    // 연결된 경우 위치 추적 시작
+    startPatientLocationTracking()
+  } else {
+    // 연결 끊긴 경우 위치 추적 중지 및 마커 제거
+    stopPatientLocationTracking()
+    if (patientMarker.value) {
+      patientMarker.value.setMap(null)
+    }
+    patientLocation.value = null
+  }
+}, { immediate: false })
+
 /* ===== 초기화 ===== */
 onMounted(async () => {
   try {
     // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
+    
+    // 시뮬레이션 상태 초기화 및 localStorage에 저장 (기본값: 라크라센타)
+    const savedSimState = localStorage.getItem('simulationState')
+    if (!savedSimState) {
+      // 시뮬레이션 상태가 없으면 초기화하여 저장
+      simulationState.value = {
+        isSimulating: true,
+        locationState: 'center',
+        currentPosition: { lat: 37.494381, lng: 126.887690 },
+        targetPosition: { lat: 37.493677, lng: 126.885879 },
+        centerPosition: { lat: 37.494381, lng: 126.887690 },
+        isMoving: false,
+        moveInterval: null
+      }
+      localStorage.setItem('simulationState', JSON.stringify({
+        locationState: simulationState.value.locationState,
+        currentPosition: simulationState.value.currentPosition
+      }))
+    } else {
+      // localStorage에서 시뮬레이션 상태 복원
+      try {
+        const parsed = JSON.parse(savedSimState)
+        if (parsed.currentPosition) {
+          simulationState.value.currentPosition = parsed.currentPosition
+          simulationState.value.locationState = parsed.locationState || 'center'
+        }
+      } catch (e) {
+        console.error('시뮬레이션 상태 복원 오류:', e)
+      }
+    }
     
     // 일정 데이터 로드
     await loadScheduleData()
@@ -761,8 +824,10 @@ onMounted(async () => {
     // 안심존 표시
     await updateSafeZone(mapInstance.value)
     
-    // 환자 위치 추적 시작
-    startPatientLocationTracking()
+    // 환자 위치 추적 시작 (연결된 경우에만)
+    if (connected.value && patientUserNo.value) {
+      startPatientLocationTracking()
+    }
     
     // 초기 안심존 상태 확인
     await checkPatientInSafeZone()

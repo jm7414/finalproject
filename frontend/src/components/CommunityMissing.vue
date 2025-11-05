@@ -50,7 +50,7 @@ function closeMissingDetailModal() {
 // 5. 모달의 '함께 찾기' 이벤트 처리 -> PredictLocation으로 이동
 function navigateToPredictLocation(missingPostId) {
   if (missingPostId !== null && missingPostId !== undefined) {
-    router.push(`/predict-location/`);
+    router.push(`/predict-location?missingPostId=${missingPostId}`);
     closeMissingDetailModal(); // 이동 후 모달 닫기
   } else {
     console.error("ID가 없어 PredictLocation으로 이동할 수 없습니다.");

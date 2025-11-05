@@ -87,7 +87,7 @@
                     <div class="handle-icon">
                         <i class="bi bi-person-walking"></i>
                     </div>
-                    <div class="handle-tooltip">{{ selectedMinutes }}분</div>
+                    <div class="handle-tooltip">{{ Math.round(selectedMinutes) }}분</div>
                 </div>
             </div>
 
@@ -131,13 +131,13 @@
 
                 <div v-if="!isLoading" class="info-header-section">
                     <div class="profile-image-wrapper">
-                        <img class="profile-image" :src="personDetail.photoPath || defaultPersonImage"
-                            :alt="personDetail.patientName" />
+                        <img class="profile-image" :src="personDetail?.photoPath || defaultPersonImage"
+                            :alt="personDetail?.patientName || '실종자'" />
                     </div>
                     <div class="basic-info-wrapper">
                         <div class="name-age-row">
-                            <h2 class="person-name">{{ personDetail.patientName || '정보 없음' }} ({{
-                                calculateAge(personDetail.patientBirthDate) }}세)</h2>
+                            <h2 class="person-name">{{ personDetail?.patientName || '정보 없음' }} ({{
+                                calculateAge(personDetail?.patientBirthDate) }}세)</h2>
                         </div>
                         <p class="age-info">
                             <i class="bi bi-clock"></i>
@@ -149,7 +149,7 @@
                         </p>
                         <p class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
-                            실종장소: {{ missingAddress.fullAddress }}
+                            실종장소: {{ missingAddress?.fullAddress || '주소 정보 없음' }}
                         </p>
                     </div>
                 </div>
@@ -162,7 +162,7 @@
                                 <i class="bi bi-person-badge"></i>
                                 <span class="badge-label">신체 특징</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures
+                            <span class="info-content">{{ formatDescription(personDetail?.description).physicalFeatures
                                 || '170cm 마른 체형' }}</span>
                         </div>
 
@@ -171,7 +171,7 @@
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail?.description).clothing || '정보없음' }}</span>
                         </div>
 
                         <div>
@@ -179,7 +179,7 @@
                                 <i class="bi bi-exclamation-triangle"></i>
                                 <span class="badge-label">특이사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).specialNotes ||
+                            <span class="info-content">{{ formatDescription(personDetail?.description).specialNotes ||
                                 '지팡이를 짚고 다니심' }}</span>
                         </div>
 
@@ -517,11 +517,23 @@ const elapsedTimeText = ref('')
 
 function calcElapsedTime() {
     try {
-        const missingTime = new Date(missingTimeDB.value)
+        // 실종자 정보 탭: missingTimeDB.value 사용 (실종자 정보에서 가져온 시간)
+        // 예상 위치 탭: missingTime 상수 사용 (시연용 데이터)
+        let timeToCalculate = missingTimeDB.value
+        
+        // missingTimeDB가 없으면 시연용 기본 시간 사용 (예상 위치 탭용)
+        if (!timeToCalculate) {
+            const missingTimeDate = new Date(missingTime)
+            timeToCalculate = missingTimeDate.getTime()
+        } else {
+            timeToCalculate = new Date(timeToCalculate).getTime()
+        }
+        
+        const missingTimeDate = new Date(timeToCalculate)
 
         // 유효한 날짜인지 확인
-        if (isNaN(missingTime.getTime())) {
-            console.error('❌ 실종 시간이 유효하지 않습니다:', missingTimeDB.value)
+        if (isNaN(missingTimeDate.getTime())) {
+            console.error('❌ 실종 시간이 유효하지 않습니다:', timeToCalculate)
             elapsedTimeText.value = '시간 불명'
             return
         }
@@ -530,7 +542,7 @@ function calcElapsedTime() {
         const now = new Date()
 
         // 시간 차이 계산 (밀리초)
-        const diffInMs = now.getTime() - missingTime.getTime()
+        const diffInMs = now.getTime() - missingTimeDate.getTime()
 
         // 밀리초를 분으로 변환
         const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
@@ -663,8 +675,12 @@ function formatDescription(desc) {
         };
     }
 
-    // \n으로 줄바꿈 분리
-    const lines = String(desc).split('\\n');
+    const descStr = String(desc).trim();
+    
+    // 실제 줄바꿈 문자(\n)와 문자열로 저장된 줄바꿈(\\n) 모두 처리
+    const lines = descStr.includes('\\n') 
+        ? descStr.split('\\n') 
+        : descStr.split('\n');
 
     const result = {
         physicalFeatures: '',
@@ -672,28 +688,45 @@ function formatDescription(desc) {
         specialNotes: ''
     };
 
-    lines.forEach(line => {
-        // "키워드: 값" 형태로 파싱
-        if (line.includes(':')) {
-            const [key, ...valueParts] = line.split(':');
-            const value = valueParts.join(':').trim(); // ":"가 여러 개 있을 경우 대비
+    let hasParsedKey = false; // 키워드가 포함된 줄이 있는지 확인
 
-            if (key.includes('인상착의') || key.includes('착의사항')) {
+    lines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return; // 빈 줄은 건너뛰기
+
+        // "키워드: 값" 형태로 파싱
+        if (trimmedLine.includes(':')) {
+            hasParsedKey = true;
+            const [key, ...valueParts] = trimmedLine.split(':');
+            const value = valueParts.join(':').trim(); // ":"가 여러 개 있을 경우 대비
+            const keyLower = key.toLowerCase().trim();
+
+            if (keyLower.includes('인상착의') || keyLower.includes('착의사항')) {
                 result.clothing = value;
-            } else if (key.includes('신체') || key.includes('체형')) {
+            } else if (keyLower.includes('신체') || keyLower.includes('체형')) {
                 result.physicalFeatures = value;
-            } else if (key.includes('특이사항') || key.includes('특이')) {
+            } else if (keyLower.includes('특이사항') || keyLower.includes('특이')) {
                 result.specialNotes = value;
             }
         }
     });
+
+    // 키워드가 없는 경우 (단순 텍스트 입력), 전체 내용을 특이사항으로 처리
+    if (!hasParsedKey && descStr) {
+        result.specialNotes = descStr;
+    }
+
+    // 파싱된 값이 없는 경우 기본값 설정
+    if (!result.physicalFeatures && !result.clothing && !result.specialNotes && descStr) {
+        result.specialNotes = descStr;
+    }
 
     return result;
 }
 
 // 병욱 작업공간 확보 끝
 
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import axios from 'axios'
 
 // ========================================================================================
@@ -708,7 +741,7 @@ const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 
 // Tmap API Key
-const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
+const TMAP_API_KEY = 'dcWZUHevJw6z8GD6zXhNb3X3pDjyDqs99YDxMbHh'
 
 // ========================================================================================
 // 데이터 상태 관리
@@ -732,7 +765,7 @@ const missingLocation = ref({
 const displayZoneLevel = ref(1)
 
 // 로딩 상태
-const isLoading = ref(false)
+const isLoading = ref(true)
 
 // 선택된 타입 (info 또는 map)
 const selectedType = ref(null)
@@ -750,6 +783,13 @@ const missingTime = '2025-10-20 09:30'
 const selectedMinutes = ref(30) // 0~90 사이의 분 단위 값
 const isDragging = ref(false)
 const timelineWrapper = ref(null)
+
+// ⭐ 시연용 시뮬레이션 상태 (Ctrl+4로 시간 자동 증가)
+const simulationState = ref({
+  isRunning: false, // 시뮬레이션 실행 중 여부
+  intervalId: null, // setInterval ID
+  startMinutes: 0 // 시뮬레이션 시작 시점의 분 값
+})
 
 // ⭐ 더보기 관련 상태 추가
 const showAllLocations = ref(false)
@@ -848,22 +888,74 @@ function toggleShowMore() {
 // ========================================================================================
 
 function setTime(minutes) {
-    selectedMinutes.value = minutes
+    // 0~90분 범위로 제한
+    const clampedMinutes = Math.max(0, Math.min(90, minutes))
+    selectedMinutes.value = clampedMinutes
     showAllLocations.value = false // ⭐ 더보기 상태 초기화
     selectedLocation.value = null
     clearAllRoutes()
 
     // ⭐⭐⭐ zone level 계산
     let newLevel = 1
-    if (minutes <= 30) {
+    if (clampedMinutes <= 30) {
         newLevel = 1
-    } else if (minutes <= 60) {
+    } else if (clampedMinutes <= 60) {
         newLevel = 2
     } else {
         newLevel = 3
     }
 
     displayZoneLevel.value = newLevel
+}
+
+// ⭐ 부드러운 시간 업데이트 함수 (시뮬레이션용, 소수점 분 허용)
+function updateTimeSmoothly(minutes) {
+    // 0~90분 범위로 제한
+    const clampedMinutes = Math.max(0, Math.min(90, minutes))
+    
+    // 소수점 분을 허용하여 저장
+    selectedMinutes.value = clampedMinutes
+    
+    // zone level 계산 (실제 분 값으로 계산하여 30분, 60분을 넘어서는 순간 바로 변경)
+    let newLevel = 1
+    if (clampedMinutes <= 30) {
+        newLevel = 1
+    } else if (clampedMinutes <= 60) {
+        newLevel = 2
+    } else {
+        newLevel = 3
+    }
+    
+    // zone level이 변경된 경우에만 전체 상태 초기화 및 지도 줌 조정
+    if (displayZoneLevel.value !== newLevel) {
+        const oldLevel = displayZoneLevel.value
+        displayZoneLevel.value = newLevel
+        showAllLocations.value = false
+        selectedLocation.value = null
+        clearAllRoutes()
+        
+        if (map.value) {
+            makeMarker()
+            showCirclesByZoneLevel(newLevel)
+            
+            // ⭐ 시뮬레이션 중일 때만 지도 줌 자동 조정
+            if (simulationState.value.isRunning) {
+                // 30분을 넘어서 level 2로 변경될 때 (circle1500 최대 반경 1300m)
+                if (oldLevel === 1 && newLevel === 2) {
+                    adjustMapZoomForRadius(1300)
+                }
+                // 60분을 넘어서 level 3로 변경될 때 (circle2100 최대 반경 2000m)
+                else if (oldLevel === 2 && newLevel === 3) {
+                    adjustMapZoomForRadius(2000)
+                }
+            }
+        }
+    }
+    
+    // 원의 반경을 소수점 분에 맞게 부드럽게 업데이트
+    if (map.value && (selectedType.value === 'map' || selectedType.value === 'info')) {
+        updateMapForTime(clampedMinutes)
+    }
 }
 
 // ⭐ 드래그 시작
@@ -956,7 +1048,7 @@ let markers = []
 let polylines = []
 let centerMarker = null
 
-// Test용 사용자 정보
+// 예측 API 호출용 사용자 번호 (테스트 단계: 항상 3번 환자로 고정)
 const user_no = 3
 
 // ========================================================================================
@@ -1052,6 +1144,47 @@ function showCirclesByZoneLevel(level) {
     updateMapForTime(selectedMinutes.value)
 }
 
+// ⭐ 반경에 맞춰 지도 줌 조정하는 함수
+function adjustMapZoomForRadius(maxRadius) {
+    if (!map.value || !missingLocation.value.lat || !missingLocation.value.lon) {
+        console.log('⚠️ adjustMapZoomForRadius: 지도 또는 위치 정보 없음')
+        return
+    }
+    
+    console.log(`🔍 adjustMapZoomForRadius 호출: maxRadius=${maxRadius}m`)
+    
+    // 반경(미터)에 따라 적절한 카카오맵 level 계산
+    // ⚠️ 카카오맵 level 개념: 숫자가 작을수록 확대(좁은 범위), 숫자가 클수록 축소(넓은 범위)
+    // 원이 클수록 지도를 조금 축소시켜 넓은 범위가 보이도록 해야 하지만, 너무 축소되지 않게 적절히 조정
+    // 예: level 3 = 확대, level 5 = 중간, level 6 = 약간 축소, level 7 = 축소
+    let targetLevel = 5
+    if (maxRadius <= 600) {
+        targetLevel = 5  // 600m 이하 → 중간
+    } else if (maxRadius <= 1000) {
+        targetLevel = 5  // 600m ~ 1000m → 중간 유지
+    } else if (maxRadius <= 1500) {
+        targetLevel = 6  // 1000m ~ 1500m → 약간 축소 (넓은 범위) ← 1300m (30~60분, 현재 적절함)
+    } else {
+        targetLevel = 7  // 1500m 이상 → 축소 (더 넓은 범위) ← 2000m (60~90분, 30~60분보다 더 축소)
+    }
+
+    // 현재 level과 다르면 조정
+    const currentLevel = map.value.getLevel()
+    console.log(`🔍 현재 level: ${currentLevel}, 목표 level: ${targetLevel}`)
+    
+    if (Math.abs(currentLevel - targetLevel) >= 1) {
+        // 카카오맵 API에서 animate 옵션이 지원되는지 확인 후 적용
+        try {
+            map.value.setLevel(targetLevel)
+            console.log(`🗺️ 지도 줌 조정 완료: 반경 ${maxRadius}m → level ${currentLevel} → ${targetLevel}`)
+        } catch (error) {
+            console.error('❌ 지도 줌 조정 실패:', error)
+        }
+    } else {
+        console.log(`ℹ️ 지도 줌 조정 불필요: 현재 level(${currentLevel})이 목표 level(${targetLevel})과 유사함`)
+    }
+}
+
 // ⭐ 시간에 따라 원의 반경 업데이트
 function updateMapForTime(minutes) {
     if (!map.value || !circles.value.circle700) {
@@ -1059,35 +1192,66 @@ function updateMapForTime(minutes) {
         return
     }
 
+    // ⭐ 원이 지도에 표시되어 있는지 확인하는 헬퍼 함수
+    const ensureCircleOnMap = (circle) => {
+        if (circle && !circle.getMap()) {
+            circle.setMap(map.value)
+        }
+    }
+
     // 0-30분: circle700만 0~600m로 점진적 확대
     if (minutes <= 30) {
+        // circle700을 지도에 추가 (필요한 경우)
+        ensureCircleOnMap(circles.value.circle700)
         const radius = (minutes / 30) * 600
         circles.value.circle700.setRadius(radius)
 
-        // 나머지 원은 반경 0으로 설정 (숨김 효과)
-        if (circles.value.circle1500) circles.value.circle1500.setRadius(0)
-        if (circles.value.circle2100) circles.value.circle2100.setRadius(0)
+        // 나머지 원은 반경 0으로 설정하고 지도에서 제거 (숨김 효과)
+        if (circles.value.circle1500) {
+            circles.value.circle1500.setRadius(0)
+            circles.value.circle1500.setMap(null)
+        }
+        if (circles.value.circle2100) {
+            circles.value.circle2100.setRadius(0)
+            circles.value.circle2100.setMap(null)
+        }
     }
-    // 30-60분: circle700은 600m 고정, circle1500은 600~1300m로 점진적 확대
+    // 30-60분: circle700은 600m 고정, circle1500은 600m(30분 종료값)에서 1300m로 점진적 확대
     else if (minutes <= 60) {
+        // circle700과 circle1500을 지도에 추가 (필요한 경우)
+        ensureCircleOnMap(circles.value.circle700)
+        ensureCircleOnMap(circles.value.circle1500)
+        
         circles.value.circle700.setRadius(600)
 
+        // circle1500: 600m(0~30분의 최대값)에서 시작해서 1300m까지 점진적 확대
+        // 30분에서 600m, 60분에서 1300m가 되도록
         const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
         if (circles.value.circle1500) {
             circles.value.circle1500.setRadius(radius)
         }
 
-        // circle2100은 반경 0으로 설정 (숨김 효과)
-        if (circles.value.circle2100) circles.value.circle2100.setRadius(0)
+        // circle2100은 반경 0으로 설정하고 지도에서 제거 (숨김 효과)
+        if (circles.value.circle2100) {
+            circles.value.circle2100.setRadius(0)
+            circles.value.circle2100.setMap(null)
+        }
     }
-    // 60-90분: circle700은 600m, circle1500은 1300m 고정, circle2100은 1300~2000m로 점진적 확대
+    // 60-90분: circle700은 600m, circle1500은 1300m 고정, circle2100은 1300m(60분 종료값)에서 2000m로 점진적 확대
     else if (minutes <= 90) {
+        // 모든 원을 지도에 추가 (필요한 경우)
+        ensureCircleOnMap(circles.value.circle700)
+        ensureCircleOnMap(circles.value.circle1500)
+        ensureCircleOnMap(circles.value.circle2100)
+        
         circles.value.circle700.setRadius(600)
 
         if (circles.value.circle1500) {
             circles.value.circle1500.setRadius(1300)
         }
 
+        // circle2100: 1300m(30~60분의 최대값)에서 시작해서 2000m까지 점진적 확대
+        // 60분에서 1300m, 90분에서 2000m가 되도록
         const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
         if (circles.value.circle2100) {
             circles.value.circle2100.setRadius(radius)
@@ -1095,6 +1259,10 @@ function updateMapForTime(minutes) {
     }
     // 90분 초과: 모든 원을 최대 반경으로 고정
     else {
+        ensureCircleOnMap(circles.value.circle700)
+        ensureCircleOnMap(circles.value.circle1500)
+        ensureCircleOnMap(circles.value.circle2100)
+        
         circles.value.circle700.setRadius(600)
         
         if (circles.value.circle1500) {
@@ -1173,8 +1341,108 @@ async function fetchPrediction() {
 // 카카오맵 초기화
 // ========================================================================================
 
-onMounted(() => {
-    fetchPatientAndMissingReport()
+// ⭐ 시연용 시뮬레이션 기능 (Ctrl+4)
+function handleSimulationToggle() {
+  if (simulationState.value.isRunning) {
+    // 시뮬레이션 정지 및 초기화
+    console.log('[시연] Ctrl+4: 실종 경과 시간 시뮬레이션 정지 및 초기화')
+    stopSimulation()
+  } else {
+    // 시뮬레이션 시작
+    console.log(`[시연] Ctrl+4: 실종 경과 시간 시뮬레이션 시작 (현재: ${selectedMinutes.value}분)`)
+    startSimulation()
+  }
+}
+
+// 시뮬레이션 시작
+function startSimulation() {
+  if (simulationState.value.isRunning) return
+  
+  // 현재 값에서 시작
+  simulationState.value.startMinutes = selectedMinutes.value
+  simulationState.value.isRunning = true
+  
+  // 50ms마다 0.1분씩 증가 (1초에 2분 증가)
+  // 더 부드러운 애니메이션을 위해 업데이트 주기를 세밀하게 함
+  simulationState.value.intervalId = setInterval(() => {
+    // 소수점까지 허용하여 부드럽게 증가
+    const nextMinutes = selectedMinutes.value + 0.1
+    
+    if (nextMinutes >= 90) {
+      // 90분 도달 시 멈춤
+      setTime(90)
+      stopSimulation()
+      console.log('[시연] 실종 경과 시간 시뮬레이션 완료: 90분 도달')
+    } else {
+      // 소수점 분을 허용하여 부드럽게 업데이트
+      updateTimeSmoothly(nextMinutes)
+    }
+  }, 50) // 50ms마다 실행 (더 부드러운 애니메이션)
+}
+
+// 시뮬레이션 정지 및 초기화
+function stopSimulation() {
+  if (simulationState.value.intervalId) {
+    clearInterval(simulationState.value.intervalId)
+    simulationState.value.intervalId = null
+  }
+  simulationState.value.isRunning = false
+  // 시작했던 값으로 초기화
+  setTime(simulationState.value.startMinutes)
+}
+
+// Ctrl + 3: 현관문 열림 감지 알림
+function handleDoorOpenAlert() {
+  console.log('[시연] Ctrl+3: 현관문 열림 감지 알림')
+  // 모달 표시 (App.vue의 전역 함수 호출)
+  setTimeout(() => {
+    if (window.showDoorOpenModal) {
+      window.showDoorOpenModal()
+    }
+  }, 100)
+}
+
+// 키보드 이벤트 리스너
+function handleKeyDown(event) {
+  // Ctrl + 3: 현관문 열림 감지 알림
+  if (event.ctrlKey && event.key === '3') {
+    event.preventDefault()
+    handleDoorOpenAlert()
+  }
+  // Ctrl + 4: 시간 시뮬레이션 토글 (predict-location 페이지에서만 작동)
+  if (event.ctrlKey && event.key === '4') {
+    event.preventDefault()
+    handleSimulationToggle()
+  }
+}
+
+onMounted(async () => {
+    // 쿼리 파라미터에서 missingPostId 확인
+    const queryMissingPostId = route.query.missingPostId
+    
+    if (queryMissingPostId) {
+        // 실종 게시판에서 "함께하기"를 통해 온 경우
+        console.log(`📋 게시판에서 온 경우: missingPostId=${queryMissingPostId}`)
+        missingPostId.value = Number(queryMissingPostId)
+        
+        // 실종자 정보 직접 조회
+        await fetchMissingPersonDetail()
+        await fetchParticipants()
+        
+        // 실종자 정보에서 환자 번호 가져오기 (실종자 정보 표시용)
+        if (personDetail.value && personDetail.value.patientUserNo) {
+            patientUserNo.value = personDetail.value.patientUserNo
+            console.log(`✅ 환자 번호 확인: patientUserNo=${patientUserNo.value} (예측 API는 항상 user_no=3 사용)`)
+        } else {
+            console.error('❌ 실종자 정보에서 환자 번호를 찾을 수 없습니다.')
+        }
+    } else {
+        // GD_main에서 "예상 위치"를 통해 온 경우 (기존 로직)
+        console.log('📋 메인에서 온 경우: 내 연결된 환자 조회')
+        await fetchPatientAndMissingReport()
+        console.log(`✅ 환자 번호 확인: patientUserNo=${patientUserNo.value} (예측 API는 항상 user_no=3 사용)`)
+    }
+    
     try {
         loadKakaoMap(mapContainer.value)
         // 페이지 로드 시 자동으로 데이터 가져오기
@@ -1185,6 +1453,15 @@ onMounted(() => {
         selectedType.value = 'info'
     }
     
+    // 키보드 이벤트 리스너 등록 (시뮬레이션용)
+    window.addEventListener('keydown', handleKeyDown)
+})
+
+onBeforeUnmount(() => {
+    // 키보드 이벤트 리스너 제거
+    window.removeEventListener('keydown', handleKeyDown)
+    // 시뮬레이션 정리
+    stopSimulation()
 })
 
 const loadKakaoMap = (container) => {
@@ -1737,11 +2014,17 @@ async function getPropsFromVworld() {
 
                 // ⭐ address2: 자연어 설명
                 if (!excludeJimok.includes(jimok)) {
-                    const poiResult = await searchVWorldPOI(location.address1)
+                    try {
+                        const poiResult = await searchVWorldPOI(location.address1)
 
-                    if (poiResult && poiResult.poiName) {
-                        location.address2 = `'${poiResult.poiName}'에 있을 것 같아요!`
-                    } else {
+                        if (poiResult && poiResult.poiName) {
+                            location.address2 = `'${poiResult.poiName}'에 있을 것 같아요!`
+                        } else {
+                            location.address2 = `도로에 있을 것 같아요!`
+                        }
+                    } catch (poiError) {
+                        // POI 검색 실패 시에도 기본 메시지 설정하여 진행
+                        console.warn(`Zone ${zone.level}-${i + 1} POI 검색 실패, 기본 메시지 사용:`, poiError)
                         location.address2 = `도로에 있을 것 같아요!`
                     }
                 } else {
@@ -1797,9 +2080,12 @@ async function searchVWorldPOI(address) {
         })
 
         const searchUrl = `https://api.vworld.kr/req/search?${searchData.toString()}`
-        const response = await fetch(searchUrl)
+        // ⭐ CORS 문제 해결: VWorld 프록시 URL 사용
+        const proxyUrl = `https://www.vworld.kr/proxy.do?url=${encodeURIComponent(searchUrl)}`
+        const response = await fetch(proxyUrl)
 
         if (!response.ok) {
+            console.warn('VWorld POI 검색 API 응답 실패:', response.status)
             return null
         }
 
@@ -2323,9 +2609,8 @@ function getTimeRangeText(minutes) {
 /* ⭐ 드래그 가능한 타임라인 스타일 */
 .timeline-container {
     position: relative;
-    width: 330px;
+    width: 100%;
     padding: 20px 16px;
-    left: 10px;
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fd 100%);
     border-bottom: 1px solid #e5e5e5;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -2395,7 +2680,7 @@ function getTimeRangeText(minutes) {
     height: 100%;
     background: linear-gradient(90deg, #667eea 0%, #667eea 33.33%, #667eea 33.33%, #667eea 66.66%, #667eea 66.66%, #667eea 100%);
     border-radius: 6px;
-    transition: width 0.15s ease-out;
+    transition: width 0.1s ease-out;
     pointer-events: none;
 }
 
@@ -2523,8 +2808,7 @@ function getTimeRangeText(minutes) {
     margin-top: 16px;
     justify-content: space-around;
     flex-wrap: wrap;
-    width: 330px;
-    left: -15px;
+    width: 100%;
 }
 
 .legend-item {
