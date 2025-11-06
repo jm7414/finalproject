@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-page">
+  <div class="calendar-page neighbor-page-container">
 
     <!-- 캘린더 섹션 -->
     <div class="calendar-section">
@@ -203,12 +203,15 @@
       </div>
     </div>
 
+    <!-- 이웃 전용 푸터 -->
+    <NeighborFooter />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import NeighborFooter from '@/components/NeighborFooter.vue'
 
 const router = useRouter()
 
@@ -465,13 +468,13 @@ function goToAddScheduleWithDate(date) {
   sessionStorage.setItem('selectedDate', dateString)
   
   // 일정 추가 페이지로 이동
-  router.push({ name: 'add-schedule' })
+  router.push({ name: 'NH_AddSchedule' })
 }
 
 
 // 일정 추가 페이지로 이동
 function goToAddSchedule() {
-  router.push({ name: 'add-schedule' })
+  router.push({ name: 'NH_AddSchedule' })
 }
 
 // 날짜별 일정 모달 닫기
@@ -491,7 +494,7 @@ function addScheduleForDate() {
   closeDateSchedulesModal()
   
   // 일정 추가 페이지로 이동
-  router.push({ name: 'add-schedule' })
+  router.push({ name: 'NH_AddSchedule' })
 }
 
 // 일정 상세 모달 열기
@@ -519,7 +522,7 @@ function editSchedule() {
   closeDateSchedulesModal()
   
   // 일정 추가 페이지로 이동 (수정 모드)
-  router.push({ name: 'add-schedule' })
+  router.push({ name: 'NH_AddSchedule' })
 }
 
 // 일정 삭제 확인
@@ -1146,6 +1149,12 @@ onMounted(() => {
 
   .modal-header, .modal-body, .modal-footer {
     padding: 16px;
+  }
+
+  /* 이웃 페이지 컨테이너 - 하단 푸터 공간 확보 */
+  .neighbor-page-container {
+    padding-bottom: 100px;
+    margin-bottom: 30px;
   }
 }
 </style>
