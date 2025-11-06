@@ -57,15 +57,19 @@ public class UserController {
             // 비밀번호 암호화
             user.setUserPw(passwordEncoder.encode(user.getUserPw()));
 
-            // 역할 설정 (보호자 체크박스에 따라)
-            user.setRoleNo(user.getRoleNo() == 1 ? 1 : 2); // 1: 보호자, 2: 환자
+            // 역할 설정: 1(보호자), 2(환자), 4(이웃)
+            Integer roleNo = user.getRoleNo();
+            if (roleNo != 1 && roleNo != 2 && roleNo != 4) {
+                return ResponseEntity.badRequest().body(Map.of("message", "올바른 역할을 선택해주세요."));
+            }
+            user.setRoleNo(roleNo);
 
             // 초대 코드 생성 (환자일 경우에만)
             if (user.getRoleNo() == 2) {
                 String invitationCode = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
                 user.setInvitationCode(invitationCode);
             } else {
-                user.setInvitationCode(null); // 보호자는 초대코드 없음
+                user.setInvitationCode(null); // 보호자와 이웃은 초대코드 없음
             }
 
             // 회원가입 처리
