@@ -24,7 +24,8 @@ CREATE TABLE role (
 INSERT INTO role (role_name) VALUES 
     ('보호자'),
     ('환자'),
-    ('구독자');
+    ('구독자'),
+    ('이웃');
 
 -- === 유저(users) 테이블 ===
 CREATE TABLE users (

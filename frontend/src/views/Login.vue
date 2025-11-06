@@ -135,6 +135,9 @@ async function onLogin() {
          } else if (userData.roleNo === 2 || userData.roleNo === 3) {
            // 환자(2) 또는 구독자(3) -> DP 페이지
            router.push('/DP')
+         } else if (userData.roleNo === 4) {
+           // 이웃(4) -> NH 페이지
+           router.push('/NH')
          } else {
            // 기본값 (예외 처리)
            router.push('/login')

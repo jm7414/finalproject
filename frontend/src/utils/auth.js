@@ -31,7 +31,7 @@ export async function getCurrentUser() {
 
 /**
  * 사용자 역할에 따른 기본 라우트 반환
- * @param {number} roleNo - 역할 번호 (1: 보호자, 2: 환자, 3: 구독자)
+ * @param {number} roleNo - 역할 번호 (1: 보호자, 2: 환자, 3: 구독자, 4: 이웃)
  */
 export function getDefaultRouteByRole(roleNo) {
   switch (roleNo) {
@@ -40,6 +40,8 @@ export function getDefaultRouteByRole(roleNo) {
     case 2: // 환자
     case 3: // 구독자
       return '/DP'
+    case 4: // 이웃
+      return '/NH'
     default:
       return '/login'
   }
