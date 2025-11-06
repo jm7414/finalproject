@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.dao.NeighborScheduleDAO">
+    
+    <!-- 이웃 일정 저장 -->
+    <insert id="insertNeighborSchedule" parameterType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        INSERT INTO neighbor_schedule (schedule_title, content, schedule_date, user_no)
+        VALUES (#{scheduleTitle}, #{content}, #{scheduleDate}, #{userNo})
+    </insert>
+    
+    <!-- 특정 이웃의 모든 일정 조회 -->
+    <select id="getNeighborSchedulesByUserNo" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT schedule_no, schedule_title, content, schedule_date, user_no, created_at
+        FROM neighbor_schedule
+        WHERE user_no = #{userNo}
+        ORDER BY schedule_date DESC
+    </select>
+    
+    <!-- 특정 일정 조회 -->
+    <select id="getNeighborScheduleByNo" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT schedule_no, schedule_title, content, schedule_date, user_no, created_at
+        FROM neighbor_schedule
+        WHERE schedule_no = #{scheduleNo}
+    </select>
+    
+    <!-- 이웃 일정 삭제 -->
+    <delete id="deleteNeighborSchedule" parameterType="int">
+        DELETE FROM neighbor_schedule
+        WHERE schedule_no = #{scheduleNo}
+    </delete>
+    
+</mapper>
