@@ -28,13 +28,34 @@
       </button>
     </div>
 
-    <!-- 가장 빠른 일정 -->
-    <h6 class="fw-bold mb-2">오늘의 일정</h6>
+    <!-- 걸음 수 -->
     <div class="card border-0 shadow-sm rounded-4 mb-2">
-      <div class="card-body text-center text-muted">오늘 남은 일정이 없습니다.</div>
+      <div class="card-body text-muted d-flex">
+        <div class="map-detail-btn" style="width:50px; height:30px;">아이콘</div>
+        <div style="width:180px; height:30px;">오늘의 활동량</div>
+        <span>0000걸음</span>
+      </div>
     </div>
 
-    <button class="btn btn-outline-dark w-100 rounded-pill mb-3">
+    <!-- 가장 빠른 일정 -->
+    <h6 class="fw-bold mb-2">모임 일정</h6>
+    <div v-if="nextSchedule" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <div class="d-flex align-items-center gap-2">
+          <span class="d-inline-block rounded-circle" style="width:10px;height:10px;background:#6c757d"></span>
+          <span class="fw-semibold">{{ nextSchedule.title }}</span>
+        </div>
+        <span class="text-secondary">{{ nextSchedule.date }}</span>
+      </div>
+    </div>
+    <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
+      <div class="card-body text-center text-muted">
+        <p>일정이 없습니다.</p>
+        <p>일정을 입력해보세요!</p>
+      </div>
+    </div>
+
+    <button class="btn btn-outline-dark w-100 rounded-pill mb-3" @click="router.push('/calendar')">
       일정 자세히 보기
     </button>
 
@@ -109,6 +130,7 @@
       </div>
     </div>
 
+
     <!-- 이웃 전용 푸터 -->
     <NeighborFooter />
   </div>
@@ -127,6 +149,9 @@ import report2 from '@/assets/images/report2.png'
 import connectIcon from '@/assets/images/connect.svg'
 
 const router = useRouter()
+
+// 지도 사라짐 대응
+const nextSchedule = ref(null)
 
 /* ===== Kakao Map Loader ===== */
 const {

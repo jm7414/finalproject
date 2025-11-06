@@ -114,8 +114,8 @@ CREATE TABLE schedule (
     schedule_title VARCHAR(200) NOT NULL,
     content TEXT,
     schedule_date DATE NOT NULL,
-    start_time TIME(0) NOT NULL,
-    end_time TIME(0) NOT NULL,
+    start_time TIME(0),
+    end_time TIME(0),
     user_no INTEGER NOT NULL,
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
     CHECK (end_time > start_time)

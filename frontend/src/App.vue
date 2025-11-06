@@ -70,7 +70,7 @@ const isDpConnect = computed(() => {
 
 // 이웃 페이지인지 확인하는 computed 속성
 const isNeighborPage = computed(() => {
-  return route.path === '/NH'
+  return route.name?.startsWith('NH')
 })
 
 // 실종자 상세정보 입력 페이지
