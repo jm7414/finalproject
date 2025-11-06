@@ -1,38 +1,48 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="lx.project.dementia_care.dao.PeriodDAO">
 
-    <!-- 1) type+key 단건 조회 -->
-    <select id="findIdByTypeKey" resultType="java.lang.Integer">
-        SELECT period_id
-          FROM period
-         WHERE period_type = #{type}
-           AND period_key  = #{key}
-         LIMIT 1
-    </select>
+	<!-- (참고) 범위로 찾기: 과거 호환 -->
+	<select id="findIdByRange" resultType="int">
+		SELECT period_id
+		FROM period
+		WHERE start_date = #{start}
+		AND end_date = #{end}
+		LIMIT 1
+	</select>
 
-    <!-- 2) 보장 업서트: INSERT 후 RETURNING으로 period_id 반환 -->
-    <select id="upsertReturningId" resultType="java.lang.Integer">
-        INSERT INTO period (period_type, period_key, start_date, end_date)
-        VALUES (#{type}, #{key}, #{start}, #{end})
-        ON CONFLICT (period_type, period_key)
-        DO UPDATE SET
-            start_date = period.start_date,
-            end_date   = period.end_date
-        RETURNING period_id
-    </select>
+	<!-- 핵심: type+key로 찾기 (유니크 인덱스와 동일 키) -->
+	<select id="findIdByTypeKey" resultType="int">
+		SELECT period_id
+		FROM period
+		WHERE period_type = #{periodType}
+		AND period_key = #{periodKey}
+		LIMIT 1
+	</select>
 
-    <!-- 3) 기존 코드 호환용: start/end로 조회 -->
-    <select id="findIdByRange" resultType="java.lang.Integer">
-        SELECT period_id
-          FROM period
-         WHERE start_date = #{start}
-           AND end_date   = #{end}
-         LIMIT 1
-    </select>
+	<!-- type+key로 전체 읽기(날짜 비교용) -->
+	<select id="getByTypeKey" resultType="map">
+		SELECT period_id, period_type, period_key, start_date, end_date
+		FROM period
+		WHERE period_type = #{periodType}
+		AND period_key = #{periodKey}
+		LIMIT 1
+	</select>
+
+	<!-- INSERT: end는 '포함'으로 저장 -->
+	<insert id="insert">
+		INSERT INTO period (period_type, period_key, start_date, end_date)
+		VALUES (#{periodType}, #{periodKey}, #{start}, #{end})
+	</insert>
+
+	<!-- 날짜 보정 -->
+	<update id="updateDates">
+		UPDATE period
+		SET start_date = #{start},
+		end_date = #{end}
+		WHERE period_id = #{periodId}
+	</update>
 
 </mapper>
-
