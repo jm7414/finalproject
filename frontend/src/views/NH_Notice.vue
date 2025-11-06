@@ -7,7 +7,7 @@ import CommunityBoard from '@/components/CommunityBoard.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
 // 기본으로 보여줄 탭(채널)을 'Post'로 설정
-const activeTab = ref('Missing'); 
+const activeTab = ref('Post'); 
 
 // 탭(채널)을 변경하는 함수
 function changeTab(tabName) {
@@ -34,7 +34,7 @@ function changeTab(tabName) {
         <div class="main-div-9" 
              :class="{ active: activeTab === 'Event' }" 
              @click="changeTab('Event')">
-          <span class="main-div-a">동네소식</span>
+          <span class="main-div-a">이벤트</span>
         </div>
       </div>
     </div>

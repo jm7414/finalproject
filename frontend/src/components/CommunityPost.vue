@@ -313,6 +313,7 @@ async function deleteComment(commentId) {
 .post-section {
   background: #FFFFFF;
   padding: 16px;
+  margin-top: 90px;
   margin-right: 10px;
   border-bottom: 1px solid #F5F5F5;
 }

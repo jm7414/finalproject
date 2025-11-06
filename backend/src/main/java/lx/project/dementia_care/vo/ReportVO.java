@@ -1,26 +1,28 @@
 package lx.project.dementia_care.vo;
 
+import java.time.OffsetDateTime;
+
 import lombok.Data;
 
 @Data
 public class ReportVO {
-	private Integer reportId;
-	private Integer periodId;
-	private Long patientId;
-	private String content;
+    private Integer reportId;
+    private Integer periodId;
+    private Integer patientId;
+    private String  content;
+    private String  periodType;
+    private String  periodKey;
+    private Integer version;
+    private OffsetDateTime generatedAt;
+    private String  generatedBy;
+    private Boolean locked;
+    private String  sourceHash;
 
-	private String periodType; // "year"
-	private String periodKey; // "2024"
-	private Integer version;
-	private String generatedAt;
-	private String generatedBy;
-	private Boolean locked;
-	private String sourceHash;
+    // ★ jsonb는 전부 String으로
+    private String  metrics;
+    private String  sections;
+    private String  chartPrefs;
 
-	private String metrics; // JSON 문자열
-	private String sections; // JSON 문자열
-	private String chartPrefs; // JSON 문자열
-
-	private String createdAt;
-	private String updatedAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 }

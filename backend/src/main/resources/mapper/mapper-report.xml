@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lx.project.dementia_care.dao.ReportDAO">
+
+	<resultMap id="ReportVOMap"
+		type="lx.project.dementia_care.vo.ReportVO">
+		<id property="reportId" column="report_id" />
+		<result property="periodId" column="period_id" />
+		<result property="patientId" column="patient_id" />
+		<result property="content" column="content" />
+		<result property="periodType" column="period_type" />
+		<result property="periodKey" column="period_key" />
+		<result property="version" column="version" />
+		<result property="generatedAt" column="generated_at"
+			javaType="java.time.OffsetDateTime" />
+		<result property="generatedBy" column="generated_by" />
+		<result property="locked" column="locked" />
+		<result property="sourceHash" column="source_hash" />
+
+		<!-- ★ jsonb -> String -->
+		<result property="metrics" column="metrics"
+			javaType="java.lang.String" />
+		<result property="sections" column="sections"
+			javaType="java.lang.String" />
+		<result property="chartPrefs" column="chart_prefs"
+			javaType="java.lang.String" />
+
+		<result property="createdAt" column="created_at"
+			javaType="java.time.OffsetDateTime" />
+		<result property="updatedAt" column="updated_at"
+			javaType="java.time.OffsetDateTime" />
+	</resultMap>
+
+	<!-- 단건 조회: ★ 반드시 ::text -->
+	<select id="findByPatientPeriod" resultMap="ReportVOMap">
+		SELECT
+		report_id,
+		period_id,
+		patient_id,
+		content,
+		period_type,
+		period_key,
+		version,
+		generated_at,
+		generated_by,
+		locked,
+		source_hash,
+		metrics::text AS metrics,
+		sections::text AS sections,
+		chart_prefs::text AS chart_prefs,
+		created_at,
+		updated_at
+		FROM report
+		WHERE patient_id = #{patientId}
+		AND period_type = #{periodType}
+		AND period_key = #{periodKey}
+		LIMIT 1
+	</select>
+
+	<!-- UPSERT: 입력은 jsonb 캐스팅, 반환은 ★ ::text -->
+	<select id="upsertReturning" resultMap="ReportVOMap">
+		INSERT INTO report(
+		period_id, patient_id, content,
+		period_type, period_key,
+		generated_at, generated_by, locked,
+		source_hash, metrics, sections, chart_prefs
+		) VALUES (
+		#{periodId}, #{patientId}, #{content},
+		#{periodType}, #{periodKey},
+		NOW(), #{generatedBy}, FALSE,
+		#{sourceHash},
+		CAST(#{metricsJson} AS jsonb),
+		CAST(#{sectionsJson} AS jsonb),
+		CAST(#{chartPrefsJson} AS jsonb)
+		)
+		ON CONFLICT (patient_id, period_type, period_key)
+		DO UPDATE SET
+		content = EXCLUDED.content,
+		source_hash = EXCLUDED.source_hash,
+		metrics = EXCLUDED.metrics,
+		sections = EXCLUDED.sections,
+		chart_prefs = EXCLUDED.chart_prefs,
+		generated_by = EXCLUDED.generated_by,
+		generated_at = NOW(),
+		version = report.version + 1,
+		updated_at = NOW()
+		RETURNING
+		report_id,
+		period_id,
+		patient_id,
+		content,
+		period_type,
+		period_key,
+		version,
+		generated_at,
+		generated_by,
+		locked,
+		source_hash,
+		metrics::text AS metrics,
+		sections::text AS sections,
+		chart_prefs::text AS chart_prefs,
+		created_at,
+		updated_at
+	</select>
+
+</mapper>

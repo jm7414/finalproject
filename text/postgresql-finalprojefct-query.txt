@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS record CASCADE;
 DROP TABLE IF EXISTS report CASCADE;
 DROP TABLE IF EXISTS period CASCADE;
 DROP TABLE IF EXISTS missing_post CASCADE;
+DROP TABLE IF EXISTS post_comments CASCADE;
 DROP TABLE IF EXISTS post CASCADE;
 DROP TABLE IF EXISTS route CASCADE;
 DROP TABLE IF EXISTS schedule_location CASCADE;
@@ -113,8 +114,8 @@ CREATE TABLE schedule (
     schedule_title VARCHAR(200) NOT NULL,
     content TEXT,
     schedule_date DATE NOT NULL,
-    start_time TIME(0) NOT NULL,
-    end_time TIME(0) NOT NULL,
+    start_time TIME(0),
+    end_time TIME(0),
     user_no INTEGER NOT NULL,
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
     CHECK (end_time > start_time)
@@ -164,6 +165,15 @@ CREATE TABLE post (
 CREATE INDEX idx_post_user_id ON post(user_id);
 CREATE INDEX idx_post_created_at ON post(created_at);
 CREATE INDEX idx_post_view_count ON post(view_count);
+
+-- === 댓글 테이블 ===
+CREATE TABLE post_comments (
+	comment_id SERIAL PRIMARY KEY,
+	POST_id INTEGER NOT NULL,
+	user_id INTEGER NOT NULL,
+	content TEXT NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
 -- === 실종자 게시물(missing_post) 테이블 ===
 CREATE TABLE missing_post (
@@ -312,13 +322,13 @@ FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
 -- 1~4번: subscription_status = 1 (구독 상태)
 -- 5~6번: subscription_status = 0 (미구독 상태)
 -- 4번, 6번: 환자이므로 invitation_code 포함
-INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_code, subscription_status, role_no) VALUES
-('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 1),
-('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 1),
-('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 1),
-('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 3),
-('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 1),
-('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 2);
+INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_code, subscription_status, user_status, role_no) VALUES
+('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 0, 1),
+('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 0, 1),
+('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 0, 1),
+('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 1, 3),
+('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 0, 1),
+('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 0, 2);
 
 INSERT INTO post (title, user_id, content, view_count, image_path) VALUES
 (
@@ -326,7 +336,7 @@ INSERT INTO post (title, user_id, content, view_count, image_path) VALUES
     1,
     '뇌 건강에 좋은 음식으로는 등 푸른 생선, 견과류, 베리류 등이 있습니다.',
     14,
-    '/images/sample_food_image.jpg'
+    'https://localhost:8080/uploads/images/23a43088-ac8f-4753-aa34-1bf4c06648a9_sample_food_image.jpg'
 );
 
 INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, description) VALUES
