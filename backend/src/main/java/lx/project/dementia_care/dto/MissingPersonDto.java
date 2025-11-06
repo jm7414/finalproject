@@ -24,4 +24,6 @@ public class MissingPersonDto {
     private LocalDate patientBirthDate; // u.birth_date (Mapper 별칭 사용 안 함, DB 타입 LocalDate)
     private Integer searchTogetherCount; // COUNT(*) AS search_together_count
     
+    private Boolean currentUserJoined; // 함께하는 사람 참여 확인 여부
+    
 }

@@ -31,23 +31,38 @@ public class MissingPersonController {
      * user_status가 1인 사용자와 관련된 최신 실종 정보를 조합하여 조회하는 API
      */
     @GetMapping
-    public ResponseEntity<List<MissingPersonDto>> getMissingPersonsWithDetails() {
-        List<MissingPersonDto> missingPersons = missingPersonService.findMissingPersonsWithDetails();
+    public ResponseEntity<List<MissingPersonDto>> getMissingPersonsWithDetails(Authentication authentication) { // <---
+                                                                                                                // (1)
+                                                                                                                // Authentication
+                                                                                                                // 추가
+
+        Integer currentUserId = null;
+        if (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())) {
+            UserVO userVO = (UserVO) authentication.getPrincipal();
+            currentUserId = userVO.getUserNo(); // <--- (2) 현재 사용자 ID 확보
+        }
+
+        List<MissingPersonDto> missingPersons = missingPersonService.findMissingPersonsWithDetails(currentUserId); // <---
+                                                                                                                   // (3)
+                                                                                                                   // 서비스로
+                                                                                                                   // ID
+                                                                                                                   // 전달
         return ResponseEntity.ok(missingPersons);
     }
 
     /**
      * 특정 실종 신고 ID로 상세 정보를 조회하는 API
      */
-@GetMapping("/{missingPostId}")
-  public ResponseEntity<MissingPersonDto> getMissingPersonDetailById(@PathVariable Integer missingPostId) {
-    MissingPersonDto missingPersonDetail = missingPersonService.getMissingPersonDetailById(missingPostId);
-    if (missingPersonDetail != null) {
-      return ResponseEntity.ok(missingPersonDetail);
-    } else {
-      return ResponseEntity.notFound().build();
+    @GetMapping("/{missingPostId}")
+    public ResponseEntity<MissingPersonDto> getMissingPersonDetailById(@PathVariable Integer missingPostId) {
+        MissingPersonDto missingPersonDetail = missingPersonService.getMissingPersonDetailById(missingPostId);
+        if (missingPersonDetail != null) {
+            return ResponseEntity.ok(missingPersonDetail);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
-  }
 
     /**
      * [추가] 환자 번호(user_no)로 최신 실종 신고를 조회하는 API
@@ -61,24 +76,29 @@ public class MissingPersonController {
      */
     @GetMapping("/patient/{patientUserNo}/latest")
     public ResponseEntity<MissingPersonDto> getLatestMissingReportByPatient(
-            @PathVariable Integer patientUserNo) {
-        
+            @PathVariable Integer patientUserNo,
+            Authentication authentication) { // <-- [수정 1] Authentication 추가
+
         try {
-            // Service의 기존 메서드 활용 (이미 구현되어 있음)
-            MissingPersonDto latestReport = missingPersonService.getMissingPersonDetailById(patientUserNo);
-            
-            // 실제로는 환자 번호로 조회해야 하므로 DAO 직접 호출
-            // (Service에는 getMissingPersonDetailById가 missingPostId를 받으므로 적절하지 않음)
-            // 대신 DAO의 findLatestMissingReportByPatientNo 사용
-            latestReport = missingPersonService.findLatestReportByPatientNo(patientUserNo);
-            
+            // --- [수정 2] 현재 사용자 ID 추출 ---
+            Integer currentUserId = null;
+            if (authentication != null && authentication.isAuthenticated()
+                    && !"anonymousUser".equals(authentication.getPrincipal())) {
+                UserVO userVO = (UserVO) authentication.getPrincipal();
+                currentUserId = userVO.getUserNo();
+            }
+
+            // --- [수정 3] 서비스 호출 시 currentUserId 전달 ---
+            MissingPersonDto latestReport = missingPersonService.findLatestReportByPatientNo(patientUserNo,
+                    currentUserId);
+
             if (latestReport != null) {
                 return ResponseEntity.ok(latestReport);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(null);
             }
-            
+
         } catch (Exception e) {
             System.err.println("환자 번호로 최신 실종 신고 조회 중 오류: " + e.getMessage());
             e.printStackTrace();
@@ -154,7 +174,8 @@ public class MissingPersonController {
             Authentication authentication) {
 
         // 1. 로그인 확인
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "message", "로그인이 필요합니다."));
         }
@@ -164,7 +185,7 @@ public class MissingPersonController {
         Integer userId = userVO.getUserNo();
 
         try {
-            // 3. Service 호출 
+            // 3. Service 호출
             boolean joined = missingPersonService.joinSearchTogether(missingPostId, userId);
 
             if (joined) {
@@ -172,7 +193,7 @@ public class MissingPersonController {
                 return ResponseEntity.status(HttpStatus.CREATED) // 201 Created
                         .body(Map.of("success", true, "message", "함께 찾기에 참여했습니다.")); // tlsrltn
             } else {
-                // 이미 참여 중인 경우 
+                // 이미 참여 중인 경우
                 return ResponseEntity.ok() // 200 OK
                         .body(Map.of("success", true, "message", "이미 참여 중입니다."));
             }

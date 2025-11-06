@@ -14,24 +14,21 @@
         <result property="patientName" column="patient_name"/>
         <result property="patientBirthDate" column="birth_date"/>
         <result property="searchTogetherCount" column="search_together_count"/>
+        <result property="currentUserJoined" column="currentUserJoined"/>
     </resultMap>
 
-<select id="findMissingUsers" resultType="lx.project.dementia_care.vo.UserVO">
+    <select id="findMissingUsers" resultType="lx.project.dementia_care.vo.UserVO">
         SELECT
             user_no AS userNo,
             user_id AS userId,
-            -- user_pw AS userPw, -- 비밀번호는 목록에 필요 없으니 제외
             name,
             birth_date AS birthDate,
             phone_number AS phoneNumber,
-            -- invitation_code AS invitationCode, -- 초대 코드도 제외
-            -- subscription_status AS subscriptionStatus, -- 구독 상태도 제외
             user_status AS userStatus,
             profile_photo AS profilePhoto,
             role_no AS roleNo
         FROM users
         WHERE user_status = 1 
-        -- ORDER BY user_no 정렬이 필요하면 주석 해제
     </select>
 
     <select id="findAllMissingPersons" resultMap="MissingPersonResultMap">
@@ -51,9 +48,9 @@
         JOIN
             users u ON mp.patient_user_no = u.user_no
         WHERE
-            mp.status = '실종' -- 현재 '실종' 상태인 경우만
+            mp.status = '실종'
         ORDER BY
-            mp.reported_at DESC -- 최근 신고 순
+            mp.reported_at DESC
     </select>
 
     <insert id="createMissingPersonReport" parameterType="lx.project.dementia_care.dto.MissingPersonDto">
@@ -75,7 +72,7 @@
         WHERE missing_post_id = #{missingPostId}
     </update>
 
-    <select id="findLatestMissingReportByPatientNo" parameterType="int" resultMap="MissingPersonResultMap">
+    <select id="findLatestMissingReportByPatientNo" parameterType="map" resultMap="MissingPersonResultMap">
         SELECT
             mp.missing_post_id,
             mp.patient_user_no,
@@ -86,17 +83,28 @@
             mp.status,
             u.name AS patient_name,
             u.birth_date,
-            (SELECT COUNT(*) FROM search_Together st WHERE st.missing_post_id = mp.missing_post_id) AS search_together_count
+            (SELECT COUNT(*) FROM search_Together st WHERE st.missing_post_id = mp.missing_post_id) AS search_together_count,
+            
+            CASE 
+                WHEN #{currentUserId} IS NULL THEN FALSE
+                ELSE EXISTS (
+                    SELECT 1 
+                    FROM search_Together st 
+                    WHERE st.missing_post_id = mp.missing_post_id 
+                      AND st.user_id = #{currentUserId}
+                )
+            END AS currentUserJoined
+            
         FROM
             missing_post mp
         JOIN
             users u ON mp.patient_user_no = u.user_no
         WHERE
             mp.patient_user_no = #{patientUserNo} 
-            AND mp.status = '실종' -- '실종' 상태인 것만 (선택사항)
+            AND mp.status = '실종'
         ORDER BY
-            mp.reported_at DESC -- 가장 최근 신고
-        LIMIT 1 -- 1건만 가져옴
+            mp.reported_at DESC
+        LIMIT 1
     </select>
 
     <select id="findMissingReportById" parameterType="int" resultMap="MissingPersonResultMap">
