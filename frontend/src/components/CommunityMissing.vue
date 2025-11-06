@@ -13,7 +13,7 @@ onMounted(() => {
   fetchMissingPeople();
 });
 
-// 백엔드 API 호출 함수 (기존과 동일)
+// 백엔드 API 호출 함수 (커뮤니티 미싱에서 실종자 가져오는 API)
 async function fetchMissingPeople() {
   loading.value = true;
   error.value = null;
@@ -125,7 +125,8 @@ const defaultPersonImage = '/default-person.png';
     <main class="missing-list">
       <div v-if="loading" class="status-message">...</div>
       <div v-else-if="error" class="status-message error">{{ error }}</div>
-      <div v-else-if="missingPeople.length === 0" class="status-message">...</div>
+      <div v-else-if="missingPeople.length === 0" class="status-message"><p>실종자 없음!</p>맘마미아!</div>
+    
 
       <div v-else v-for="person in missingPeople" :key="person.missingPostId" class="card"
         @click="openMissingDetailModal(person)">

@@ -70,6 +70,10 @@ const defaultPersonImage = '/default-person.png';
 
         <section class="info-section">
           <h3>실종자 정보</h3>
+          <div class="info-row">
+            <span>함께하는 사람 수 : </span>
+            <span>{{ person.searchTogetherCount || 0 }}명</span>
+          </div>
           <div class="info-box">
             <div class="info-row">
               <span>이름</span>
@@ -79,8 +83,8 @@ const defaultPersonImage = '/default-person.png';
               <span>나이</span>
               <span>{{ calculateAge(person.patientBirthDate) }}세</span>
             </div>
-            <div class="info-row detail-description">
-              <span>상세정보</span>
+            <div class="detail-description">
+              <p>상세정보</p>
               <p>{{ formatDescription(person.description) }}</p>
             </div>
           </div>
@@ -154,7 +158,7 @@ const defaultPersonImage = '/default-person.png';
 /* 모달 본문 (스크롤 가능 영역) */
 .modal-body {
   overflow-y: auto; /* 내용 길면 스크롤 */
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 
 }
 
@@ -192,7 +196,21 @@ const defaultPersonImage = '/default-person.png';
   justify-content: space-between;
   margin-bottom: 10px;
 }
-.modal-body .info-row.detail-description p { max-height: 150px; overflow-y: auto; } /* 긴 설명 스크롤 (선택사항) */
+
+/* '상세정보' 제목 <p> (첫 번째 p) */
+.modal-body .detail-description p:first-child {
+  margin: 0 0 3px; 
+}
+
+/* '상세정보' 내용 <p> (두 번째 p) */
+.modal-body .detail-description p:last-child {
+  margin: 0; 
+  max-height: 150px;
+  overflow-y: auto;
+  white-space: pre-wrap; 
+  word-break: break-all;
+  line-height: 1.6;
+}
 
 /* 모달 하단 버튼 영역 */
 .modal-footer {
@@ -216,4 +234,5 @@ const defaultPersonImage = '/default-person.png';
 }
 .modal-footer .action-button.primary { background: #8E97FD; color: #FFFFFF; }
 .modal-footer .action-button.secondary { background: #E5E5E5; color: #404040; }
+
 </style>
