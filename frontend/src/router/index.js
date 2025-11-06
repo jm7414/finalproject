@@ -42,6 +42,7 @@ import HospitalCare from '@/views/HospitalCare.vue'
 import GD_ModifyInfo from '@/views/GD_ModifyInfo.vue'
 import GD_AdminDP from '@/views/GD_AdminDP.vue'
 import NH_main from '@/views/NH_main.vue'
+import NH_Calender from '@/views/NH_Calender.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -309,7 +310,15 @@ const router = createRouter({
       name: 'map-main',
       component: MapMain,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
-    }
+    },
+    
+    // 지겸
+    {
+      path: '/nhcalender',
+      name: 'nhcalender',
+      component: NH_Calender,
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
+    },
   ],
 })
 
