@@ -514,3 +514,7 @@ SELECT
   )
 FROM dates d
 ON CONFLICT (user_id, record_date) DO NOTHING;
+
+-- 7번 고영준 방장으로(광장명: 경1)
+insert into plaza(plaza_no, plaza_name, member_name, user_no) values
+('1', '경1', '방장', '7');
