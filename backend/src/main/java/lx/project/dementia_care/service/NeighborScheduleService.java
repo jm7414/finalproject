@@ -23,14 +23,24 @@ public class NeighborScheduleService {
         schedule.setScheduleTitle(request.getTitle());
         schedule.setContent(request.getContent());
         schedule.setScheduleDate(LocalDate.parse(request.getDate()));
-        schedule.setUserNo(userNo);
+        schedule.setUserNo(userNo);  // 현재 로그인한 사용자
         
         neighborScheduleDAO.insertNeighborSchedule(schedule);
     }
     
-    // 특정 이웃의 모든 일정 조회
+    // 특정 이웃의 모든 일정 조회 (개인용)
     public List<NeighborScheduleVO> getNeighborSchedulesByUserNo(int userNo) {
         return neighborScheduleDAO.getNeighborSchedulesByUserNo(userNo);
+    }
+    
+    // ✅ 같은 광장의 모든 일정 조회 (광장용)
+    public List<NeighborScheduleVO> getNeighborSchedulesByPlazaName(String plazaName) {
+        return neighborScheduleDAO.getNeighborSchedulesByPlazaName(plazaName);
+    }
+    
+    // ✅ 사용자의 광장명 조회
+    public String getPlazaNameByUserNo(int userNo) {
+        return neighborScheduleDAO.getPlazaNameByUserNo(userNo);
     }
     
     // 특정 일정 조회

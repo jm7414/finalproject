@@ -383,7 +383,6 @@ const todaySchedules = computed(() => {
       id: schedule.scheduleNo,
       time: `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`,
       title: schedule.scheduleTitle,
-      location: formatLocation(schedule.scheduleNo),
       completed: false
     }))
 })
@@ -554,94 +553,37 @@ function openScheduleDetailFromList(scheduleNo) {
   }
 }
 
-// 보호자가 관리하는 환자 정보 가져오기
-async function fetchPatientInfo() {
-  try {
-    const response = await fetch(`/api/user/my-patient`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('환자 정보를 가져올 수 없습니다.')
-    }
-    
-    const patient = await response.json()
-    
-    // 메시지만 있는 경우 (환자가 없는 경우)
-    if (patient.message) {
-      console.warn(patient.message)
-      return null
-    }
-    
-    return patient.userNo
-  } catch (error) {
-    console.error('환자 정보 조회 오류:', error)
-    return null
-  }
-}
 
-// 일정 목록 가져오기
-async function fetchSchedules(userNo) {
-  try {
-    const response = await fetch(`/api/schedule/list/${userNo}`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('일정 목록을 가져올 수 없습니다.')
-    }
-    
-    const schedules = await response.json()
-    return schedules
-  } catch (error) {
-    console.error('일정 목록 조회 오류:', error)
-    return []
-  }
-}
-
-// 특정 일정의 위치 목록 가져오기
-async function fetchScheduleLocations(scheduleNo) {
-  try {
-    const response = await fetch(`/api/schedule/${scheduleNo}/locations`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('위치 정보를 가져올 수 없습니다.')
-    }
-    
-    const locations = await response.json()
-    return locations
-  } catch (error) {
-    console.error('위치 정보 조회 오류:', error)
-    return []
-  }
-}
 
 // 모든 데이터 로드
 async function loadAllData() {
-  // 1. 환자 정보 조회
-  const userNo = await fetchPatientInfo()
-  if (!userNo) {
-    console.warn('관리하는 환자가 없습니다.')
-    return
-  }
-  
-  patientUserNo.value = userNo
-  
-  // 2. 일정 목록 조회
-  const schedules = await fetchSchedules(userNo)
-  allSchedules.value = schedules
-  
-  // 3. 각 일정의 위치 정보 조회
-  for (const schedule of schedules) {
-    const locations = await fetchScheduleLocations(schedule.scheduleNo)
-    scheduleLocations.value[schedule.scheduleNo] = locations
+  try {
+    // ✅ 광장 일정 조회 (기존 환자 일정 대신 광장 일정 조회)
+    const response = await fetch('NH/api/plaza-schedules', {
+      method: 'GET',
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      console.warn('광장 일정을 불러올 수 없습니다.')
+      allSchedules.value = []
+      return
+    }
+
+    const schedules = await response.json()
+    allSchedules.value = schedules
+
+    console.log('광장 일정 로드 성공:', schedules)
+
+  } catch (error) {
+    console.error('광장 일정 조회 오류:', error)
+    allSchedules.value = []
   }
 }
+
+onMounted(() => {
+  loadAllData()
+})
 
 onMounted(() => {
   // 컴포넌트 마운트 시 데이터 로드
@@ -806,13 +748,6 @@ onMounted(() => {
 
 .schedule-group {
   margin-bottom: 24px;
-}
-
-.schedule-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 12px 0;
 }
 
 .schedule-list {
