@@ -1,0 +1,5 @@
+user_location 값 추가방법(파일경로만 바꿔서 user_location쿼리툴에서 진행)
+
+copy user_location (user_no , latitude, longitude, record_time) 
+FROM 'C:\final-project\python\processed_locations.csv' 
+WITH (FORMAT csv, HEADER true);
