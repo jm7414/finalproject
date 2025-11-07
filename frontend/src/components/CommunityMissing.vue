@@ -48,13 +48,47 @@ function closeMissingDetailModal() {
 }
 
 // 5. 모달의 '함께 찾기' 이벤트 처리 -> PredictLocation으로 이동
-function navigateToPredictLocation(missingPostId) {
-  if (missingPostId !== null && missingPostId !== undefined) {
-    router.push(`/predict-location/`);
-    closeMissingDetailModal(); // 이동 후 모달 닫기
-  } else {
-    console.error("ID가 없어 PredictLocation으로 이동할 수 없습니다.");
-    alert("오류: 페이지 이동에 필요한 ID가 없습니다.");
+// 5. 모달의 '함께 찾기' 이벤트 처리 -> API 호출 후 PredictLocation으로 이동
+async function navigateToPredictLocation(missingPostId) {
+  
+  // 1. ID가 있는지 다시 한번 확인
+  if (missingPostId === null || missingPostId === undefined) {
+    console.error("ID가 없어 '함께 찾기' 및 이동을 할 수 없습니다.");
+    alert("오류: 처리에 필요한 ID가 없습니다.");
+    return; // ID가 없으면 함수 종료
+  }
+
+  try {
+    // --- [추가된 부분] "함께 찾기" API 호출 ---
+    // 컨트롤러의 POST /api/missing-persons/{missingPostId}/join 를 호출
+    const response = await axios.post(
+      `/api/missing-persons/${missingPostId}/join`, 
+      {}, // POST 본문이 비어있으면 빈 객체 전송
+      { withCredentials: true } // 로그인 세션(인증)을 함께 보냄
+    );
+
+    // API가 성공적으로 처리되었는지 확인
+    if (response.data && response.data.success) {
+      console.log(response.data.message); // "함께 찾기에 참여했습니다." 또는 "이미 참여 중입니다."
+    } else {
+      // API가 성공(2xx)은 했지만, success: false를 반환한 경우 (예: 404는 catch로 감)
+      throw new Error(response.data.message || "함께 찾기에 실패했습니다.");
+    }
+
+    // --- [수정된 부분] ID를 가지고 페이지 이동 ---
+    router.push(`/predict-location/${missingPostId}`);
+
+    closeMissingDetailModal(); // 모달 닫기
+
+  } catch (err) {
+    // axios 호출이 실패했거나(401, 404, 500 등) 위에서 throw new Error를 던진 경우
+    console.error("'함께 찾기' 처리 중 오류 발생:", err);
+    
+    if (err.response && err.response.status === 401) {
+        alert("로그인이 필요합니다.");
+    } else {
+        alert(err.message || "처리 중 오류가 발생했습니다.");
+    }
   }
 }
 
@@ -135,7 +169,8 @@ const defaultPersonImage = '/default-person.png';
           <div class="person-details">
             <h3>{{ person.patientName || '이름 없음' }} ({{ calculateAge(person.patientBirthDate) }}세)</h3>
             <span>{{ formatTimeAgo(person.reportedAt) }}</span>
-            <p>실종일시: {{ formatDateTime(person.reportedAt) }}</p>
+            <span>실종일시: </span>
+            <p>{{ formatDateTime(person.reportedAt) }}</p>
           </div>
         </div>
         <div class="card-extra-info">
