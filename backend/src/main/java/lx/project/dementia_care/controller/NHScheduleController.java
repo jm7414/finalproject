@@ -18,7 +18,7 @@ import lx.project.dementia_care.service.NeighborScheduleService;
 import lx.project.dementia_care.vo.ScheduleVO;
 import lx.project.dementia_care.vo.UserVO;
 
-@Controller
+@RestController
 @RequestMapping("/NH/api")
 public class NHScheduleController {
 

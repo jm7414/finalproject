@@ -176,7 +176,6 @@ function goToSearchRoute() {
   sessionStorage.setItem('isScheduleInProgress', 'true')
   router.push({ name: 'search-route' })
 }
-import axios from 'axios'
 // 일정 저장
 async function saveNeighborSchedule() {
   if (!isFormValid.value) {
@@ -186,18 +185,22 @@ async function saveNeighborSchedule() {
 
   try {
     const requestData = {
-      scheduleTitle: scheduleForm.value.title,
+      title: scheduleForm.value.title,
       content: scheduleForm.value.content,
-      scheduleDate: scheduleForm.value.date
+      date: scheduleForm.value.date
     }
 
     console.log('일정 저장 요청:', requestData)
 
     // /create-NH로 호출
-    const response = await axios.post(`/NH/api/create-NH`,
-    requestData, {
-            withCredentials: true
-        });
+    const response = await fetch(`/NH/api/create-NH`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(requestData)
+    })
 
     if (!response.ok) {
       const error = await response.json()
