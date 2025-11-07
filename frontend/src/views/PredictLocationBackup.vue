@@ -1,6 +1,6 @@
 <template>
     <div class="page-container">
-        
+
         <!-- ⭐ 전체 화면 로딩 오버레이 추가 -->
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-content">
@@ -28,15 +28,21 @@
 
         <!-- 토글 버튼 영역 -->
         <div class="toggle-button-wrapper">
-            <button class="toggle-button" :class="{ active: selectedType === 'info' }" @click="mapOrInfo('info')">
-                <i class="bi bi-person-fill"></i>
-                <span class="button-text">실종자 정보</span>
-            </button>
+            <div class="d-flex">
+                <button class="toggle-button" :class="{ active: selectedType === 'info' }" @click="mapOrInfo('info')">
+                    <i class="bi bi-person-fill"></i>
+                    <span class="button-text">실종자 정보</span>
+                </button>
 
-            <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
-                <i class="bi bi-map-fill"></i>
-                <span class="button-text">예상위치</span>
-            </button>
+                <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
+                    <i class="bi bi-map-fill"></i>
+                    <span class="button-text">예상위치</span>
+                </button>
+            </div>
+            <div v-if="lessData" class="">
+                <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
+                <span>예측 위치들이 부정확할 수 있습니다.</span>
+            </div>
         </div>
 
         <!-- ⭐ 드래그 가능한 타임라인 프로그레스 바 -->
@@ -171,7 +177,8 @@
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'
+                            }}</span>
                         </div>
 
                         <div>
@@ -397,7 +404,7 @@ async function fetchMissingPersonDetail() {
 
         // API 응답에서 'reportedAt' 값을 'missingTimeDB'에 저장
         if (response.data && response.data.reportedAt) {
-            missingTimeDB.value = new Date(response.data.reportedAt).getTime()
+            missingTimeDB.value = response.data.reportedAt
             console.log('변환된 timestamp:', missingTimeDB.value)
         }
 
@@ -537,7 +544,7 @@ function calcElapsedTime() {
 
         // 음수면 0으로 설정 (미래 시간인 경우)
         const minutes = Math.max(0, diffInMinutes)
-        
+
         // 분 또는 시간으로 표시하기
         if (minutes < 60) {
             elapsedTimeText.value = `${minutes}분 전`
@@ -1096,20 +1103,66 @@ function updateMapForTime(minutes) {
     // 90분 초과: 모든 원을 최대 반경으로 고정
     else {
         circles.value.circle700.setRadius(600)
-        
+
         if (circles.value.circle1500) {
             circles.value.circle1500.setRadius(1300)
         }
-        
+
         if (circles.value.circle2100) {
             circles.value.circle2100.setRadius(2000)  // 최대 2000m로 제한
         }
     }
 }
 
+// ========================================================================================
+// 환자데이터 불러와서 fetchPrediction의 parameter로 던지기
+// 1. patientUserNo.value 를 가지고 진행
+// 2. DB에서 1에서 받은 결과로 데이터 조회 ('/api/pred/{userno}/{missingTime}') -> patientUserNo, missingTimeDB.value
+const lessData = ref(false)
+const gpsData = ref([])
+// ========================================================================================
+async function getPatientGPS() {
+    console.log(`getPatientGPS called`)
+    try {
+        ///
+        /// 1. api/user/my-patient 에서 받은 결과(patientUserNo.value)와 missingPost에서 있는 실종일시(missingTimeDB.value)로 검색
+        ///
+        let findUser = String(patientUserNo.value).trim()
+        console.log(`findUser = ${findUser}`)
+        console.log(`missingTimeDB = ${missingTimeDB.value}`)
+        const gpsResponse = await axios.get(`/api/pred/${findUser}`, {
+            params: {
+                datetime: missingTimeDB.value
+            },
+            withCredentials: true
+        })
+
+
+        if (!gpsResponse.data) {
+            console.log(`환자에 대한 위치정보가 없습니다.`)
+        } else if (gpsResponse.data.length < 13400) {
+            console.log(`환자에 대한 데이터가 부족한 것 같아 예측값이 불안정할 수 잇습니다 표시`)
+            lessData.value = true;
+        }
+        gpsData.value = gpsResponse.data
+        return true
+
+
+    } catch (error) {
+        console.log(`환자 위치데이터 불러오는 중 에러발생 -> ${error}`)
+        return false
+    }
+}
 
 // ========================================================================================
-// FastAPI 호출 함수
+// ========================================================================================
+// ========================================================================================
+// ===========================현재 오류가 많이 남  ==========================================
+// ==================이 부분은 나중에 python 모델 바뀌면 추가==================================
+// ========================return값이 어떻게 될지멀라=========================================
+// ========================================================================================
+// ========================================================================================
+// FastAPI 호출 함수 
 // ========================================================================================
 
 async function fetchPrediction() {
@@ -1117,20 +1170,38 @@ async function fetchPrediction() {
     isLoading.value = true
 
     try {
+        const success = await getPatientGPS()
+
+        if (!success || !gpsData.value || gpsData.value.length === 0) {
+            console.error('GPS 데이터 없음 ㅅㄱ')
+            isLoading.value = false
+            return
+        }
+        // ⭐ GPS 데이터를 백엔드 예상 포맷으로 변환
+        const transformedGpsData = gpsData.value.map(point => ({
+            user_no: point.userNo,
+            latitude: point.latitude, 
+            longitude: point.longitude,    
+            timestamp: point.timestamp
+        }))
+
+        console.log('DB에서 값 불러옴')
+
+
         const response = await fetch('http://localhost:8000/api/predict-location', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                user_no: user_no,
-                missing_time: missingTime,
+                user_no: patientUserNo.value,
+                missing_time: missingTime.value,
+                gps_data: transformedGpsData
             })
         })
 
         if (!response.ok) {
-            console.error('Failed to fetch prediction:', response.statusText)
-            return
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
         const data = await response.json()
@@ -1175,16 +1246,17 @@ async function fetchPrediction() {
 
 onMounted(() => {
     fetchPatientAndMissingReport()
+    getPatientGPS()
     try {
         loadKakaoMap(mapContainer.value)
         // 페이지 로드 시 자동으로 데이터 가져오기
         setTimeout(() => {
             fetchPrediction()
-        }, 1000)        
+        }, 1000)
     } finally {
         selectedType.value = 'info'
     }
-    
+
 })
 
 const loadKakaoMap = (container) => {
@@ -1914,7 +1986,8 @@ function getTimeRangeText(minutes) {
     background: linear-gradient(180deg, #f8f9fd 0%, #ffffff 100%);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-y: auto;
-    scrollbar-width: none;  /* 스크롤바 숨기기 */
+    scrollbar-width: none;
+    /* 스크롤바 숨기기 */
 }
 
 /* ⭐⭐⭐ 전체 화면 로딩 오버레이 스타일 ⭐⭐⭐ */
@@ -1937,6 +2010,7 @@ function getTimeRangeText(minutes) {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -1981,10 +2055,13 @@ function getTimeRangeText(minutes) {
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translate(-50%, -50%) scale(1);
         box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
     }
+
     50% {
         transform: translate(-50%, -50%) scale(1.1);
         box-shadow: 0 0 0 15px rgba(102, 126, 234, 0);
@@ -2036,6 +2113,7 @@ function getTimeRangeText(minutes) {
         transform: translate(-50%, -50%) scale(0.8);
         opacity: 1;
     }
+
     100% {
         transform: translate(-50%, -50%) scale(1.5);
         opacity: 0;
@@ -2084,9 +2162,11 @@ function getTimeRangeText(minutes) {
     0% {
         transform: translateX(-100%);
     }
+
     50% {
         transform: translateX(0);
     }
+
     100% {
         transform: translateX(100%);
     }
@@ -2107,6 +2187,7 @@ function getTimeRangeText(minutes) {
 /* ============ 토글 버튼 (지도 바로 아래, 탭 스타일) ============ */
 .toggle-button-wrapper {
     display: flex;
+    flex-direction: column;
     width: 100%;
     background: #ffffff;
     border-bottom: 2px solid #e0e0e0;
@@ -2173,10 +2254,10 @@ function getTimeRangeText(minutes) {
 
 /* ============ 컨텐츠 섹션 ============ */
 .content-section {
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fd 100%);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fd 100%);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 
@@ -2233,7 +2314,7 @@ function getTimeRangeText(minutes) {
 }
 
 .detail-sections {
-    position : relative;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -2976,7 +3057,7 @@ function getTimeRangeText(minutes) {
 .age-info i,
 .missing-datetime i,
 .missing-location i {
-    font-size: 14px; 
+    font-size: 14px;
     color: #667eea;
 }
 

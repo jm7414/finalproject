@@ -1,5 +1,6 @@
 -- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
 -- 자식 테이블부터 부모 테이블 순서로 삭제
+DROP TABLE IF EXISTS user_location CASCADE;
 DROP TABLE IF EXISTS search_Together CASCADE;
 DROP TABLE IF EXISTS record CASCADE;
 DROP TABLE IF EXISTS report CASCADE;
@@ -291,6 +292,17 @@ CREATE TABLE IF NOT EXISTS record (
   CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE,
   CONSTRAINT uq_record_user_date UNIQUE (user_id, record_date)
 );
+
+-- 주형 user_location 테이블 추가
+CREATE TABLE IF NOT EXISTS user_location (
+  location_no SERIAL PRIMARY KEY,
+  user_no INT NOT NULL,
+  latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+  longitude DECIMAL(11,8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+  record_time TIMESTAMPZ DEFAULT NOW(),
+  CONSTRAINT fk_user_no FOREIGN KEY(user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+-- 주형 수정 끝
 
 -- updated_at 자동 갱신 트리거 (period / report / record 모두 적용)
 CREATE OR REPLACE FUNCTION trg_touch_updated_at() RETURNS trigger AS $$
