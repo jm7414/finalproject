@@ -176,7 +176,6 @@ function goToSearchRoute() {
   sessionStorage.setItem('isScheduleInProgress', 'true')
   router.push({ name: 'search-route' })
 }
-import axios from 'axios'
 // 일정 저장
 async function saveNeighborSchedule() {
   if (!isFormValid.value) {
@@ -186,18 +185,22 @@ async function saveNeighborSchedule() {
 
   try {
     const requestData = {
-      scheduleTitle: scheduleForm.value.title,
+      title: scheduleForm.value.title,
       content: scheduleForm.value.content,
-      scheduleDate: scheduleForm.value.date
+      date: scheduleForm.value.date
     }
 
     console.log('일정 저장 요청:', requestData)
 
     // /create-NH로 호출
-    const response = await axios.post(`/NH/api/create-NH`,
-    requestData, {
-            withCredentials: true
-        });
+    const response = await fetch(`/NH/api/create-NH`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(requestData)
+    })
 
     if (!response.ok) {
       const error = await response.json()
@@ -207,10 +210,18 @@ async function saveNeighborSchedule() {
     const result = await response.json()
     console.log('일정 저장 성공:', result)
 
+    // 저장 성공 후 session 삭제하기
+    resetScheduleForm()
+    sessionStorage.removeItem('isScheduleInProgress')
+    sessionStorage.removeItem('scheduleFormData')
+    sessionStorage.removeItem('scheduleLocations')
+    sessionStorage.removeItem('routeCoordinates')
+    sessionStorage.removeItem('bufferCoordinates')
+
     resetScheduleForm()
     alert('일정이 저장되었습니다.')
     
-    // ✅ NH_Calender로 이동
+    // NH_Calender로 이동
     router.push({ name: 'NH_Calender' })
 
   } catch (error) {
@@ -279,7 +290,7 @@ onMounted(() => {
 <style scoped>
 /* (CSS는 이전과 동일하게 유지) */
 .add-schedule-page {
-  min-height: 100vh;
+  min-height: 70vh;
   background: #ffffff;
   display: flex;
   flex-direction: column;

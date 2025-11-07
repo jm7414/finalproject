@@ -69,3 +69,12 @@ learning-pages-guide.txt
 python/__pycache__/
 python/cache/
 python/venv/
+python/requirements.txt
+
+# 서버 배포 관련 파일 (팀원 브랜치에 포함하지 않음)
+.github/
+README_DEPLOY.md
+docker-compose.yml
+docker/
+init.sql
+nginx/

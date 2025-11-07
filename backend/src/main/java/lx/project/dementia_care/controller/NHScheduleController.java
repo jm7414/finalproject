@@ -18,7 +18,7 @@ import lx.project.dementia_care.service.NeighborScheduleService;
 import lx.project.dementia_care.vo.ScheduleVO;
 import lx.project.dementia_care.vo.UserVO;
 
-@RestController // json으로 받아오기 때문에 RestController이어야함 - controller + restAPI
+@RestController
 @RequestMapping("/NH/api")
 public class NHScheduleController {
 

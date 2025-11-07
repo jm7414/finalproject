@@ -1,6 +1,7 @@
 -- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
 -- 자식 테이블부터 부모 테이블 순서로 삭제
 DROP TABLE IF EXISTS neighbor_schedule CASCADE;
+DROP TABLE IF EXISTS plaza CASCADE;
 DROP TABLE IF EXISTS search_Together CASCADE;
 DROP TABLE IF EXISTS record CASCADE;
 DROP TABLE IF EXISTS report CASCADE;
@@ -99,7 +100,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian3
 -- === 안심존(safe_zone) 테이블 ===
 CREATE TABLE safe_zone (
     safe_zone_no SERIAL PRIMARY KEY,
-    zone_type VARCHAR(20) NOT NULL CHECK (zone_type IN ('기본형','경로형')),
+    zone_type VARCHAR(20) NOT NULL CHECK (zone_type IN ('기본형','경로형','만남의 광장')),
     boundary_coordinates JSON NOT NULL,
     user_no INTEGER NOT NULL,
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
@@ -195,6 +196,32 @@ CREATE TABLE search_Together (
 
 CREATE INDEX idx_search_together_missing_post ON search_Together(missing_post_id);
 CREATE INDEX idx_search_together_user ON search_Together(user_id);
+
+-- === 이웃 일정(neighbor_schedule) 테이블 ===
+CREATE TABLE neighbor_schedule (
+    schedule_no SERIAL PRIMARY KEY,
+    schedule_title VARCHAR(200) NOT NULL,
+    content TEXT,
+    schedule_date DATE NOT NULL,
+    user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_neighbor_schedule_user ON neighbor_schedule(user_no);
+CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
+
+-- === 만남의 광장(plaza) 테이블 ===
+CREATE TABLE plaza (
+    plaza_no SERIAL PRIMARY KEY,
+    plaza_name VARCHAR(200) NOT NULL,
+	member INTEGER, -- 1/0으로 할거니까 널값 안들어가게
+    user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_plaza_plaza_no ON plaza(plaza_no);
+CREATE INDEX idx_plaza_plaza_name ON plaza(plaza_name);
+CREATE INDEX idx_plaza_user ON plaza(user_no);
 
 -- === period, report, record 테이블 ===
 
@@ -306,19 +333,7 @@ CREATE TRIGGER tg_record_touch
 BEFORE UPDATE ON record
 FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
 
--- === 이웃 일정(neighbor_schedule) 테이블 ===
-CREATE TABLE neighbor_schedule (
-    schedule_no SERIAL PRIMARY KEY,
-    schedule_title VARCHAR(200) NOT NULL,
-    content TEXT,
-    schedule_date DATE NOT NULL,
-    user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
-    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
-CREATE INDEX idx_neighbor_schedule_user ON neighbor_schedule(user_no);
-CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
 -----------------------------------------------------------------
 
 
@@ -327,13 +342,15 @@ CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
 -- 1~4번: subscription_status = 1 (구독 상태)
 -- 5~6번: subscription_status = 0 (미구독 상태)
 -- 4번, 6번: 환자이므로 invitation_code 포함
+-- 7번: 이웃
 INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_code, subscription_status, role_no) VALUES
 ('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 1),
 ('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 1),
 ('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 1),
 ('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 3),
 ('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 1),
-('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 2);
+('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 2),
+('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 4);
 
 INSERT INTO post (title, user_id, content, view_count, image_path) VALUES
 (

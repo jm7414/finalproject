@@ -348,18 +348,6 @@ function formatTime(timeString) {
   }
 }
 
-// 위치 정보를 화살표 형식으로 포맷팅
-function formatLocation(scheduleNo) {
-  const locations = scheduleLocations.value[scheduleNo]
-  if (!locations || locations.length === 0) return ''
-  
-  // sequence_order 순서대로 정렬
-  const sortedLocations = [...locations].sort((a, b) => a.sequenceOrder - b.sequenceOrder)
-  
-  // 위치명을 화살표로 연결
-  return sortedLocations.map(loc => loc.locationName).join(' → ')
-}
-
 // 특정 날짜의 이벤트 가져오기
 function getEventsForDate(date) {
   // 로컬 시간대 기준으로 YYYY-MM-DD 형식 생성 (UTC 변환 없이)
