@@ -214,7 +214,7 @@ CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
 CREATE TABLE plaza (
     plaza_no SERIAL PRIMARY KEY,
     plaza_name VARCHAR(200) NOT NULL,
-	member INTEGER, -- 1/0으로 할거니까 널값 안들어가게
+	member_name VARCHAR(200) NOT NULL CHECK (member_name IN ('방장','이웃')),
     user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
