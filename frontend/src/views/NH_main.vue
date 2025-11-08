@@ -1,4 +1,3 @@
-<!-- src/views/NH_main.vue -->
 <template>
   <div class="container-sm py-3 neighbor-page-container" style="max-width:414px; position:relative;">
 
@@ -37,17 +36,25 @@
       </div>
     </div>
 
-    <!-- 가장 빠른 일정 -->
+    <!-- 가장 빠른 일정 2개 -->
     <h6 class="fw-bold mb-2">모임 일정</h6>
-    <div v-if="nextSchedule" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <div class="d-flex align-items-center gap-2">
-          <span class="d-inline-block rounded-circle" style="width:10px;height:10px;background:#6c757d"></span>
-          <span class="fw-semibold">{{ nextSchedule.title }}</span>
+    
+    <!-- 일정 2개 -->
+    <div v-if="upcomingSchedules.length > 0">
+      <div v-for="(schedule, index) in upcomingSchedules"  
+        :key="index" 
+        class="card border-2 rounded-3 p-3 mb-2" 
+        style="border-color:#e9ecef">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-secondary mb-1">{{ formatDate(schedule.scheduleDate) }}</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">{{ schedule.scheduleTitle }}</span>
+          </div>
         </div>
-        <span class="text-secondary">{{ nextSchedule.date }}</span>
       </div>
     </div>
+    
+    <!-- 일정 없음 -->
     <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
       <div class="card-body text-center text-muted">
         <p>일정이 없습니다.</p>
@@ -130,7 +137,6 @@
       </div>
     </div>
 
-
     <!-- 이웃 전용 푸터 -->
     <NeighborFooter />
   </div>
@@ -150,8 +156,8 @@ import connectIcon from '@/assets/images/connect.svg'
 
 const router = useRouter()
 
-// 지도 사라짐 대응
-const nextSchedule = ref(null)
+// ✅ nextSchedule → upcomingSchedules 배열로 변경
+const upcomingSchedules = ref([])
 
 /* ===== Kakao Map Loader ===== */
 const {
@@ -165,6 +171,15 @@ const {
   enableTracking: false
 })
 
+/* ===== 날짜 포맷팅 ===== */
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString + 'T00:00:00') // ISO 형식 보정
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return `${month}/${day}`
+}
+
 /* ===== 로그아웃 처리 ===== */
 const handleLogout = async () => {
   const success = await logout()
@@ -172,6 +187,22 @@ const handleLogout = async () => {
     router.push('/login')
   } else {
     alert('로그아웃에 실패했습니다.')
+  }
+}
+
+/* ===== 오늘, 내일 일정 조회 ===== */
+const fetchUpcomingSchedules = async () => {
+  try {
+    const response = await fetch('/NH/api/schedule/upcoming')
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`)
+    }
+
+    const data = await response.json()
+    upcomingSchedules.value = data || []
+  } catch (error) {
+    console.error('일정 조회 실패:', error)
+    upcomingSchedules.value = []
   }
 }
 
@@ -183,6 +214,9 @@ onMounted(async () => {
     
     // 지도 초기화 (빈 지도만 표시)
     await initMap()
+    
+    // ✅ 오늘, 내일 일정 2개 조회
+    await fetchUpcomingSchedules()
   } catch (e) {
     console.error(e)
   }

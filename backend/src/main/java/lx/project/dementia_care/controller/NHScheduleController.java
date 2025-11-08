@@ -93,4 +93,28 @@ public class NHScheduleController {
                     .body(Map.of("message", "일정 조회 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
+
+    // 오늘, 내일 일정 2개 조회
+    @GetMapping("/schedule/upcoming")
+    public ResponseEntity<?> getUpcomingSchedules() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "로그인이 필요합니다."));
+            }
+
+            UserVO currentUser = (UserVO) auth.getPrincipal();
+            int userNo = currentUser.getUserNo();
+
+            List<NeighborScheduleVO> schedules = neighborScheduleService.getUpcomingSchedules(userNo);
+
+            return ResponseEntity.ok(schedules);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "일정 조회 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 }

@@ -53,4 +53,8 @@ public class NeighborScheduleService {
     public void deleteNeighborSchedule(int scheduleNo) {
         neighborScheduleDAO.deleteNeighborSchedule(scheduleNo);
     }
+    // 오늘, 내일 일정 2개 조회
+    public List<NeighborScheduleVO> getUpcomingSchedules(int userNo) {
+        return neighborScheduleDAO.selectUpcomingSchedules(userNo);
+    }
 }

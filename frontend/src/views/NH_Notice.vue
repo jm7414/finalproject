@@ -22,7 +22,7 @@ function changeTab(tabName) {
         <div class="main-button" 
              :class="{ active: activeTab === 'Post' }" 
              @click="changeTab('Post')">
-          <span class="post-button">게시글</span>
+          <span class="post-button">공지</span>
         </div>
 
         <div class="missing-button" 
