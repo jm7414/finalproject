@@ -2,10 +2,10 @@
   <div class="mobile-frame">
     <div class="app-layout">
       <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
-      <main class="main-content" :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage || MissingReport || PredictLocation || CommunityPost || CommunityPostWrite}">
+      <main class="main-content" :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage || MissingReport || PredictLocation || CommunityPost || CommunityPostWrite, 'neighbor-page': isNeighborPage }">
         <RouterView />
       </main>
-      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
+      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isNeighborPage)" />
     </div>
     
   </div>
@@ -66,6 +66,11 @@ const isDpSchedule = computed(() => {
 
 const isDpConnect = computed(() => {
   return route.name === 'dpc'
+})
+
+// 이웃 페이지인지 확인하는 computed 속성
+const isNeighborPage = computed(() => {
+  return route.name?.startsWith('NH')
 })
 
 // 실종자 상세정보 입력 페이지
@@ -611,5 +616,10 @@ body {
 .main-content.no-padding {
   padding: 0;
   overflow: hidden;
+}
+
+/* 이웃 페이지 - 하단 padding 제거 */
+.main-content.neighbor-page {
+  padding: 90px 5px 5px 5px;
 }
 </style>

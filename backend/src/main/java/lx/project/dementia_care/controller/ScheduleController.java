@@ -1,5 +1,6 @@
 package lx.project.dementia_care.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lx.project.dementia_care.dao.ConnectDAO;
 import lx.project.dementia_care.dto.ScheduleRequest;
+import lx.project.dementia_care.service.NeighborScheduleService;
 import lx.project.dementia_care.service.ScheduleService;
 import lx.project.dementia_care.vo.RouteVO;
 import lx.project.dementia_care.vo.SafeZoneVO;
@@ -24,6 +27,7 @@ import lx.project.dementia_care.vo.ScheduleLocationVO;
 import lx.project.dementia_care.vo.ScheduleVO;
 import lx.project.dementia_care.vo.UserVO;
 
+// @CrossOrigin(origins = "*", allowCredentials = "true") // ✅ 이 줄 추가
 @RestController
 @RequestMapping("/api/schedule")
 public class ScheduleController {
@@ -67,8 +71,7 @@ public class ScheduleController {
 
             return ResponseEntity.ok(Map.of(
                     "message", "일정이 성공적으로 저장되었습니다.",
-                    "patientName", patient.getName()
-            ));
+                    "patientName", patient.getName()));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -191,8 +194,7 @@ public class ScheduleController {
 
             return ResponseEntity.ok(Map.of(
                     "message", "기본 안심존이 성공적으로 저장되었습니다.",
-                    "patientName", patient.getName()
-            ));
+                    "patientName", patient.getName()));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -282,8 +284,7 @@ public class ScheduleController {
 
             return ResponseEntity.ok(Map.of(
                     "message", "일정이 성공적으로 수정되었습니다.",
-                    "scheduleNo", scheduleNo
-            ));
+                    "scheduleNo", scheduleNo));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -346,7 +347,8 @@ public class ScheduleController {
      * PUT /api/schedule/route-safe-zone/{scheduleNo}
      */
     @PostMapping("/route-safe-zone/{scheduleNo}")
-    public ResponseEntity<?> updateRouteSafeZone(@PathVariable int scheduleNo, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateRouteSafeZone(@PathVariable int scheduleNo,
+            @RequestBody Map<String, Object> request) {
         try {
             // 현재 로그인한 보호자 정보 가져오기
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -388,8 +390,7 @@ public class ScheduleController {
             return ResponseEntity.ok(Map.of(
                     "message", "경로형 안심존이 성공적으로 업데이트되었습니다.",
                     "scheduleNo", scheduleNo,
-                    "level", level
-            ));
+                    "level", level));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -398,4 +399,3 @@ public class ScheduleController {
         }
     }
 }
-

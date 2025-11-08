@@ -63,15 +63,21 @@
                 <label class="form-label">사용자 구분</label>
 
                 <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2 mb-2">
-                    <input v-model="form.isGuardian" :value="true" class="form-check-input me-2" type="radio" name="role">
+                    <input v-model="form.roleType" :value="1" class="form-check-input me-2" type="radio" name="role">
                     <i class="bi bi-people"></i>
                     <span>보호자/가족입니다</span>
                 </label>
 
-                <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2">
-                    <input v-model="form.isGuardian" :value="false" class="form-check-input me-2" type="radio" name="role">
+                <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2 mb-2">
+                    <input v-model="form.roleType" :value="2" class="form-check-input me-2" type="radio" name="role">
                     <i class="bi bi-person"></i>
                     <span>환자입니다</span>
+                </label>
+
+                <label class="form-check border rounded-3 ps-5 px-3 py-2 d-flex align-items-center gap-2">
+                    <input v-model="form.roleType" :value="4" class="form-check-input me-2" type="radio" name="role">
+                    <i class="bi bi-house-door"></i>
+                    <span>이웃입니다</span>
                 </label>
             </div>
 
@@ -126,7 +132,7 @@ const form = reactive({
   password: '',
   birth: '',
   phone: '',
-  isGuardian: null
+  roleType: null
 })
 
 const isIdChecked = ref(false)
@@ -201,7 +207,7 @@ async function onSubmit() {
   }
 
   // 사용자 구분 필수
-  if (form.isGuardian === null) {
+  if (form.roleType === null) {
     alert('사용자 구분을 선택해주세요.')
     return
   }
@@ -225,11 +231,10 @@ async function onSubmit() {
       name: form.name,
       birthDate: form.birth,
       phoneNumber: form.phone,
-      roleNo: form.isGuardian ? 1 : 2, // 보호자: 1, 환자: 2
+      roleNo: form.roleType, // 보호자: 1, 환자: 2, 이웃: 4
     }
     
     console.log('회원가입 요청 데이터:', requestData)
-    console.log('form.isGuardian 값:', form.isGuardian, '타입:', typeof form.isGuardian)
 
     const response = await fetch(`/api/register`, {
       method: 'POST',

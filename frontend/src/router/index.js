@@ -41,6 +41,10 @@ import DP_ModifyInfo from '@/views/DP_ModifyInfo.vue'
 import HospitalCare from '@/views/HospitalCare.vue'
 import GD_ModifyInfo from '@/views/GD_ModifyInfo.vue'
 import GD_AdminDP from '@/views/GD_AdminDP.vue'
+import NH_main from '@/views/NH_main.vue'
+import NH_Calender from '@/views/NH_Calender.vue'
+import NH_AddSchedule from '@/views/NH_AddSchedule.vue'
+import NH_Notice from '@/views/NH_Notice.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -81,6 +85,12 @@ const router = createRouter({
       name: 'GD',
       component: GD_main,
       meta: { requiresAuth: true, roles: [1] } // 보호자(1) 전용
+    },
+    {
+      path: '/NH',
+      name: 'NH',
+      component: NH_main,
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
     {
       path: '/SignUp',
@@ -302,6 +312,26 @@ const router = createRouter({
       name: 'map-main',
       component: MapMain,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
+
+    // 지겸
+    {
+      path: '/nhCalender',
+      name: 'NH_Calender',
+      component: NH_Calender,
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
+    },
+        {
+      path: '/nhAddSchedule',
+      name: 'NH_AddSchedule',
+      component: NH_AddSchedule, 
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
+    },
+        {
+      path: '/nhNotice',
+      name: 'NH_Notice',
+      component: NH_Notice,
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     }
   ],
 })

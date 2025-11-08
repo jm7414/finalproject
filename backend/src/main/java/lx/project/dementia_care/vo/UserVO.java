@@ -42,6 +42,9 @@ public class UserVO implements UserDetails {
             case 3:
                 role = "ROLE_SUBSCRIBER"; // 구독자 (보호자와 동일한 권한)
                 break;
+            case 4:
+                role = "ROLE_NEIGHBOR";  // 이웃
+                break;
             default:
                 role = "ROLE_USER";
                 break;
