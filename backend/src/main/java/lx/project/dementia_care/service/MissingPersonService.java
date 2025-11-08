@@ -248,4 +248,20 @@ public class MissingPersonService {
         return reportDetails;
     }
 
+    /**
+     * [추가] 확인하지 않은 최신 알림 1건 조회 (폴링용)
+     */
+    @Transactional(readOnly = true)
+    public MissingPersonDto findLatestAlertForUser(Integer userId) {
+        return missingPersonDAO.findLatestAlertForUser(userId);
+    }
+
+    /**
+     * [추가] 알림 확인 기록을 DB에 저장 (확인 버튼 클릭 시)
+     */
+    @Transactional
+    public void confirmAlert(Integer missingPostId, Integer userId) {
+        missingPersonDAO.addAlertConfirmation(missingPostId, userId);
+    }
+
 }

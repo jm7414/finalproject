@@ -121,6 +121,7 @@ function handleOverlayClick() {
   margin: 0;
   text-align: center;
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .modal-footer {
