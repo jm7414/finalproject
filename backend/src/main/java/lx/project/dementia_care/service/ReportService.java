@@ -1,4 +1,3 @@
-// src/main/java/lx/project/dementia_care/service/ReportService.java
 package lx.project.dementia_care.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -20,38 +19,37 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-/**
- * 리포트 통합 서비스(클린 버전) - 커버리지: WEEK ≥ 5일, MONTH/YEAR ≥ 70% - metrics.scores:
- * 5개(0~20) - details: 항목별 1~2문장(순수 AI). 실패 시 빈 문자열로 남김 - YEAR:
- * totals/series/annual(요약) 생성. 빈 월은 null로 표기(프론트에서 선 끊김)
- */
 @Service
 @RequiredArgsConstructor
 public class ReportService {
 
 	private static final Logger log = LoggerFactory.getLogger(ReportService.class);
 
-	private final RecordDAO recordDAO; // getRange(userId, start, end)
-	private final ReportDAO reportDAO; // upsertReturning(...)
-	private final PeriodDAO periodDAO; // ensureId(type, key, start, end)
+	private final RecordDAO recordDAO;
+	private final ReportDAO reportDAO;
+	private final PeriodDAO periodDAO;
 	private final ObjectMapper om;
 	private final GoogleAiClient ai;
 
-	/* ============================== 엔트리 ============================== */
+	// ====== 429 대응: 일정 시간 AI 호출 스킵(쿨다운) ======
+	private volatile long cooldownUntil = 0L; // 429 이후 n분 동안 AI 호출 생략
 
-	// 기존 6-arg 시그니처 유지
-	public ReportVO loadOrCreate(Long patientId, String periodType, String periodKey, LocalDate start, LocalDate end,
-			String generatedBy) {
-		return loadOrCreate(patientId, periodType, periodKey, start, end, generatedBy, true);
+	private boolean inCooldown() {
+		return System.currentTimeMillis() < cooldownUntil;
 	}
 
+	/** 기존 6-인자 유지 (force=false) */
 	public ReportVO loadOrCreate(Long patientId, String periodType, String periodKey, LocalDate start, LocalDate end,
-			String generatedBy, boolean useCache) {
+			String generatedBy) {
+		return loadOrCreate(patientId, periodType, periodKey, start, end, generatedBy, false);
+	}
 
-		// 0) 커버리지 검사
-		List<DailyRecordResponseDTO> rows = safeGetRange(patientId, start, end);
-		int coveredDays = rows.size();
-		int expectedDays = (int) ChronoUnit.DAYS.between(start, end); // [start, end)
+	/**
+	 * 원하는 동작: - force=false: 기존 저장본 있으면 **무조건 반환**(원본이 바뀌었어도 재생성 금지) - force=true :
+	 * 새로 생성/업서트
+	 */
+	public ReportVO loadOrCreate(Long patientId, String periodType, String periodKey, LocalDate start, LocalDate end,
+			String generatedBy, boolean force) {
 
 		String normType = Optional.ofNullable(periodType).map(s -> s.trim().toUpperCase(Locale.ROOT)).orElse("");
 		if (normType.startsWith("WEEK"))
@@ -61,53 +59,58 @@ public class ReportService {
 		else if (normType.startsWith("YEAR"))
 			normType = "YEAR";
 
-		int required = "WEEK".equals(normType) ? 5 : (int) Math.ceil(expectedDays * 0.7);
-		log.info("[AI-REPORT] loadOrCreate pid={}, type={}, key={}, start={}, end={}, covered/required/total={}/{}/{}",
-				patientId, normType, periodKey, start, end, coveredDays, required, expectedDays);
+		// 0) 캐시 우선: 저장본 있으면 바로 리턴 (=> “두 번째부터는 DB만”)
+		if (!force) {
+			ReportVO existing = reportDAO.findByPatientPeriod(patientId, normType, periodKey);
+			if (existing != null)
+				return existing;
+		}
 
+		// 1) 커버리지 확인(최초 생성 시에만 적용)
+		List<DailyRecordResponseDTO> rows = safeGetRange(patientId, start, end);
+		int coveredDays = rows.size();
+		int expectedDays = (int) ChronoUnit.DAYS.between(start, end); // [start, end)
+		int required = "WEEK".equals(normType) ? 5 : (int) Math.ceil(expectedDays * 0.7);
 		if (coveredDays < required) {
-			log.warn("[AI-REPORT] coverage insufficient: {} / {} (of {}) → null", coveredDays, required, expectedDays);
+			log.warn("[AI-REPORT] {} coverage not enough: {}/{}(req) of total {}", normType, coveredDays, required,
+					expectedDays);
 			return null;
 		}
 
-		// 1) 기간 ID
+		// 2) 기간 ID
 		Integer periodId = periodDAO.ensureId(normType, periodKey, start, end);
 
-		// 2) 점수 산출
+		// 3) 점수·섹션
 		Map<String, Object> metrics = buildMetrics(rows);
-
-		// 3) 섹션 기본
 		Map<String, Object> sections = buildSections(rows, metrics, normType, periodKey, start, end);
 
-		// 3-1) 항목별 코멘트(순수 AI, 실패 시 빈 문자열)
+		// 3-1) 항목 코멘트(AI) 실패 시 안전문구 (→ 단일 프롬프트로 1회 호출)
 		List<Map<String, Object>> details = buildDetailsWithAI(metrics, normType, periodKey, start, end);
 		sections.put("details", details);
 
-		// 3-2) 주간 Quick Action
-		if ("WEEK".equals(normType)) {
+		// 3-2) 주간 퀵액션
+		if ("WEEK".equals(normType))
 			sections.put("quick_action", suggestQuickAction(rows));
-		}
 
-		// 3-3) AI 메타(단순 표기)
+		// 3-3) AI 메타
+		boolean anyFailed = details.stream().anyMatch(d -> "failed".equals(String.valueOf(d.get("aiStatus"))));
 		Map<String, Object> aiMeta = new LinkedHashMap<>();
 		aiMeta.put("provider", "gemini");
-		aiMeta.put("status", "ok");
+		aiMeta.put("status", anyFailed ? "failed" : "ok");
 		sections.put("ai", aiMeta);
 
-		// 4) 차트 프리셋 + 요약
+		// 4) 차트 prefs + 본문 요약
 		Map<String, Object> chartPrefs = buildChartPrefs();
 		String content = buildHumanSummary(metrics, sections, normType, periodKey, start, end);
 
-		// 5) 원본 해시
+		// 5) 소스 해시(참고용만, 더 이상 캐시 판단에 사용 안 함)
 		String sourceHash = hashFor(rows);
 
-		// 6) 직렬화
+		// 6) 직렬화 & 업서트
 		try {
 			String metricsJson = om.writeValueAsString(metrics);
 			String sectionsJson = om.writeValueAsString(sections);
 			String chartPrefsJson = om.writeValueAsString(chartPrefs);
-
-			// 7) UPSERT + RETURNING
 			return reportDAO.upsertReturning(periodId, patientId, content, normType, periodKey, sourceHash, metricsJson,
 					sectionsJson, chartPrefsJson,
 					(generatedBy != null && !generatedBy.isBlank()) ? generatedBy : "api");
@@ -116,45 +119,64 @@ public class ReportService {
 		}
 	}
 
-	/* ===================== 연간 보조(요약/시리즈 등) ===================== */
+	// ====================== 연간 보조(월간 캐시 + 스케치 보강) ======================
 
-	/** 연간: totals(12, 0~100 or null), series, annual(요약) */
+	/** 연간: totals/series/details/ai/annual */
 	public Map<String, Object> buildYearlyExtras(Long userId, LocalDate start, LocalDate end) {
 		final int year = start.getYear();
 
-		Integer[] totals = new Integer[12]; // 1~12월. 데이터 없으면 null
+		Integer[] totals = new Integer[12];
 		List<Map<String, Object>> series = new ArrayList<>();
-
-		// details는 연간 항목별 코멘트를 넣고 싶을 때 사용 (이번 버전은 비워둠)
-		List<Map<String, Object>> details = new ArrayList<>();
-
-		Map<String, Object> aiMeta = new LinkedHashMap<>();
-		aiMeta.put("status", "ok");
-
-		boolean anyMonthHasData = false;
+		double sumMS = 0, sumML = 0, sumOR = 0, sumADL = 0, sumBE = 0;
+		int monthsWithData = 0;
 
 		for (int m = 1; m <= 12; m++) {
 			LocalDate s = LocalDate.of(year, m, 1);
 			LocalDate e = s.plusMonths(1);
 
-			// 이미 생성된 월간만 조회(생성 금지)
 			String periodKey = makePeriodKey("MONTH", s, e);
-			ReportVO vo = loadOrCreate(userId, "MONTH", periodKey, s, e, "annual-scan", true);
+			// ★ 캐시만 사용: 기존 있으면 그걸, 없으면 생성 시도(커버리지 미달이면 null 반환)
+			ReportVO vo = loadOrCreate(userId, "MONTH", periodKey, s, e, "annual-scan", false);
+
+			Map<String, Object> rowMap = new LinkedHashMap<>();
+			rowMap.put("month", String.format("%d-%02d", year, m));
 
 			if (vo == null) {
-				totals[m - 1] = null;
+				// ✦ 커버리지 부족 → 스케치 계산(저장 안함)로 채워서 연간 공백 최소화
+				List<DailyRecordResponseDTO> rows = safeGetRange(userId, s, e);
+				Map<String, Object> sketchMetrics = buildMetrics(rows);
+				Map<String, Object> scores = asMap(sketchMetrics.get("scores"));
 
-				Map<String, Object> empty = new LinkedHashMap<>();
-				empty.put("month", String.format("%d-%02d", year, m));
-				empty.put("metrics", new LinkedHashMap<>()); // 빈 맵
-				empty.put("sum0to100", null);
-				empty.put("scaled20to80", null);
-				series.add(empty);
+				double ms = getAsNumber(scores, "memory_short");
+				double ml = getAsNumber(scores, "memory_long");
+				double or = getAsNumber(scores, "orientation");
+				double ad = getAsNumber(scores, "adl");
+				double be = getAsNumber(scores, "behavior_safety");
+
+				int sum0to100 = (int) Math.round(clamp20(ms) + clamp20(ml) + clamp20(or) + clamp20(ad) + clamp20(be));
+				Integer scaled20to80 = rows.isEmpty() ? null
+						: Math.max(20, Math.min(80, (int) Math.round(20 + sum0to100 * 0.6)));
+
+				rowMap.put("metrics", mapOfFive("memory_short", ms, "memory_long", ml, "orientation", or, "adl", ad,
+						"behavior_safety", be));
+				rowMap.put("sum0to100", rows.isEmpty() ? null : sum0to100);
+				rowMap.put("scaled20to80", scaled20to80);
+
+				series.add(rowMap);
+				totals[m - 1] = rows.isEmpty() ? null : sum0to100;
+
+				if (!rows.isEmpty()) {
+					sumMS += ms;
+					sumML += ml;
+					sumOR += or;
+					sumADL += ad;
+					sumBE += be;
+					monthsWithData++;
+				}
 				continue;
 			}
 
-			anyMonthHasData = true;
-
+			// 저장본이 있는 월
 			Map<String, Object> metrics = parseJsonMaybeTwiceToMap(vo.getMetrics());
 			Map<String, Object> scores = (metrics != null) ? asMap(metrics.get("scores")) : null;
 
@@ -164,150 +186,262 @@ public class ReportService {
 			double ad = getAsNumber(scores, "adl");
 			double be = getAsNumber(scores, "behavior_safety");
 
-			int sum0to100 = (int) Math.round(
-					clamp(ms, 0, 20) + clamp(ml, 0, 20) + clamp(or, 0, 20) + clamp(ad, 0, 20) + clamp(be, 0, 20));
+			int sum0to100 = (int) Math.round(clamp20(ms) + clamp20(ml) + clamp20(or) + clamp20(ad) + clamp20(be));
+			int scaled20to80 = Math.max(20, Math.min(80, (int) Math.round(20 + sum0to100 * 0.6)));
 
-			int scaled20to80 = (int) Math.round(20 + (sum0to100 * 0.6));
-			scaled20to80 = (int) clamp(scaled20to80, 20, 80);
+			rowMap.put("metrics", mapOfFive("memory_short", ms, "memory_long", ml, "orientation", or, "adl", ad,
+					"behavior_safety", be));
+			rowMap.put("sum0to100", sum0to100);
+			rowMap.put("scaled20to80", scaled20to80);
 
+			series.add(rowMap);
 			totals[m - 1] = sum0to100;
 
-			Map<String, Object> one = new LinkedHashMap<>();
-			one.put("month", String.format("%d-%02d", year, m));
-			one.put("metrics", mapOfFive("memory_short", ms, "memory_long", ml, "orientation", or, "adl", ad,
-					"behavior_safety", be));
-			one.put("sum0to100", sum0to100);
-			one.put("scaled20to80", scaled20to80);
-			series.add(one);
+			sumMS += ms;
+			sumML += ml;
+			sumOR += or;
+			sumADL += ad;
+			sumBE += be;
+			monthsWithData++;
 		}
 
-		if (!anyMonthHasData)
-			aiMeta.put("status", "empty");
+		Map<String, Object> aiMeta = new LinkedHashMap<>();
+		aiMeta.put("status", monthsWithData == 0 ? "empty" : "ok");
 
-		// 연간 내러티브(요약) — 실패 시에도 빈 문자열/빈 리스트로만 채움
-		Map<String, Object> annual = buildAnnualNarrativeSafe(year, totals);
+		List<Map<String, Object>> details = new ArrayList<>();
+		Map<String, Object> annual = new LinkedHashMap<>();
 
-		Map<String, Object> out = new LinkedHashMap<>();
-		out.put("totals", totals);
-		out.put("series", series);
-		out.put("details", details);
-		out.put("ai", aiMeta);
-		out.put("annual", annual);
-		return out;
-	}
+		if (monthsWithData > 0) {
+			double avgMS = sumMS / monthsWithData;
+			double avgML = sumML / monthsWithData;
+			double avgOR = sumOR / monthsWithData;
+			double avgADL = sumADL / monthsWithData;
+			double avgBE = sumBE / monthsWithData;
 
-	/* ============================== 헬퍼 ============================== */
+			details.add(makeAnnualDetail("memory_short", "단기·작업기억", avgMS, year));
+			details.add(makeAnnualDetail("memory_long", "장기기억", avgML, year));
+			details.add(makeAnnualDetail("orientation", "지남력", avgOR, year));
+			details.add(makeAnnualDetail("adl", "일상기능", avgADL, year));
+			details.add(makeAnnualDetail("behavior_safety", "행동·기분·안전", avgBE, year));
 
-	private double clamp(double v, double min, double max) {
-		return Math.max(min, Math.min(max, v));
-	}
-
-	@SuppressWarnings("unchecked")
-	private Map<String, Object> asMap(Object o) {
-		if (o instanceof Map)
-			return (Map<String, Object>) o;
-		return null;
-	}
-
-	private double getAsNumber(Map<String, Object> m, String key) {
-		if (m == null)
-			return 0.0;
-		Object v = m.get(key);
-		if (v instanceof Number)
-			return ((Number) v).doubleValue();
-		try {
-			return v == null ? 0.0 : Double.parseDouble(String.valueOf(v));
-		} catch (Exception ignore) {
-			return 0.0;
-		}
-	}
-
-	private Map<String, Object> parseJsonMaybeTwiceToMap(Object raw) {
-		if (raw == null)
-			return null;
-		try {
-			if (raw instanceof String s) {
-				Object a = om.readValue(s, Object.class);
-				if (a instanceof String s2) {
-					Object b = om.readValue(s2, Object.class);
-					return asMap(b);
-				}
-				return asMap(a);
+			List<Integer> totals20to80 = new ArrayList<>();
+			for (Integer t : totals) {
+				totals20to80.add(t == null ? null : Math.max(20, Math.min(80, (int) Math.round(20 + t * 0.6))));
 			}
-			return asMap(raw);
+			annual = buildAnnualNarrative(year, totals20to80, avgMS, avgML, avgOR, avgADL, avgBE, monthsWithData);
+		}
+
+		Map<String, Object> result = new LinkedHashMap<>();
+		result.put("totals", totals);
+		result.put("series", series);
+		result.put("details", details);
+		result.put("ai", aiMeta);
+		result.put("annual", annual);
+
+		if (monthsWithData == 0) {
+			int expectedDays = (int) ChronoUnit.DAYS.between(start, end);
+			result.put("eligibility", "INSUFFICIENT");
+			result.put("expectedDays", expectedDays);
+			result.put("coveredDays", 0);
+		}
+		return result;
+	}
+
+	// ---------------- 연간 헬퍼 3종 ----------------
+	private Map<String, Object> makeAnnualDetail(String key, String label, double avg0to20, int year) {
+		String txt = generateYearlyDetailText(label, avg0to20, year);
+		String source = "ai";
+		String aiStatus = "ok";
+		if (txt == null || txt.isBlank()) {
+			txt = fallbackGuidance(label, avg0to20);
+			source = "rule";
+			aiStatus = "failed";
+		}
+		Map<String, Object> row = new LinkedHashMap<>();
+		row.put("key", key);
+		row.put("label", label);
+		row.put("value", (int) Math.round(avg0to20));
+		row.put("text", txt);
+		row.put("source", source);
+		row.put("aiStatus", aiStatus);
+		return row;
+	}
+
+	private String generateYearlyDetailText(String label, double avg0to20, int year) {
+		String prompt = """
+				당신은 치매 가족을 돕는 케어 코치입니다.
+				아래 정보를 바탕으로 '연간 항목 코멘트'를 한국어로 1~2문장(140자 이내)으로 작성하세요.
+				- 톤: 사실 기반+따뜻한 조언. 과장/단정/진단/이모지 금지.
+				- 반드시 %d년을 한 번 언급.
+				- 문장에 '유지/변화/권장' 중 1개 이상 포함.
+
+				[항목] %s
+				[연간 평균 점수] %.0f / 20
+				""".formatted(year, label, avg0to20);
+		try {
+			String raw = ai.generateText(prompt);
+			String post = postProcessOneOrTwoSentences(raw);
+			if (post == null || post.isBlank())
+				return fallbackGuidance(label, avg0to20);
+			return post;
 		} catch (Exception e) {
-			return null;
+			String msg = safeMsg(e.getMessage());
+			if (msg.contains("429") || msg.contains("TooManyRequests"))
+				mark429Cooldown();
+			log.warn("[AI-REPORT] Yearly detail failed: {} - {}", e.getClass().getSimpleName(), msg);
+			return fallbackGuidance(label, avg0to20);
 		}
 	}
 
-	private Map<String, Object> mapOfFive(String k1, Object v1, String k2, Object v2, String k3, Object v3, String k4,
-			Object v4, String k5, Object v5) {
-		Map<String, Object> m = new LinkedHashMap<>();
-		m.put(k1, v1);
-		m.put(k2, v2);
-		m.put(k3, v3);
-		m.put(k4, v4);
-		m.put(k5, v5);
-		return m;
-	}
-
-	private Map<String, Object> buildAnnualNarrativeSafe(int year, Integer[] totals0to100) {
-		// 0~100을 20~80으로 변환한 리스트(JSON 넣기 좋게)
-		List<Integer> scaled = new ArrayList<>();
-		int monthsWithData = 0;
-		for (Integer t : totals0to100) {
-			if (t == null) {
-				scaled.add(null);
-			} else {
-				monthsWithData++;
-				int sc = 20 + (int) Math.round(t * 0.6);
-				scaled.add(Math.max(20, Math.min(80, sc)));
-			}
+	private Map<String, Object> buildAnnualNarrative(int year, List<Integer> totals20to80, double avgMS, double avgML,
+			double avgOR, double avgADL, double avgBE, int monthsWithData) {
+		String jsonTotals = "[]";
+		try {
+			jsonTotals = om.writeValueAsString(totals20to80);
+		} catch (Exception ignore) {
 		}
 
 		String prompt = """
-				당신은 고령자 치매 케어 코치입니다.
-				아래 1년 월별 총점(20~80, null은 데이터 부족)을 보고, 간결한 연간 요약을 한국어로 작성하세요.
-				- 톤: 사실 기반, 따뜻하고 과장 없음. 진단 단정 금지.
-				- 형식(JSON): {"overview":"...", "milestones":["..."], "next_quarter_focus":["..."]}
-				[연도]: %d
-				[월별 20~80]: %s
-				[데이터 충족 월 수]: %d
-				""".formatted(year, safeToJson(scaled), monthsWithData);
+				당신은 치매 케어 코치이자 연간 리포트 편집장입니다.
+				아래 데이터를 기반으로 '연간 총정리'를 한국어로 작성하세요.
+
+				[작성 지침]
+				- 톤: 사실 기반, 따뜻하고 실천지향. 과장/진단/위협 표현, 이모지 금지.
+				- 길이: overview 3~5문장, milestones 2~3개, next_quarter_focus 3개(행동 동사로 시작).
+
+				[연도] %d년
+				[월별 총점(20~80, null=데이터 부족)]: %s
+				[연간 평균(0~20)] 단기·작업기억 %.1f, 장기기억 %.1f, 지남력 %.1f, 일상기능 %.1f, 행동·기분·안전 %.1f
+				[커버리지 충족 월 수] %d
+
+				[출력 형식(JSON만)]
+				{
+				  "overview": "3~5문장",
+				  "milestones": ["...", "..."],
+				  "next_quarter_focus": ["...", "...", "..."]
+				}
+				""".formatted(year, jsonTotals, avgMS, avgML, avgOR, avgADL, avgBE, monthsWithData);
 
 		try {
 			String raw = ai.generateText(prompt);
-			Map<String, Object> m = om.readValue(raw, new TypeReference<Map<String, Object>>() {
+			Map<String, Object> m = om.readValue(raw, new TypeReference<>() {
 			});
 			Map<String, Object> out = new LinkedHashMap<>();
 			out.put("overview", String.valueOf(m.getOrDefault("overview", "")));
-			out.put("milestones", (m.get("milestones") instanceof List<?> l) ? l : List.of());
-			out.put("next_quarter_focus", (m.get("next_quarter_focus") instanceof List<?> l) ? l : List.of());
+			Object ms = m.get("milestones");
+			Object nq = m.get("next_quarter_focus");
+			out.put("milestones", (ms instanceof List<?> l) ? l : List.of());
+			out.put("next_quarter_focus", (nq instanceof List<?> l) ? l : List.of());
 			return out;
 		} catch (Exception e) {
 			Map<String, Object> out = new LinkedHashMap<>();
-			out.put("overview", "");
-			out.put("milestones", List.of());
-			out.put("next_quarter_focus", List.of());
+			out.put("overview", "올해 기록을 바탕으로 전반 경향을 정리했습니다. 일부 월은 데이터 부족으로 추세 확인이 제한될 수 있어요.");
+			out.put("milestones", List.of("기록 충족 월 중심으로 일과 안정성 확인", "여름철 야간 각성·낙상 등 안전 신호 주기 점검"));
+			out.put("next_quarter_focus", List.of("취침·기상 시각 고정", "복약 체크리스트 주 5회 확인", "안전등/미끄럼 방지 재점검"));
+			log.warn("[AI-REPORT] Annual narrative failed: {} - {}", e.getClass().getSimpleName(),
+					safeMsg(e.getMessage()));
 			return out;
 		}
 	}
 
-	private String safeToJson(Object o) {
+	// ================= 공통 유틸 =================
+	private List<DailyRecordResponseDTO> safeGetRange(Long userId, LocalDate start, LocalDate end) {
 		try {
-			return om.writeValueAsString(o);
+			List<DailyRecordResponseDTO> rows = recordDAO.getRange(userId, start, end);
+			return (rows != null) ? rows : Collections.emptyList();
 		} catch (Exception e) {
-			return "[]";
+			return Collections.emptyList();
 		}
 	}
 
-	/* ============== 컨트롤러 보조(총점 변환 등) ============== */
+	private Map<String, Object> buildMetrics(List<DailyRecordResponseDTO> rows) {
+		double mShort = 12, mLong = 12, orient = 12, adl = 12, beh = 12;
+		if (rows != null && !rows.isEmpty()) {
+			int fallCnt = 0, lostCnt = 0, nightCnt = 0, missApptHigh = 0;
+			for (DailyRecordResponseDTO r : rows) {
+				try {
+					Map<String, Object> content = om.readValue(r.getContent(), new TypeReference<>() {
+					});
+					Map<String, Object> act = asMap(content.get("act"));
+					Map<String, Object> note = asMap(content.get("note"));
+					if (act != null) {
+						fallCnt += isTrue(act.get("fall")) ? 1 : 0;
+						lostCnt += isTrue(act.get("lostWay")) ? 1 : 0;
+						Object miss = act.get("missAppt");
+						if (miss != null && String.valueOf(miss).contains("3"))
+							missApptHigh++;
+					}
+					if (note != null)
+						nightCnt += isTrue(note.get("nightWander")) ? 1 : 0;
+				} catch (Exception ignore) {
+				}
+			}
+			mShort = clamp20(14 - Math.min(6, lostCnt));
+			mLong = clamp20(14 - Math.min(6, missApptHigh));
+			orient = clamp20(14 - Math.min(6, lostCnt + nightCnt));
+			adl = clamp20(15 - Math.min(7, fallCnt + missApptHigh));
+			beh = clamp20(15 - Math.min(7, nightCnt + fallCnt));
+		}
+		Map<String, Object> scores = new LinkedHashMap<>();
+		scores.put("memory_short", mShort);
+		scores.put("memory_long", mLong);
+		scores.put("orientation", orient);
+		scores.put("adl", adl);
+		scores.put("behavior_safety", beh);
+		return new LinkedHashMap<>(Map.of("scores", scores));
+	}
+
+	private Map<String, Object> buildSections(List<DailyRecordResponseDTO> rows, Map<String, Object> metrics,
+			String type, String key, LocalDate start, LocalDate end) {
+		Map<String, Object> sections = new LinkedHashMap<>();
+		sections.put("summary",
+				String.format("%s(%s) 기간 요약: %d일 데이터 기반 간단 집계.", type, key, (rows != null ? rows.size() : 0)));
+		sections.put("highlights", Collections.emptyList());
+		sections.put("range", Map.of("start", start.toString(), "end", end.toString()));
+		sections.put("period", Map.of("type", type, "key", key));
+		return sections;
+	}
+
+	private Map<String, Object> buildChartPrefs() {
+		Map<String, Object> radar = new LinkedHashMap<>();
+		radar.put("scaleMax", 20);
+		radar.put("labels", List.of("단기·작업기억", "장기기억", "지남력", "일상기능", "행동·기분·안전"));
+		return new LinkedHashMap<>(Map.of("radar", radar));
+	}
+
+	private String buildHumanSummary(Map<String, Object> metrics, Map<String, Object> sections, String type, String key,
+			LocalDate start, LocalDate end) {
+		Map<String, Object> s = asMap(metrics.get("scores"));
+		String line = (s == null) ? "점수 산출 실패"
+				: String.format("단기/작업기억:%s, 장기기억:%s, 지남력:%s, 일상기능:%s, 행동·안전:%s", s.get("memory_short"),
+						s.get("memory_long"), s.get("orientation"), s.get("adl"), s.get("behavior_safety"));
+		return String.format("초기 생성 리포트. %s(%s) [%s ~ %s). %s", type, key, start, end, line);
+	}
+
+	private String hashFor(List<DailyRecordResponseDTO> rows) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			if (rows != null)
+				for (DailyRecordResponseDTO r : rows) {
+					String s = (r.getRecordDate() != null ? r.getRecordDate().toString() : "") + "|"
+							+ (r.getContent() != null ? r.getContent() : "");
+					md.update(s.getBytes(StandardCharsets.UTF_8));
+				}
+			byte[] b = md.digest();
+			StringBuilder sb = new StringBuilder();
+			for (byte x : b)
+				sb.append(String.format("%02x", x));
+			return sb.toString();
+		} catch (Exception e) {
+			return "";
+		}
+	}
 
 	public int getTotalScore0to100FromJson(String metricsJson) {
 		if (metricsJson == null || metricsJson.isEmpty())
 			return 0;
 		try {
-			Map<String, Object> metrics = om.readValue(metricsJson, new TypeReference<Map<String, Object>>() {
+			Map<String, Object> metrics = om.readValue(metricsJson, new TypeReference<>() {
 			});
 			return sumScores0to100(metrics);
 		} catch (Exception e) {
@@ -316,36 +450,34 @@ public class ReportService {
 	}
 
 	public int toScaled20to80FromJson(String metricsJson) {
-		return toScaled20to80(getTotalScore0to100FromJson(metricsJson));
+		return 20 + (int) Math.round(getTotalScore0to100FromJson(metricsJson) * 0.6);
 	}
 
 	public String makePeriodKey(String normType, LocalDate start, LocalDate end) {
 		if ("WEEK".equalsIgnoreCase(normType)) {
-			var wf = java.time.temporal.WeekFields.ISO;
+			java.time.temporal.WeekFields wf = java.time.temporal.WeekFields.ISO;
 			int y = start.get(wf.weekBasedYear());
 			int w = start.get(wf.weekOfWeekBasedYear());
 			return String.format("%04d-W%02d", y, w);
 		} else if ("MONTH".equalsIgnoreCase(normType)) {
 			return String.format("%04d-%02d", start.getYear(), start.getMonthValue());
+		} else if ("YEAR".equalsIgnoreCase(normType)) {
+			return String.format("%04d", start.getYear());
 		}
-		return start + "_" + end;
+		return start.toString() + "_" + end.toString();
 	}
 
 	public int countCoveredDays(Long userId, LocalDate start, LocalDate end) {
 		return safeGetRange(userId, start, end).size();
 	}
 
-	/* ======================== 일간 이모지 ======================== */
-
+	// ===== 일간 이모지 =====
 	public Map<String, Object> buildDailyEmoji(Long userId, LocalDate date) {
 		List<DailyRecordResponseDTO> rows = safeGetRange(userId, date, date.plusDays(1));
 		int covered = (rows == null) ? 0 : rows.size();
-
-		if (covered == 0) {
+		if (covered == 0)
 			return Map.of("userId", userId, "date", date.toString(), "coveredDays", 0, "score0to100", null, "level",
 					"none", "emoji", "😴");
-		}
-
 		int score = computeDailyScore0to100(rows);
 		String level = scoreToLevel(score);
 		String emoji = switch (level) {
@@ -353,7 +485,6 @@ public class ReportService {
 		case "mid" -> "🙂";
 		default -> "😟";
 		};
-
 		return Map.of("userId", userId, "date", date.toString(), "coveredDays", covered, "score0to100", score, "level",
 				level, "emoji", emoji);
 	}
@@ -361,7 +492,7 @@ public class ReportService {
 	private int computeDailyScore0to100(List<DailyRecordResponseDTO> rows) {
 		double mShort = 12, mLong = 12, orient = 12, adl = 12, beh = 12;
 		if (rows != null && !rows.isEmpty()) {
-			int fall = 0, lost = 0, night = 0, missHigh = 0;
+			int fallCnt = 0, lostCnt = 0, nightCnt = 0, missApptHigh = 0;
 			for (DailyRecordResponseDTO r : rows) {
 				try {
 					Map<String, Object> content = om.readValue(r.getContent(), new TypeReference<>() {
@@ -369,22 +500,20 @@ public class ReportService {
 					Map<String, Object> act = asMap(content.get("act"));
 					Map<String, Object> note = asMap(content.get("note"));
 					if (act != null) {
-						fall += isTrue(act.get("fall")) ? 1 : 0;
-						lost += isTrue(act.get("lostWay")) ? 1 : 0;
+						fallCnt += isTrue(act.get("fall")) ? 1 : 0;
+						lostCnt += isTrue(act.get("lostWay")) ? 1 : 0;
 						Object miss = act.get("missAppt");
 						if (miss != null && String.valueOf(miss).contains("3"))
-							missHigh++;
+							missApptHigh++;
 					}
 					if (note != null)
-						night += isTrue(note.get("nightWander")) ? 1 : 0;
+						nightCnt += isTrue(note.get("nightWander")) ? 1 : 0;
 				} catch (Exception ignore) {
 				}
 			}
-			mShort = clamp20(14 - Math.min(2, lost));
-			mLong = clamp20(14 - Math.min(2, missHigh));
-			double orBase = lost + night;
-			double adBase = fall + missHigh;
-			double beBase = night + fall;
+			mShort = clamp20(14 - Math.min(2, lostCnt));
+			mLong = clamp20(14 - Math.min(2, missApptHigh));
+			double orBase = lostCnt + nightCnt, adBase = fallCnt + missApptHigh, beBase = nightCnt + fallCnt;
 			orient = clamp20(14 - Math.min(2, orBase));
 			adl = clamp20(15 - Math.min(2, adBase));
 			beh = clamp20(15 - Math.min(2, beBase));
@@ -401,118 +530,7 @@ public class ReportService {
 		return "low";
 	}
 
-	/* ===================== 내부 스코어/유틸 ===================== */
-
-	private List<DailyRecordResponseDTO> safeGetRange(Long userId, LocalDate start, LocalDate end) {
-		try {
-			List<DailyRecordResponseDTO> rows = recordDAO.getRange(userId, start, end);
-			return (rows != null) ? rows : Collections.emptyList();
-		} catch (Exception e) {
-			return Collections.emptyList();
-		}
-	}
-
-	private Map<String, Object> buildMetrics(List<DailyRecordResponseDTO> rows) {
-		double mShort = 12, mLong = 12, orient = 12, adl = 12, beh = 12;
-
-		if (rows != null && !rows.isEmpty()) {
-			int fall = 0, lost = 0, night = 0, missHigh = 0;
-			for (DailyRecordResponseDTO r : rows) {
-				try {
-					Map<String, Object> content = om.readValue(r.getContent(), new TypeReference<>() {
-					});
-					Map<String, Object> act = asMap(content.get("act"));
-					Map<String, Object> note = asMap(content.get("note"));
-					if (act != null) {
-						fall += isTrue(act.get("fall")) ? 1 : 0;
-						lost += isTrue(act.get("lostWay")) ? 1 : 0;
-						Object miss = act.get("missAppt");
-						if (miss != null && String.valueOf(miss).contains("3"))
-							missHigh++;
-					}
-					if (note != null)
-						night += isTrue(note.get("nightWander")) ? 1 : 0;
-				} catch (Exception ignore) {
-				}
-			}
-			mShort = clamp20(14 - Math.min(6, lost));
-			mLong = clamp20(14 - Math.min(6, missHigh));
-			orient = clamp20(14 - Math.min(6, lost + night));
-			adl = clamp20(15 - Math.min(7, fall + missHigh));
-			beh = clamp20(15 - Math.min(7, night + fall));
-		}
-
-		Map<String, Object> scores = new LinkedHashMap<>();
-		scores.put("memory_short", mShort);
-		scores.put("memory_long", mLong);
-		scores.put("orientation", orient);
-		scores.put("adl", adl);
-		scores.put("behavior_safety", beh);
-
-		Map<String, Object> metrics = new LinkedHashMap<>();
-		metrics.put("scores", scores);
-		return metrics;
-	}
-
-	private Map<String, Object> buildSections(List<DailyRecordResponseDTO> rows, Map<String, Object> metrics,
-			String type, String key, LocalDate start, LocalDate end) {
-		Map<String, Object> sections = new LinkedHashMap<>();
-		sections.put("summary",
-				String.format("%s(%s) 기간 요약: %d일 데이터 기반 간단 집계.", type, key, (rows != null ? rows.size() : 0)));
-		sections.put("highlights", List.of());
-
-		Map<String, Object> range = new LinkedHashMap<>();
-		range.put("start", start.toString());
-		range.put("end", end.toString());
-		sections.put("range", range);
-
-		Map<String, Object> period = new LinkedHashMap<>();
-		period.put("type", type);
-		period.put("key", key);
-		sections.put("period", period);
-
-		return sections;
-	}
-
-	private Map<String, Object> buildChartPrefs() {
-		Map<String, Object> radar = new LinkedHashMap<>();
-		radar.put("scaleMax", 20);
-		radar.put("labels", List.of("단기·작업기억", "장기기억", "지남력", "일상기능", "행동·기분·안전"));
-
-		Map<String, Object> prefs = new LinkedHashMap<>();
-		prefs.put("radar", radar);
-		return prefs;
-	}
-
-	private String buildHumanSummary(Map<String, Object> metrics, Map<String, Object> sections, String type, String key,
-			LocalDate start, LocalDate end) {
-		Map<String, Object> s = asMap(metrics.get("scores"));
-		String line = (s == null) ? "점수 산출 실패"
-				: String.format("단기/작업기억:%s, 장기기억:%s, 지남력:%s, 일상기능:%s, 행동·안전:%s", s.get("memory_short"),
-						s.get("memory_long"), s.get("orientation"), s.get("adl"), s.get("behavior_safety"));
-		return String.format("초기 생성 리포트. %s(%s) [%s ~ %s). %s", type, key, start, end, line);
-	}
-
-	private String hashFor(List<DailyRecordResponseDTO> rows) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-256");
-			if (rows != null) {
-				for (DailyRecordResponseDTO r : rows) {
-					String s = (r.getRecordDate() != null ? r.getRecordDate().toString() : "") + "|"
-							+ (r.getContent() != null ? r.getContent() : "");
-					md.update(s.getBytes(StandardCharsets.UTF_8));
-				}
-			}
-			byte[] b = md.digest();
-			StringBuilder sb = new StringBuilder();
-			for (byte x : b)
-				sb.append(String.format("%02x", x));
-			return sb.toString();
-		} catch (Exception e) {
-			return "";
-		}
-	}
-
+	// ===== 공통 =====
 	private int sumScores0to100(Map<String, Object> metrics) {
 		Map<String, Object> s = asMap(metrics.get("scores"));
 		if (s == null)
@@ -523,80 +541,20 @@ public class ReportService {
 		sum += toNum(s.get("orientation"));
 		sum += toNum(s.get("adl"));
 		sum += toNum(s.get("behavior_safety"));
-		sum = Math.max(0, Math.min(100, sum));
-		return (int) Math.round(sum);
+		return (int) Math.round(Math.max(0, Math.min(100, sum)));
 	}
 
-	private int toScaled20to80(int sum0to100) {
-		return 20 + (int) Math.round(sum0to100 * 0.6);
+	private double clamp20(double v) {
+		if (Double.isNaN(v) || Double.isInfinite(v))
+			return 0;
+		return Math.max(0, Math.min(20, v));
 	}
 
-	/* ==================== AI 코멘트(순수, 실패 시 빈값) ==================== */
-
-	private List<Map<String, Object>> buildDetailsWithAI(Map<String, Object> metrics, String periodType,
-			String periodKey, LocalDate start, LocalDate end) {
-		Map<String, Object> s = asMap(metrics.get("scores"));
-		if (s == null)
-			s = Map.of();
-
-		record ItemDef(String key, String label) {
-		}
-		List<ItemDef> items = List.of(new ItemDef("memory_short", "단기·작업기억"), new ItemDef("memory_long", "장기기억"),
-				new ItemDef("orientation", "지남력"), new ItemDef("adl", "일상기능"),
-				new ItemDef("behavior_safety", "행동·기분·안전"));
-
-		List<Map<String, Object>> out = new ArrayList<>();
-		for (ItemDef def : items) {
-			double v = toNum(s.get(def.key()));
-			String txt = generateOneOrTwoLinesSafe(def.label(), v, periodType, periodKey, start, end); // 실패 시 ""
-
-			Map<String, Object> row = new LinkedHashMap<>();
-			row.put("key", def.key());
-			row.put("label", def.label());
-			row.put("value", (int) Math.round(v)); // 0~20
-			row.put("text", txt); // 실패면 빈 문자열
-			row.put("source", "ai");
-			row.put("aiStatus", txt.isBlank() ? "failed" : "ok");
-			out.add(row);
-		}
-		return out;
-	}
-
-	private String generateOneOrTwoLinesSafe(String label, double score0to20, String periodType, String periodKey,
-			LocalDate start, LocalDate end) {
-		String prompt = """
-				당신은 고령자 치매 케어 코치입니다.
-				아래 점수(0~20)를 바탕으로 보호자에게 줄 1–2문장(140자 이내)의 코멘트를 한국어로 작성하세요.
-				과장/진단 단정/명령조/이모지 금지, 생활 코칭 톤.
-				항목: %s
-				점수: %.0f / 20
-				기간: %s(%s) [%s ~ %s)
-				""".formatted(label, score0to20, periodType, periodKey, start, end);
-		try {
-			String raw = ai.generateText(prompt);
-			String post = postProcessOneOrTwoSentences(raw);
-			return (post == null) ? "" : post;
-		} catch (Exception e) {
-			log.warn("[AI-REPORT] detail AI failed for {}: {}", label, safeMsg(e.getMessage()));
-			return "";
-		}
-	}
-
-	/* ======================== 공통 문자 처리 ======================== */
-
-	private String postProcessOneOrTwoSentences(String s) {
-		if (s == null)
-			return "";
-		String t = s.replaceAll("[\\r\\n]+", " ").trim();
-		t = t.replaceAll("^\\s*[-•\\*\\d\\.\\)]\\s*", "");
-		t = t.replaceAll("^\\p{Zs}+", "");
-		String[] parts = t.split("(?<=[.!?。？！])\\s+");
-		if (parts.length > 2)
-			t = parts[0] + " " + parts[1];
-		if (t.length() > 140)
-			t = t.substring(0, 140).trim();
-		t = t.replaceAll("[^\\p{L}\\p{N}\\p{Zs}\\p{P}]", "");
-		return t.trim();
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> asMap(Object o) {
+		if (o instanceof Map<?, ?> m)
+			return (Map<String, Object>) m;
+		return null;
 	}
 
 	private boolean isTrue(Object o) {
@@ -618,10 +576,177 @@ public class ReportService {
 		}
 	}
 
-	private double clamp20(double v) {
-		if (Double.isNaN(v) || Double.isInfinite(v))
-			return 0;
-		return Math.max(0, Math.min(20, v));
+	private double getAsNumber(Map<String, Object> m, String key) {
+		if (m == null)
+			return 0.0;
+		Object v = m.get(key);
+		if (v instanceof Number)
+			return ((Number) v).doubleValue();
+		try {
+			return v == null ? 0.0 : Double.parseDouble(String.valueOf(v));
+		} catch (Exception e) {
+			return 0.0;
+		}
+	}
+
+	private Map<String, Object> mapOfFive(String k1, Object v1, String k2, Object v2, String k3, Object v3, String k4,
+			Object v4, String k5, Object v5) {
+		Map<String, Object> m = new LinkedHashMap<>();
+		m.put(k1, v1);
+		m.put(k2, v2);
+		m.put(k3, v3);
+		m.put(k4, v4);
+		m.put(k5, v5);
+		return m;
+	}
+
+	private Map<String, Object> parseJsonMaybeTwiceToMap(Object raw) {
+		if (raw == null)
+			return null;
+		try {
+			if (raw instanceof String s) {
+				Object a = om.readValue(s, Object.class);
+				if (a instanceof String s2) {
+					Object b = om.readValue(s2, Object.class);
+					return asMap(b);
+				}
+				return asMap(a);
+			}
+			return asMap(raw);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	private String postProcessOneOrTwoSentences(String s) {
+		if (s == null)
+			return "";
+		String t = s.replaceAll("[\\r\\n]+", " ").trim();
+		t = t.replaceAll("^\\s*[-•\\*\\d\\.\\)]\\s*", "");
+		t = t.replaceAll("^\\p{Zs}+", "");
+		String[] parts = t.split("(?<=[.!?。？！])\\s+");
+		if (parts.length > 2)
+			t = parts[0] + " " + parts[1];
+		if (t.length() > 140)
+			t = t.substring(0, 140).trim();
+		t = t.replaceAll("[^\\p{L}\\p{N}\\p{Zs}\\p{P}]", "");
+		return t.trim();
+	}
+
+	private String generateOneOrTwoLines(String label, double score0to20, String periodType, String periodKey,
+			LocalDate start, LocalDate end) {
+		String prompt = """
+				당신은 고령자 치매 케어 코치입니다.
+				아래 항목의 점수(0~20)를 바탕으로 보호자에게 줄 1–2문장(140자 이내) 코멘트를 한국어로 작성하세요.
+				과장·단정·명령조·이모지 금지.
+				항목: %s
+				점수: %.0f / 20
+				기간: %s(%s) [%s ~ %s)
+				""".formatted(label, score0to20, periodType, periodKey, start, end);
+		try {
+			String raw = ai.generateText(prompt);
+			String post = postProcessOneOrTwoSentences(raw);
+			if (post == null || post.isBlank())
+				return fallbackGuidance(label, score0to20);
+			return post;
+		} catch (Exception e) {
+			log.warn("[AI-REPORT] AI comment failed: {} - {}", e.getClass().getSimpleName(), safeMsg(e.getMessage()));
+			return fallbackGuidance(label, score0to20);
+		}
+	}
+
+	/**
+	 * (핵심 변경) 5항목 코멘트를 단일 프롬프트로 한 번에 생성. 429 발생 시 2분 쿨다운 동안 규칙기반으로 즉시 대체.
+	 */
+	private List<Map<String, Object>> buildDetailsWithAI(Map<String, Object> metrics, String periodType,
+			String periodKey, LocalDate start, LocalDate end) {
+		Map<String, Object> s = asMap(metrics.get("scores"));
+		if (s == null)
+			s = Map.of();
+
+		record ItemDef(String key, String label) {
+		}
+		List<ItemDef> items = List.of(new ItemDef("memory_short", "단기·작업기억"), new ItemDef("memory_long", "장기기억"),
+				new ItemDef("orientation", "지남력"), new ItemDef("adl", "일상기능"),
+				new ItemDef("behavior_safety", "행동·기분·안전"));
+
+		// 쿨다운이면 규칙기반으로 즉시 반환
+		if (inCooldown()) {
+			List<Map<String, Object>> out = new ArrayList<>();
+			for (ItemDef def : items) {
+				double v = toNum(s.get(def.key()));
+				out.add(Map.of("key", def.key(), "label", def.label(), "value", (int) Math.round(v), "text",
+						fallbackGuidance(def.label(), v), "source", "rule", "aiStatus", "failed"));
+			}
+			return out;
+		}
+
+		// === 단일 프롬프트 ===
+		StringBuilder sb = new StringBuilder();
+		sb.append("""
+				당신은 치매 가족을 돕는 케어 코치입니다.
+				아래 5개 항목에 대해 각 1–2문장(140자 이내) 코멘트를 한국어로 작성하세요.
+				- 톤: 사실 기반 + 따뜻한 조언. 과장/단정/진단/이모지 금지.
+				- 출력은 JSON 배열로, 각 원소는 {"key": "...", "text": "..."} 형태.
+				- 입력 기간: %s(%s) [%s ~ %s)
+				""".formatted(periodType, periodKey, start, end));
+
+		sb.append("\n[항목/점수(0~20)]\n");
+		for (ItemDef def : items) {
+			double v = toNum(s.get(def.key()));
+			sb.append("- ").append(def.key()).append(" | ").append(def.label()).append(" : ")
+					.append((int) Math.round(v)).append("\n");
+		}
+
+		String prompt = sb.toString();
+		List<Map<String, Object>> out = new ArrayList<>();
+		try {
+			String raw = ai.generateText(prompt); // ← 단 1회 호출
+			// 기대 형식: [{"key":"memory_short","text":"..."}, ...]
+			List<Map<String, Object>> arr = om.readValue(raw, new TypeReference<>() {
+			});
+			// 매핑 + 누락 보정
+			Map<String, String> textByKey = new HashMap<>();
+			if (arr != null) {
+				for (Map<String, Object> e : arr) {
+					String k = String.valueOf(e.get("key"));
+					String t = postProcessOneOrTwoSentences(String.valueOf(e.get("text")));
+					if (k != null && t != null && !t.isBlank())
+						textByKey.put(k, t);
+				}
+			}
+
+			for (ItemDef def : items) {
+				double v = toNum(s.get(def.key()));
+				String txt = textByKey.get(def.key());
+				boolean ok = (txt != null && !txt.isBlank());
+				if (!ok)
+					txt = fallbackGuidance(def.label(), v);
+
+				Map<String, Object> row = new LinkedHashMap<>();
+				row.put("key", def.key());
+				row.put("label", def.label());
+				row.put("value", (int) Math.round(v));
+				row.put("text", txt);
+				row.put("source", ok ? "ai" : "rule");
+				row.put("aiStatus", ok ? "ok" : "failed");
+				out.add(row);
+			}
+			return out;
+
+		} catch (Exception e) {
+			String msg = safeMsg(e.getMessage());
+			if (msg.contains("429") || msg.contains("TooManyRequests"))
+				mark429Cooldown();
+
+			// 실패 시 전부 규칙기반
+			for (ItemDef def : items) {
+				double v = toNum(s.get(def.key()));
+				out.add(Map.of("key", def.key(), "label", def.label(), "value", (int) Math.round(v), "text",
+						fallbackGuidance(def.label(), v), "source", "rule", "aiStatus", "failed"));
+			}
+			return out;
+		}
 	}
 
 	private String suggestQuickAction(List<DailyRecordResponseDTO> rows) {
@@ -645,5 +770,23 @@ public class ReportService {
 		if (t.length() > 160)
 			t = t.substring(0, 160) + "...";
 		return t;
+	}
+
+	// ---- 규칙 기반 대체 문구 & 429 마킹 ----
+	private String fallbackGuidance(String label, double score0to20) {
+		int s = (int) Math.round(score0to20);
+		if (s >= 15)
+			return "%s은(는) %d년 동안 전반적으로 안정적이에요. 작은 규칙을 유지해 현재 수준을 지켜봐요.".formatted(label, LocalDate.now().getYear());
+		if (s >= 10)
+			return "%s은(는) 보통 수준이에요. 한 가지 루틴을 정해 꾸준함을 높여보세요.".formatted(label);
+		if (s >= 5)
+			return "%s이(가) 다소 불안정해 보여요. 이번 분기엔 한 영역을 골라 가볍게 연습을 늘려봐요.".formatted(label);
+		return "%s이(가) 전반적으로 낮아요. 무리하지 말고 하루 한 번 체크부터 시작해요.".formatted(label);
+	}
+
+	private void mark429Cooldown() {
+		long coolMs = 2 * 60 * 1000L; // 2분
+		cooldownUntil = System.currentTimeMillis() + coolMs;
+		log.warn("[AI-REPORT] 429 detected. cooldown {} sec", coolMs / 1000);
 	}
 }

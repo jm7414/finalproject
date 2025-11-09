@@ -1,4 +1,3 @@
-// src/main/java/lx/project/dementia_care/controller/ReportController.java
 package lx.project.dementia_care.controller;
 
 import lombok.RequiredArgsConstructor;
@@ -17,28 +16,23 @@ public class ReportController {
 
 	private final ReportService reportService;
 
-	/**
-	 * 통합 엔드포인트 period=daily & date=YYYY-MM-DD → Map(이모지 응답) period=weekly &
-	 * start,end → ReportVO (저장본 우선, force 재생성 가능) period=monthly & start,end →
-	 * ReportVO (저장본 우선, force 재생성 가능) period=yearly & start,end → Map(연간
-	 * totals/series/details/ai)
-	 */
 	@GetMapping("/api/ai/report")
 	public ResponseEntity<?> getReport(@RequestParam Long userId, @RequestParam String period,
 			@RequestParam(required = false) String start, @RequestParam(required = false) String end,
 			@RequestParam(required = false) String date, @RequestParam(defaultValue = "loadOrCreate") String mode,
 			@RequestParam(required = false) String generatedBy,
 			@RequestParam(required = false, defaultValue = "false") boolean force) {
+
 		final String p = period.toLowerCase(Locale.ROOT);
 
-		// 일간: 오늘/특정일 이모지
+		// 일간
 		if ("daily".equals(p)) {
 			LocalDate d = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
 			Map<String, Object> emojiResp = reportService.buildDailyEmoji(userId, d);
 			return ResponseEntity.ok(emojiResp);
 		}
 
-		// 주/월/연: start/end 필수
+		// 공통: start/end
 		if (start == null || end == null) {
 			return ResponseEntity.badRequest().body(
 					Map.of("error", "start/end 파라미터가 필요합니다.", "hint", "예: start=2025-11-03&end=2025-11-10 (end는 미포함)"));
@@ -46,29 +40,30 @@ public class ReportController {
 		LocalDate s = LocalDate.parse(start);
 		LocalDate e = LocalDate.parse(end);
 
-		// 연간
+		// 연간: YEAR도 “처음만 생성, 이후 DB 고정(+부족 월은 스케치 보강)”
 		if ("yearly".equals(p)) {
+			try {
+				String yearKey = reportService.makePeriodKey("YEAR", s, e);
+				reportService.loadOrCreate(userId, "YEAR", yearKey, s, e,
+						(generatedBy != null && !generatedBy.isBlank()) ? generatedBy : "api", false // 캐시만 사용, 있으면 무조건
+																										// DB본
+				);
+			} catch (Exception ignore) {
+			}
 			Map<String, Object> extras = reportService.buildYearlyExtras(userId, s, e);
 			return ResponseEntity.ok(extras);
 		}
 
-		// 주/월: weekly → WEEK, monthly → MONTH 로 매핑
-		final String normType;
-		if ("weekly".equals(p))
-			normType = "WEEK";
-		else if ("monthly".equals(p))
-			normType = "MONTH";
-		else
-			normType = p.toUpperCase(Locale.ROOT); // 혹시 모를 확장 대비
-
+		// 주/월
+		final String normType = "weekly".equals(p) ? "WEEK"
+				: ("monthly".equals(p) ? "MONTH" : p.toUpperCase(Locale.ROOT));
 		String periodKey = reportService.makePeriodKey(normType, s, e);
 
-		// ✅ 여기서 force 전달 (7번째 인자)
 		ReportVO vo = reportService.loadOrCreate(userId, normType, periodKey, s, e,
-				(generatedBy != null && !generatedBy.isBlank()) ? generatedBy : "api", force);
+				(generatedBy != null && !generatedBy.isBlank()) ? generatedBy : "api", force /* 기본 false → 저장본 우선 */
+		);
 
 		if (vo == null) {
-			// 커버리지 부족 → 프론트 안내용
 			int expected = (int) java.time.temporal.ChronoUnit.DAYS.between(s, e);
 			int covered = reportService.countCoveredDays(userId, s, e);
 			return ResponseEntity

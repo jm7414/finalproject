@@ -14,7 +14,7 @@ public class GoogleAiClient {
 	private static final String BASE = "https://generativelanguage.googleapis.com";
 
 	private String resolveApiKey() {
-		return "AAAAAAAAAAAAAAAAAAAAAAAAAAA";
+		return "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 		
 	}
 
