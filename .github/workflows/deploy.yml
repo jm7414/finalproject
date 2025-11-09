@@ -54,20 +54,6 @@ jobs:
           source: "."
           target: "/home/ubuntu/final-project"
           strip_components: 0
-          exclude:
-            - ".git"
-            - "node_modules"
-            - ".github"
-            - "*.md"
-            - "learning-pages-guide.txt"
-            - "text"
-            - "python/venv"
-            - "python/__pycache__"
-            - "python/cache"
-            - "backend/target"
-            - "frontend/node_modules"
-            - "frontend/.env.*"
-            - "backend/src/main/resources/application-local.properties"
 
       # 서버에서 배포 스크립트 실행
       - name: Run deployment script
@@ -78,6 +64,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/final-project
+            
+            # 불필요한 파일/폴더 제거
+            rm -rf .git node_modules .github *.md learning-pages-guide.txt text
+            rm -rf python/venv python/__pycache__ python/cache
+            rm -rf backend/target frontend/node_modules frontend/.env.*
+            rm -rf backend/src/main/resources/application-local.properties
             
             # .env 파일 생성 (서버에만 존재)
             cat > .env << EOF
