@@ -31,8 +31,11 @@ public class ReportService {
 	private final ObjectMapper om;
 	private final GoogleAiClient ai;
 
+	/** 점수를 AI로 추정/보정할지 여부 (기본: false=현행 규칙 점수) */
+	private static final boolean USE_AI_FOR_SCORES = false;
+
 	// ====== 429 대응: 일정 시간 AI 호출 스킵(쿨다운) ======
-	private volatile long cooldownUntil = 0L; // 429 이후 n분 동안 AI 호출 생략
+	private volatile long cooldownUntil = 0L; // 429 이후 n초 동안 AI 호출 생략
 
 	private boolean inCooldown() {
 		return System.currentTimeMillis() < cooldownUntil;
@@ -59,14 +62,14 @@ public class ReportService {
 		else if (normType.startsWith("YEAR"))
 			normType = "YEAR";
 
-		// 0) 캐시 우선: 저장본 있으면 바로 리턴 (=> “두 번째부터는 DB만”)
+		// 0) 캐시 우선
 		if (!force) {
 			ReportVO existing = reportDAO.findByPatientPeriod(patientId, normType, periodKey);
 			if (existing != null)
 				return existing;
 		}
 
-		// 1) 커버리지 확인(최초 생성 시에만 적용)
+		// 1) 커버리지 확인(최초 생성 시에만)
 		List<DailyRecordResponseDTO> rows = safeGetRange(patientId, start, end);
 		int coveredDays = rows.size();
 		int expectedDays = (int) ChronoUnit.DAYS.between(start, end); // [start, end)
@@ -81,7 +84,7 @@ public class ReportService {
 		Integer periodId = periodDAO.ensureId(normType, periodKey, start, end);
 
 		// 3) 점수·섹션
-		Map<String, Object> metrics = buildMetrics(rows);
+		Map<String, Object> metrics = buildMetrics(rows, normType, periodKey, start, end);
 		Map<String, Object> sections = buildSections(rows, metrics, normType, periodKey, start, end);
 
 		// 3-1) 항목 코멘트(AI) 실패 시 안전문구 (→ 단일 프롬프트로 1회 호출)
@@ -92,18 +95,19 @@ public class ReportService {
 		if ("WEEK".equals(normType))
 			sections.put("quick_action", suggestQuickAction(rows));
 
-		// 3-3) AI 메타
+		// 3-3) AI 메타 (부분 성공을 partial-fallback으로 표기)
 		boolean anyFailed = details.stream().anyMatch(d -> "failed".equals(String.valueOf(d.get("aiStatus"))));
+		boolean anyOk = details.stream().anyMatch(d -> "ok".equals(String.valueOf(d.get("aiStatus"))));
 		Map<String, Object> aiMeta = new LinkedHashMap<>();
 		aiMeta.put("provider", "gemini");
-		aiMeta.put("status", anyFailed ? "failed" : "ok");
+		aiMeta.put("status", anyOk ? (anyFailed ? "partial-fallback" : "ok") : "failed");
 		sections.put("ai", aiMeta);
 
 		// 4) 차트 prefs + 본문 요약
 		Map<String, Object> chartPrefs = buildChartPrefs();
 		String content = buildHumanSummary(metrics, sections, normType, periodKey, start, end);
 
-		// 5) 소스 해시(참고용만, 더 이상 캐시 판단에 사용 안 함)
+		// 5) 소스 해시(참고용)
 		String sourceHash = hashFor(rows);
 
 		// 6) 직렬화 & 업서트
@@ -142,9 +146,9 @@ public class ReportService {
 			rowMap.put("month", String.format("%d-%02d", year, m));
 
 			if (vo == null) {
-				// ✦ 커버리지 부족 → 스케치 계산(저장 안함)로 채워서 연간 공백 최소화
+				// ✦ 커버리지 부족 → 스케치 계산(저장 안함)
 				List<DailyRecordResponseDTO> rows = safeGetRange(userId, s, e);
-				Map<String, Object> sketchMetrics = buildMetrics(rows);
+				Map<String, Object> sketchMetrics = buildMetrics(rows, "MONTH", periodKey, s, e);
 				Map<String, Object> scores = asMap(sketchMetrics.get("scores"));
 
 				double ms = getAsNumber(scores, "memory_short");
@@ -354,7 +358,19 @@ public class ReportService {
 		}
 	}
 
-	private Map<String, Object> buildMetrics(List<DailyRecordResponseDTO> rows) {
+	/** 점수 생성: 스위치에 따라 (A)규칙 or (B)AI(+폴백) */
+	private Map<String, Object> buildMetrics(List<DailyRecordResponseDTO> rows, String periodType, String periodKey,
+			LocalDate start, LocalDate end) {
+		if (USE_AI_FOR_SCORES && !inCooldown()) {
+			Map<String, Object> m = buildMetricsByAI(rows, periodType, periodKey, start, end);
+			if (m != null)
+				return m;
+		}
+		return buildMetricsByRule(rows);
+	}
+
+	/** (A) 규칙 점수 */
+	private Map<String, Object> buildMetricsByRule(List<DailyRecordResponseDTO> rows) {
 		double mShort = 12, mLong = 12, orient = 12, adl = 12, beh = 12;
 		if (rows != null && !rows.isEmpty()) {
 			int fallCnt = 0, lostCnt = 0, nightCnt = 0, missApptHigh = 0;
@@ -391,13 +407,96 @@ public class ReportService {
 		return new LinkedHashMap<>(Map.of("scores", scores));
 	}
 
+	/** (B) AI 점수 (실패/429 시 규칙 점수로 폴백) */
+	private Map<String, Object> buildMetricsByAI(List<DailyRecordResponseDTO> rows, String periodType, String periodKey,
+			LocalDate start, LocalDate end) {
+		try {
+			// 요약 피처 만들기
+			int fallCnt = 0, lostCnt = 0, nightCnt = 0, missApptHigh = 0, days = 0;
+			if (rows != null) {
+				days = rows.size();
+				for (DailyRecordResponseDTO r : rows) {
+					try {
+						Map<String, Object> content = om.readValue(r.getContent(), new TypeReference<>() {
+						});
+						Map<String, Object> act = asMap(content.get("act"));
+						Map<String, Object> note = asMap(content.get("note"));
+						if (act != null) {
+							fallCnt += isTrue(act.get("fall")) ? 1 : 0;
+							lostCnt += isTrue(act.get("lostWay")) ? 1 : 0;
+							Object miss = act.get("missAppt");
+							if (miss != null && String.valueOf(miss).contains("3"))
+								missApptHigh++;
+						}
+						if (note != null)
+							nightCnt += isTrue(note.get("nightWander")) ? 1 : 0;
+					} catch (Exception ignore) {
+					}
+				}
+			}
+
+			String prompt = """
+					당신은 치매 케어 코치입니다. 아래 기간의 기록 요약을 보고 5개 영역 점수(0~20)를 JSON 배열로만 출력하세요.
+					- 키: memory_short, memory_long, orientation, adl, behavior_safety
+					- 각 값은 0~20 정수.
+					- 설명 문장, 코드블록 금지. JSON만.
+
+					[기간] %s(%s) [%s ~ %s)
+					[요약지표]
+					- 기록일수: %d
+					- 낙상일수: %d
+					- 길 잃음/방향상실: %d
+					- 야간배회: %d
+					- 약속/일정 미준수(심각): %d
+					""".formatted(periodType, periodKey, start, end, days, fallCnt, lostCnt, nightCnt, missApptHigh);
+
+			String raw = ai.generateText(prompt);
+			String json = extractJsonArray(raw);
+
+			// 기대: [{"key":"memory_short","value":12}, ...] 또는 [{"memory_short":12,...}]도 허용
+			List<Map<String, Object>> arr = om.readValue(json, new TypeReference<>() {
+			});
+			Map<String, Object> scores = new LinkedHashMap<>();
+
+			// 케이스1: [{"key":"memory_short","value":12},...]
+			for (Map<String, Object> e : arr) {
+				if (e.containsKey("key")) {
+					String k = String.valueOf(e.get("key"));
+					Object v = e.getOrDefault("value", e.get("score"));
+					if (k != null && v != null)
+						scores.put(k, clamp20(toNum(v)));
+				} else {
+					// 케이스2: [{"memory_short":12,"memory_long":...}]
+					for (String k : List.of("memory_short", "memory_long", "orientation", "adl", "behavior_safety")) {
+						if (e.containsKey(k))
+							scores.put(k, clamp20(toNum(e.get(k))));
+					}
+				}
+			}
+
+			// 검증: 5키 모두 없으면 실패 처리
+			boolean ok = scores.keySet()
+					.containsAll(Set.of("memory_short", "memory_long", "orientation", "adl", "behavior_safety"));
+			if (!ok)
+				throw new IllegalStateException("AI score parse fail");
+
+			return Map.of("scores", scores);
+		} catch (Exception e) {
+			String msg = safeMsg(e.getMessage());
+			if (msg.contains("429") || msg.contains("TooManyRequests"))
+				mark429Cooldown();
+			log.warn("[AI-REPORT] AI scores failed → fallback to rule: {} - {}", e.getClass().getSimpleName(), msg);
+			return buildMetricsByRule(rows);
+		}
+	}
+
 	private Map<String, Object> buildSections(List<DailyRecordResponseDTO> rows, Map<String, Object> metrics,
 			String type, String key, LocalDate start, LocalDate end) {
 		Map<String, Object> sections = new LinkedHashMap<>();
 		sections.put("summary",
 				String.format("%s(%s) 기간 요약: %d일 데이터 기반 간단 집계.", type, key, (rows != null ? rows.size() : 0)));
 		sections.put("highlights", Collections.emptyList());
-		sections.put("range", Map.of("start", start.toString(), "end", end.toString()));
+		sections.put("range", Map.of("start", start.toString(), "end", end.toString(), "label", key));
 		sections.put("period", Map.of("type", type, "key", key));
 		return sections;
 	}
@@ -541,7 +640,7 @@ public class ReportService {
 		sum += toNum(s.get("orientation"));
 		sum += toNum(s.get("adl"));
 		sum += toNum(s.get("behavior_safety"));
-		return (int) Math.round(Math.max(0, Math.min(100, sum)));
+		return (int) Math.max(0, Math.min(100, Math.round(sum)));
 	}
 
 	private double clamp20(double v) {
@@ -633,30 +732,8 @@ public class ReportService {
 		return t.trim();
 	}
 
-	private String generateOneOrTwoLines(String label, double score0to20, String periodType, String periodKey,
-			LocalDate start, LocalDate end) {
-		String prompt = """
-				당신은 고령자 치매 케어 코치입니다.
-				아래 항목의 점수(0~20)를 바탕으로 보호자에게 줄 1–2문장(140자 이내) 코멘트를 한국어로 작성하세요.
-				과장·단정·명령조·이모지 금지.
-				항목: %s
-				점수: %.0f / 20
-				기간: %s(%s) [%s ~ %s)
-				""".formatted(label, score0to20, periodType, periodKey, start, end);
-		try {
-			String raw = ai.generateText(prompt);
-			String post = postProcessOneOrTwoSentences(raw);
-			if (post == null || post.isBlank())
-				return fallbackGuidance(label, score0to20);
-			return post;
-		} catch (Exception e) {
-			log.warn("[AI-REPORT] AI comment failed: {} - {}", e.getClass().getSimpleName(), safeMsg(e.getMessage()));
-			return fallbackGuidance(label, score0to20);
-		}
-	}
-
 	/**
-	 * (핵심 변경) 5항목 코멘트를 단일 프롬프트로 한 번에 생성. 429 발생 시 2분 쿨다운 동안 규칙기반으로 즉시 대체.
+	 * (핵심 변경) 5항목 코멘트를 단일 프롬프트로 한 번에 생성. 429 발생 시 쿨다운 동안 규칙기반으로 즉시 대체.
 	 */
 	private List<Map<String, Object>> buildDetailsWithAI(Map<String, Object> metrics, String periodType,
 			String periodKey, LocalDate start, LocalDate end) {
@@ -702,8 +779,9 @@ public class ReportService {
 		List<Map<String, Object>> out = new ArrayList<>();
 		try {
 			String raw = ai.generateText(prompt); // ← 단 1회 호출
+			String json = extractJsonArray(raw);
 			// 기대 형식: [{"key":"memory_short","text":"..."}, ...]
-			List<Map<String, Object>> arr = om.readValue(raw, new TypeReference<>() {
+			List<Map<String, Object>> arr = om.readValue(json, new TypeReference<>() {
 			});
 			// 매핑 + 누락 보정
 			Map<String, String> textByKey = new HashMap<>();
@@ -785,8 +863,33 @@ public class ReportService {
 	}
 
 	private void mark429Cooldown() {
-		long coolMs = 2 * 60 * 1000L; // 2분
+		long coolMs = 30 * 1000L; // 30초로 완화
 		cooldownUntil = System.currentTimeMillis() + coolMs;
 		log.warn("[AI-REPORT] 429 detected. cooldown {} sec", coolMs / 1000);
+	}
+
+	/** 모델 응답에서 JSON 배열만 뽑아낸다. ```json ...``` 또는 설명+JSON 모두 대응 */
+	private String extractJsonArray(String s) {
+		if (s == null)
+			return "[]";
+		String t = s.trim();
+		// 코드펜스 제거
+		if (t.startsWith("```")) {
+			t = t.replaceAll("^```(?:json)?\\s*", "");
+			t = t.replaceAll("\\s*```\\s*$", "");
+		}
+		// 첫 '['부터 마지막 ']'까지 잘라냄
+		int i = t.indexOf('[');
+		int j = t.lastIndexOf(']');
+		if (i >= 0 && j > i)
+			return t.substring(i, j + 1).trim();
+		// 단일 오브젝트로 내려온 경우 배열로 감싸기
+		int a = t.indexOf('{');
+		int b = t.lastIndexOf('}');
+		if (a >= 0 && b > a) {
+			String obj = t.substring(a, b + 1).trim();
+			return "[" + obj + "]";
+		}
+		return "[]";
 	}
 }

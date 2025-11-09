@@ -22,7 +22,6 @@ public class ReportController {
 			@RequestParam(required = false) String date, @RequestParam(defaultValue = "loadOrCreate") String mode,
 			@RequestParam(required = false) String generatedBy,
 			@RequestParam(required = false, defaultValue = "false") boolean force) {
-
 		final String p = period.toLowerCase(Locale.ROOT);
 
 		// 일간
@@ -45,8 +44,7 @@ public class ReportController {
 			try {
 				String yearKey = reportService.makePeriodKey("YEAR", s, e);
 				reportService.loadOrCreate(userId, "YEAR", yearKey, s, e,
-						(generatedBy != null && !generatedBy.isBlank()) ? generatedBy : "api", false // 캐시만 사용, 있으면 무조건
-																										// DB본
+						(generatedBy != null && !generatedBy.isBlank()) ? generatedBy : "api", false // 캐시만 사용
 				);
 			} catch (Exception ignore) {
 			}
