@@ -69,3 +69,11 @@ learning-pages-guide.txt
 python/__pycache__/
 python/cache/
 python/venv/
+
+# 환경 변수 파일
+.env
+.env.local
+.env.*.local
+
+# 로컬 개발용 설정 파일 (Git에 올리지 않음)
+application-local.properties

@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    container_name: dementia_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-finalproject}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Spring Boot 백엔드
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: dementia_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # 데이터베이스 연결
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-finalproject}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_SERVER_PORT: ${SPRING_SERVER_PORT:-8080}
+      
+      # API 키
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      TMAP_API_KEY: ${TMAP_API_KEY}
+      TMAP_API_BASE_URL: ${TMAP_API_BASE_URL:-https://apis.openapi.sk.com/tmap}
+      
+      # 도메인
+      DOMAIN: ${DOMAIN:-lx12mammamia.xyz}
+    volumes:
+      - ./backend/uploads:/app/uploads:rw
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Python FastAPI
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.python
+    container_name: dementia_fastapi
+    depends_on:
+      - postgres
+    volumes:
+      - ./python/road_based_gps_data.csv:/app/road_based_gps_data.csv:ro
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    container_name: dementia_nginx
+    depends_on:
+      - backend
+      - fastapi
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./backend/uploads:/usr/share/nginx/html/uploads:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Certbot (SSL 인증서 자동 갱신)
+  certbot:
+    image: certbot/certbot
+    container_name: dementia_certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+
+

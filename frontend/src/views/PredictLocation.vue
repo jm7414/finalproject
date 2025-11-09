@@ -702,13 +702,14 @@ import axios from 'axios'
 const mapContainer = ref(null)
 
 // 카카오맵 API 키
-const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
+// 환경변수에서 API 키 가져오기, 없으면 기본값 사용 (개발용)
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '7e0332c38832a4584b3335bed6ae30d8'
 
 // VWorld API Key
-const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
+const VWORLD_API_KEY = import.meta.env.VITE_VWORLD_API_KEY || '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 
 // Tmap API Key
-const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
+const TMAP_API_KEY = import.meta.env.VITE_TMAP_API_KEY || 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
 // ========================================================================================
 // 데이터 상태 관리
@@ -1117,7 +1118,9 @@ async function fetchPrediction() {
     isLoading.value = true
 
     try {
-        const response = await fetch('http://localhost:8000/api/predict-location', {
+        // 환경변수에서 FastAPI URL 가져오기, 없으면 localhost 사용 (개발용)
+        const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'
+        const response = await fetch(`${fastApiUrl}/api/predict-location`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

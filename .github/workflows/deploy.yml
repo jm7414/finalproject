@@ -1,0 +1,132 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+          cache-dependency-path: backend/pom.xml
+
+      # Frontend 빌드
+      - name: Install Frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        env:
+          VITE_API_BASE_URL: https://${{ secrets.DOMAIN }}
+          VITE_FASTAPI_URL: https://${{ secrets.DOMAIN }}
+          VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          VITE_TMAP_API_KEY: ${{ secrets.TMAP_API_KEY }}
+          VITE_VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
+          VITE_KAKAO_JS_KEY: ${{ secrets.KAKAO_JS_KEY }}
+        run: npm run build
+
+      # 서버에 배포
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "."
+          target: "/home/ubuntu/final-project"
+          strip_components: 0
+          exclude:
+            - ".git"
+            - "node_modules"
+            - ".github"
+            - "*.md"
+            - "learning-pages-guide.txt"
+            - "text"
+            - "python/venv"
+            - "python/__pycache__"
+            - "python/cache"
+            - "backend/target"
+            - "frontend/node_modules"
+            - "frontend/.env.*"
+            - "backend/src/main/resources/application-local.properties"
+
+      # 서버에서 배포 스크립트 실행
+      - name: Run deployment script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/final-project
+            
+            # .env 파일 생성 (서버에만 존재)
+            cat > .env << EOF
+            # 데이터베이스 설정
+            POSTGRES_DB=finalproject
+            POSTGRES_USER=postgres
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            
+            # 서비스 포트
+            SPRING_SERVER_PORT=8080
+            FASTAPI_PORT=8000
+            
+            # API 키
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            TMAP_API_KEY=${{ secrets.TMAP_API_KEY }}
+            TMAP_API_BASE_URL=https://apis.openapi.sk.com/tmap
+            
+            # 도메인
+            DOMAIN=${{ secrets.DOMAIN }}
+            EOF
+            
+            # Frontend 빌드 파일을 nginx가 서빙할 위치로 복사
+            sudo mkdir -p /home/ubuntu/final-project/frontend/dist
+            sudo cp -r frontend/dist/* /home/ubuntu/final-project/frontend/dist/ || true
+            
+            # 업로드 디렉토리 생성
+            mkdir -p backend/uploads/images backend/uploads/profiles
+            
+            # Docker Compose로 서비스 재시작
+            docker-compose down || true
+            docker-compose build --no-cache
+            docker-compose up -d
+            
+            # 서비스 상태 확인
+            sleep 10
+            docker-compose ps
+            docker-compose logs --tail=50 backend
+            docker-compose logs --tail=50 fastapi
+            docker-compose logs --tail=50 nginx
+
+      # 배포 실패 시 알림
+      - name: Check deployment status
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "::error::배포 실패! 서버 로그를 확인하세요."
+            docker-compose logs --tail=100
+            exit 1
