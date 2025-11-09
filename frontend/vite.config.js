@@ -21,14 +21,17 @@ export default defineConfig({
   },
   server: {
     port: 5173,  // Vite 기본 HTTPS 포트 유지
-    https: {
-      key: fs.readFileSync(
-        path.resolve(__dirname, '../backend/src/main/resources/localhost+1-key.pem')
-      ),
-      cert: fs.readFileSync(
-        path.resolve(__dirname, '../backend/src/main/resources/localhost+1.pem')
-      ),
-    },
+    // 개발 환경에서만 HTTPS 인증서 사용 (프로덕션 빌드 시에는 필요 없음)
+    ...(process.env.NODE_ENV !== 'production' && {
+      https: {
+        key: fs.readFileSync(
+          path.resolve(__dirname, '../backend/src/main/resources/localhost+1-key.pem')
+        ),
+        cert: fs.readFileSync(
+          path.resolve(__dirname, '../backend/src/main/resources/localhost+1.pem')
+        ),
+      },
+    }),
     proxy: {
       '/api': {
         target: 'https://localhost:8080',  // Spring Boot HTTPS 포트

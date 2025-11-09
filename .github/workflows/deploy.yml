@@ -36,6 +36,7 @@ jobs:
       - name: Build Frontend
         working-directory: ./frontend
         env:
+          NODE_ENV: production
           VITE_API_BASE_URL: https://${{ secrets.DOMAIN }}
           VITE_FASTAPI_URL: https://${{ secrets.DOMAIN }}
           VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -119,6 +120,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            cd /home/ubuntu/final-project || true
             echo "::error::배포 실패! 서버 로그를 확인하세요."
-            docker-compose logs --tail=100
+            docker-compose logs --tail=100 || echo "Docker Compose 로그를 가져올 수 없습니다."
             exit 1
