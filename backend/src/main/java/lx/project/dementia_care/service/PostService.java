@@ -47,6 +47,13 @@ public class PostService {
     public List<PostListDto> findAllPosts() {
         return postDAO.findAllPosts();
     }
+    
+    // 지겸
+    // 공지 목록 조회
+    @Transactional(readOnly = true)
+    public List<PostListDto> findNotices() {
+        return postDAO.findNotices();
+    }
 
     /**
      * 게시물 생성

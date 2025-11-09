@@ -156,7 +156,7 @@ import connectIcon from '@/assets/images/connect.svg'
 
 const router = useRouter()
 
-// ✅ nextSchedule → upcomingSchedules 배열로 변경
+// nextSchedule → upcomingSchedules 배열로 변경
 const upcomingSchedules = ref([])
 
 /* ===== Kakao Map Loader ===== */
@@ -215,7 +215,7 @@ onMounted(async () => {
     // 지도 초기화 (빈 지도만 표시)
     await initMap()
     
-    // ✅ 오늘, 내일 일정 2개 조회
+    // 오늘, 내일 일정 2개 조회
     await fetchUpcomingSchedules()
   } catch (e) {
     console.error(e)

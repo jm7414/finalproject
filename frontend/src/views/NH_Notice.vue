@@ -1,17 +1,82 @@
 <script setup>
-import { ref } from 'vue';
-
-// 3개의 '채널' 컴포넌트를 모두 불러옵니다. (경로는 실제 파일 위치에 맞게 조정하세요)
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import NH_NoticeBoard from '@/components/NH_NoticeBoard.vue';
+import NH_NoticeWrite from '@/components/NH_NoticeWrite.vue';
 import CommunityMissing from '@/components/CommunityMissing.vue';
-import CommunityBoard from '@/components/CommunityBoard.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
+const router = useRouter();
+
+// Props
+const props = defineProps({
+  plazaId: {
+    type: Number,
+    required: true
+  },
+  userId: {
+    type: Number,
+    required: true
+  }
+});
+
 // 기본으로 보여줄 탭(채널)을 'Post'로 설정
-const activeTab = ref('Post'); 
+const activeTab = ref('Post');
+const noticeView = ref('list'); // 공지 탭 내부 상태: 'list' 또는 'write'
+const plazaMasterNo = ref(null);
+const isPlazaMaster = computed(() => plazaMasterNo.value === props.userId);
+
+// 마운트 시 방장 정보 조회
+onMounted(async () => {
+  await fetchPlazaMasterInfo();
+});
+
+// 플래자 방장 정보 조회
+async function fetchPlazaMasterInfo() {
+  try {
+    const response = await fetch(`/api/plaza/${props.plazaId}/master`);
+    const data = await response.json();
+    plazaMasterNo.value = data.masterUserNo;
+  } catch (error) {
+    console.error('플래자 방장 정보 조회 실패:', error);
+  }
+}
 
 // 탭(채널)을 변경하는 함수
 function changeTab(tabName) {
   activeTab.value = tabName;
+  noticeView.value = 'list'; // 탭 변경 시 공지 리스트로 초기화
+}
+
+// 공지 작성 페이지로 이동
+function goToNoticeWrite() {
+  noticeView.value = 'write';
+}
+
+// 공지 리스트로 돌아가기
+function goToNoticeList() {
+  noticeView.value = 'list';
+}
+
+// 공지 작성 완료
+function handleNoticeCreated() {
+  goToNoticeList();
+}
+
+// 실종자 페이지로 이동
+function goToMissing() {
+  router.push({
+    name: 'CommunityMissing',
+    params: { plazaId: props.plazaId }
+  });
+}
+
+// 이벤트 페이지로 이동
+function goToEvent() {
+  router.push({
+    name: 'CommunityEvent',
+    params: { plazaId: props.plazaId }
+  });
 }
 </script>
 
@@ -27,21 +92,38 @@ function changeTab(tabName) {
 
         <div class="missing-button" 
              :class="{ active: activeTab === 'Missing' }" 
-             @click="changeTab('Missing')">
+             @click="goToMissing">
           <span class="event-button">실종</span>
         </div>
 
         <div class="main-div-9" 
              :class="{ active: activeTab === 'Event' }" 
-             @click="changeTab('Event')">
+             @click="goToEvent">
           <span class="main-div-a">이벤트</span>
         </div>
       </div>
     </div>
 
     <div class="content-area">
+      <!-- 공지 탭: 목록 또는 작성 -->
+      <div v-if="activeTab === 'Post'">
+        <NH_NoticeBoard 
+          v-if="noticeView === 'list'"
+          :plazaId="props.plazaId"
+          :userId="props.userId"
+          :isPlazaMaster="isPlazaMaster"
+          @write-notice="goToNoticeWrite"
+        />
+        <NH_NoticeWrite 
+          v-if="noticeView === 'write'"
+          :plazaId="props.plazaId"
+          :userId="props.userId"
+          @notice-created="handleNoticeCreated"
+          @cancel="goToNoticeList"
+        />
+      </div>
+
       <CommunityMissing v-if="activeTab === 'Missing'" />
-      <CommunityBoard v-if="activeTab === 'Post'" />
       <CommunityEvent v-if="activeTab === 'Event'" />
     </div>
   </div>
@@ -54,10 +136,6 @@ function changeTab(tabName) {
   margin-top: -30px;
   background: #ffffff;
 }
-
-/* 탭 네비게이션 스타일은 이전에 완성했던 
-  디자인의 스타일을 그대로 가져옵니다. 
-*/
 .main-nav {
   width: 100%;
   max-width: 700px;

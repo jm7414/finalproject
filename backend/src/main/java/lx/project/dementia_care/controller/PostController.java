@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -40,8 +41,14 @@ public class PostController {
     }
 
     // 게시판 - board
+    //지겸 수정
     @GetMapping
-    public List<PostListDto> getAllPosts() {
+    public List<PostListDto> getAllPosts(
+    // 쿼리 파라미터 추가
+            @RequestParam(required = false) String noticeCheck) {
+        if ("공지".equals(noticeCheck)) {
+            return postService.findNotices();
+        }
         return postService.findAllPosts();
     }
 
