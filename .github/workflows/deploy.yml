@@ -95,6 +95,21 @@ jobs:
             # 업로드 디렉토리 생성
             mkdir -p backend/uploads/images backend/uploads/profiles
             
+            # SSL 인증서 확인 및 복사 (호스트의 /etc/letsencrypt에서 프로젝트 디렉토리로)
+            mkdir -p certbot/conf certbot/www
+            if [ -d "/etc/letsencrypt/live/lx12mammamia.xyz" ]; then
+              echo "호스트의 SSL 인증서를 프로젝트 디렉토리로 복사합니다."
+              sudo cp -rL /etc/letsencrypt/live certbot/conf/ 2>/dev/null || sudo cp -r /etc/letsencrypt/live certbot/conf/ 2>/dev/null || echo "인증서 복사 실패, 기존 인증서 사용 시도"
+              sudo cp -rL /etc/letsencrypt/archive certbot/conf/ 2>/dev/null || sudo cp -r /etc/letsencrypt/archive certbot/conf/ 2>/dev/null || true
+              sudo chown -R $USER:$USER certbot/conf/ 2>/dev/null || true
+            else
+              echo "경고: /etc/letsencrypt/live/lx12mammamia.xyz 인증서를 찾을 수 없습니다."
+              echo "인증서가 이미 certbot/conf에 있는지 확인합니다."
+              if [ ! -d "certbot/conf/live/lx12mammamia.xyz" ]; then
+                echo "인증서가 없습니다. nginx는 SSL 없이 시작할 수 없습니다."
+              fi
+            fi
+            
             # Docker Compose 명령어 확인 (V2 또는 V1)
             if command -v docker &> /dev/null && docker compose version &> /dev/null; then
               DOCKER_COMPOSE_CMD="docker compose"
