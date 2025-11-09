@@ -844,82 +844,83 @@ function calcElapsedTime() {
     }
 }
 
-// async function fetchPatientAndMissingReport() {
-//     const idToFetch = missingPostId.value; 
+// 홈에서 왔을때 연결된 환자의 ID를 확인하는 함수
+async function findMissingReportId() {
+    const idFromParam = route.params.id;
 
-//     personLoading.value = true;
-//     personError.value = null;
+    if (idFromParam) {
+        // 경로 - 게시판
+        console.log("ID가 있습니다 (게시판 경로):", idFromParam);
+        return parseInt(idFromParam, 10);
+    }
 
-//     try {
-//         let response;
-//         if (idToFetch) {
-//             // 경우 1: ID가 있음 -> 특정 실종자 정보 조회
-//             console.log(`ID(${idToFetch})로 특정 실종자 정보를 조회합니다.`);
-//             response = await axios.get(`/api/missing-persons/${idToFetch}`, {
-//                 withCredentials: true
-//             });
+    // 경로 - 홈
+    console.log("ID가 없습니다 (홈 경로). '내 환자'의 최신 신고 ID를 찾습니다.");
+    try {
+        // 내 환자 정보 조회
+        console.log("[ID 찾기] '내 환자' 정보를 /api/user/my-patient 에서 조회합니다.");
+        const myPatientResponse = await axios.get('/api/user/my-patient', {
+            withCredentials: true
+        });
 
-//         } else {
-//             // 경우 2: ID가 없음 -> '내 환자'의 최신 정보 조회
-//             console.log("ID가 없으므로 '내 환자'의 최신 정보를 조회합니다.");
-            
-//             try {
-//             // (1) 먼저 /api/user/me를 호출해 내 정보를 가져옵니다.
-//             // (이 API가 '내 환자'의 user_no를 반환한다고 가정)
-//             const meResponse = await axios.get('/api/user/me', { withCredentials: true });
-            
-//             // (주의!) /api/user/me가 환자 ID를 patientUserNo 같은 이름으로 준다고 가정
-//             const myPatientId = meResponse.data.patientUserNo; 
-            
-//             if (!myPatientId) {
-//                 throw new Error("로그인 정보에서 연결된 환자를 찾을 수 없습니다.");
-//             }
+        const myPatientId = myPatientResponse.data.userNo;
+        if (!myPatientId) {
+            throw new Error("연결된 환자 정보를 찾을 수 없습니다.");
+        }
 
-//             // (2) 찾은 환자 ID로 최신 신고를 조회
-//             response = await axios.get(
-//                 `/api/missing-persons/patient/${myPatientId}/latest`, 
-//                 { withCredentials: true }
-//             );
-
-//         } catch (err) {
-//             // (3) 404 에러를 "실패"가 아닌 "신고 없음"으로 처리
-//             if (err.response && err.response.status === 404) {
-//                 console.log("이 환자는 현재 실종 신고가 없습니다.");
-//                 personError.value = "현재 등록된 실종 신고가 없습니다.";
-//                 // 맵 로딩 모달을 멈추게 하는 로직이 필요 (예: stopMapLoading())
-//             } else {
-//                 console.error("내 환자 정보 조회 실패:", err);
-//                 personError.value = "환자 정보를 불러올 수 없습니다.";
-//             }
-//             personLoading.value = false; // 로딩 끝
-//             return; // catch에서 함수 종료
-//         }
-//         }
-
-//         personDetail.value = response.data;
-//         console.log('✅ 실종자 상세 정보:', personDetail.value);
-
-//         // (중요) ID가 없던 경우, 지금 받은 ID로 missingPostId.value를 채워줍니다.
-//         if (!idToFetch) {
-//             missingPostId.value = response.data.missingPostId;
-//         }
-
-//         // 시간 변수 설정
-//         if (response.data && response.data.reportedAt) {
-//             missingTimeDB.value = new Date(response.data.reportedAt).getTime();
-//         }
-
-//     } catch (err) {
-//         console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err);
-//         personError.value = "상세 정보를 불러올 수 없습니다.";
-//     } finally {
-//         personLoading.value = false;
+        // 환자 ID로 최신 실종 신고 조회
+        console.log(`[ID 찾기] 환자 ID(${myPatientId})로 '최신 실종 신고'를 조회합니다.`);
+        const reportResponse = await axios.get(
+            `/api/missing-persons/patient/${myPatientId}/latest`, 
+            { withCredentials: true }
+        );
         
-//         if (missingPostId.value) {
-//             fetchParticipants();
-//         }
-//     }
-// }
+        // 실종 신고 ID 반환
+        return reportResponse.data.missingPostId; 
+
+    } catch (err) {
+        if (err.response && err.response.status === 404) {
+            console.log("[ID 찾기] 현재 등록된 실종 신고가 없습니다. (404)");
+            personError.value = "현재 등록된 실종 신고가 없습니다.";
+        } else {
+            console.error("❌ [ID 찾기] 실패:", err.message);
+            personError.value = err.message || "정보를 불러올 수 없습니다.";
+        }
+        return null;
+    }
+}
+
+// 실종자의 정보를 조회하는 함수
+async function fetchPatientAndMissingReport() {
+    // (이 함수는 missingPostId.value가 있다는 것이 보장될 때 호출됨)
+    
+    personLoading.value = true;
+    personError.value = null; // (오류 메시지 초기화 - ID 찾기 오류를 덮어쓰기 위함)
+
+    try {
+        console.log(`[데이터 로드] ID(${missingPostId.value})로 실종자 정보를 조회합니다.`);
+        const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
+            withCredentials: true
+        });
+
+        personDetail.value = response.data;
+        console.log('✅ 실종자 상세 정보:', personDetail.value);
+
+        if (response.data && response.data.reportedAt) {
+            missingTimeDB.value = new Date(response.data.reportedAt).getTime();
+        }
+        
+        fetchParticipants(); // 참가자 조회
+        return true; // 성공
+
+    } catch (err) {
+        console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err);
+        personError.value = "실종 신고 정보를 불러오는 데 실패했습니다.";
+        return false; // 실패
+    } finally {
+        personLoading.value = false;
+    }
+}
 
 function formatSimpleDateTime(dateString) {
     if (!dateString) return '시간 정보 없음';
@@ -1357,36 +1358,42 @@ async function initializeWithJjamTong() {
 // 카카오맵 초기화
 // ========================================================================================
 
-onMounted(() => {
-    // 실종자 확인용
-    console.log("페이지 로드됨. URL 파라미터:", route.params); 
-    const idFromParam = route.params.id; 
-    console.log("읽어온 ID (idFromParam):", idFromParam);
+onMounted(async () => {
+    isLoading.value = true;
+    selectedType.value = 'info';
 
-    if (idFromParam) {
-        // ID가 있는 경우 (모달에서 옴)
-        missingPostId.value = parseInt(idFromParam, 10);
-        console.log("ID를 사용합니다:", missingPostId.value);
+    // 불러올 ID 찾기 
+    const idToLoad = await findMissingReportId();
+
+    // ID 찾기 결과에 따라서 갈라짐
+    if (idToLoad) {
+        // ID를 찾았음
+        console.log("최종 로드할 ID:", idToLoad);
+        missingPostId.value = idToLoad; // ⭐ 핵심: 찾은 ID를 state에 저장
         
-        fetchPatientAndMissingReport();
-
+        // 4 찾은 ID로 실제 데이터 불러오기
+        const fetchSuccess = await fetchPatientAndMissingReport();
+        
+        if (fetchSuccess) {
+            // 데이터 로드 성공 -> 지도 그리기
+            try {
+                loadKakaoMap(mapContainer.value);
+                setTimeout(() => initializeWithJjamTong(), 1000); 
+            } catch (e) {
+                console.error("지도 초기화 중 오류:", e);
+                personError.value = "지도 로딩 중 오류가 발생했습니다.";
+                isLoading.value = false;
+            }
+        } else {
+            // 데이터 로드 실패 (ID는 맞았는데 API가 실패)
+            isLoading.value = false; // 로딩 끄기
+        }
     } else {
-        // ID가 없는 경우 (메인에서 옴)
-        console.log("ID가 없습니다. '내 환자' 로직을 실행합니다.");
-        fetchPatientAndMissingReport(); // ID 없이 호출
+        // ID를 못 찾았음 (신고가 없거나(404), 환자 연결이 없거나)
+        console.log("로드할 ID가 없습니다. (신고 없음 또는 오류)");
+        isLoading.value = false; // 로딩 끄기
     }
-    
-    try {
-        loadKakaoMap(mapContainer.value)
-        
-        // ⭐ jjamTong 데이터로 초기화
-        setTimeout(() => {
-            initializeWithJjamTong()
-        }, 1000)        
-    } finally {
-        selectedType.value = 'info'
-    }
-})
+});
 
 const loadKakaoMap = (container) => {
     const script = document.createElement('script')
