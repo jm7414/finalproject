@@ -294,7 +294,7 @@ async function deleteComment(commentId) {
 /* 전체 페이지 컨테이너 */
 .page-container {
   width: 100%;
-  margin-top: -20px;
+  margin-top: 70px;
   background: #FAFAFA;
   font-family: 'Inter', sans-serif;
   height: calc(100vh - 90px - 90px);

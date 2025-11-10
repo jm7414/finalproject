@@ -1,11 +1,11 @@
 <template>
   <div class="mobile-frame">
     <div class="app-layout">
-      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
+      <AppHeader v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isGame)" />
       <main class="main-content" :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage || MissingReport || PredictLocation || CommunityPost || CommunityPostWrite, 'neighbor-page': isNeighborPage }">
         <RouterView />
       </main>
-      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isNeighborPage)" />
+      <AppFooter v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isNeighborPage || isGame)" />
     </div>
     
   </div>
@@ -91,6 +91,11 @@ const CommunityPost = computed(() => {
 // 게시물 페이지
 const CommunityPostWrite = computed(() => {
   return route.name === 'CommunityPostWrite'
+})
+
+// 두뇌 게임
+const isGame = computed(() => {
+  return route.name === 'game'
 })
 
 /* ===== 안심존 이탈 알림 시스템 ===== */
