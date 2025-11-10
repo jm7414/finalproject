@@ -1,12 +1,12 @@
 <!-- src/views/Report.vue -->
 <template>
   <div class="container-sm" style="max-width:414px;">
-    <!-- 기간 선택 -->
+    <!-- 상단: 기간 선택 -->
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
           <button
-            v-for="p in ['day','week','month','year']"
+            v-for="p in ['day', 'week', 'month', 'year']"
             :key="p"
             class="btn btn-sm"
             :class="period === p ? 'btn-primary' : 'btn-outline-secondary'"
@@ -17,11 +17,10 @@
         </div>
 
         <div class="row g-2 align-items-end">
-          <!-- DAY -->
+          <!-- 오늘 기분 -->
           <template v-if="period === 'day'">
-            <div class="col-12">
-              <label class="form-label small mb-1">날짜</label>
-              <input type="date" class="form-control" v-model="inputs.onlyThisDay" />
+            <div class="col-12 small text-secondary">
+              오늘 상태를 자동으로 업데이트해요. (약 {{ Math.round(POLL_MS / 1000) }}초 간격)
             </div>
           </template>
 
@@ -56,55 +55,93 @@
               <input type="number" class="form-control" v-model.number="inputs.year" min="2000" max="2100" />
             </div>
           </template>
-
-          <!-- 액션 -->
-          <div class="col-auto d-flex gap-2">
-            <button class="btn btn-primary" @click="loadOrCreate">
-              {{ period === 'day' ? '오늘의 기록' : 'AI건강체크' }}
-            </button>
-          </div>
         </div>
 
-        <div v-if="rangeLabel" class="text-secondary small mt-2">기간: {{ rangeLabel }}</div>
+        <div v-if="rangeLabel && period !== 'day'" class="text-secondary small mt-2">
+          기간: {{ rangeLabel }}
+        </div>
       </div>
     </div>
 
-    <!-- 로딩 / 에러 -->
-    <div v-if="loading" class="text-center py-5 text-secondary">처리 중…</div>
+    <!-- 로딩: 단계형 애니메이션 -->
+    <div v-if="loading" class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="fw-semibold">AI 리포트를 준비하고 있어요</div>
+          <div class="small text-secondary">{{ yearPercent }}%</div>
+        </div>
+
+        <!-- 진행률 바 -->
+        <div class="progress my-2" style="height:8px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated"
+               role="progressbar"
+               :style="{ width: yearPercent + '%'}">
+          </div>
+        </div>
+
+        <!-- 단계 리스트 -->
+        <ul class="list-unstyled mt-3 mb-0 small">
+          <li v-for="(s, i) in yearSteps" :key="i" class="d-flex align-items-start mb-2">
+            <span class="step-dot me-2"
+                  :class="{
+                    done: i < yearStepIndex,
+                    active: i === yearStepIndex
+                  }"></span>
+            <div class="flex-grow-1">
+              <span :class="{'text-secondary': i > yearStepIndex}">
+                {{ s.label }}<span v-if="i === yearStepIndex" class="dots">{{ dots }}</span>
+              </span>
+              <div v-if="i === yearStepIndex" class="shimmer mt-1"></div>
+            </div>
+            <span v-if="i < yearStepIndex" class="ms-2 text-success">✔</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 에러 -->
     <div v-else-if="error" class="alert alert-danger mb-3">{{ error }}</div>
 
     <!-- 기록 부족 안내 (주/월/연 전용) -->
     <div v-else-if="insufficient.flag && period !== 'day'" class="alert alert-warning border-0 mb-3">
       <div class="fw-semibold mb-1">기록이 부족합니다</div>
       <div class="small">
-        해당 기간 전체 기록이 필요해요.
-        <template v-if="insufficient.expected !== null">
-          (필요: {{ insufficient.expected }}일, 현재: {{ insufficient.covered }}일)
+        이 보고서는 <b>주 5일</b> 또는 <b>월·연 70% 이상</b> 기록 시 열립니다.
+        <template v-if="insufficient.required !== null">
+          (필요: ≥{{ insufficient.required }}일/총 {{ insufficient.total }}일,
+          현재: {{ insufficient.covered ?? '—' }}일
+          <template v-if="insufficient.covered != null">
+            , 남은: {{ Math.max(0, insufficient.required - insufficient.covered) }}일
+          </template>
+          )
         </template>
       </div>
     </div>
 
-    <!-- ===================== 일간: 이모티콘 + 한줄 메시지 ===================== -->
+    <!-- ===================== 오늘 기분 ===================== -->
     <div v-if="!loading && !error && period === 'day'" class="card border-0 shadow-sm mb-3">
       <div class="card-body d-flex flex-column align-items-center justify-content-center" style="min-height:180px;">
-        <div v-if="dailyResp && dailyResp.emoji" style="font-size:72px; line-height:1;">
-          {{ dailyResp.emoji }}
-        </div>
-        <div v-else class="text-secondary small">데이터가 없어요.</div>
+        <div class="fw-semibold mb-2">오늘 기분</div>
 
-        <!-- 한줄 메시지 -->
+        <div style="font-size:72px; line-height:1;">
+          <template v-if="dailyResp && (dailyResp.coveredDays === 0 || dailyResp.level === 'none')">😴</template>
+          <template v-else-if="dailyResp && dailyResp.emoji">{{ dailyResp.emoji }}</template>
+          <template v-else>😴</template>
+        </div>
+
         <div v-if="dailyMessage" class="mt-3 text-center small text-secondary">
           {{ dailyMessage }}
         </div>
+
+        <div class="small text-secondary mt-2" v-if="lastFetchedAt">
+          마지막 업데이트: {{ lastFetchedAt }}
+        </div>
       </div>
     </div>
-    <!-- ===================================================================== -->
+    <!-- ===================================================== -->
 
     <!-- CARE-5 레이더 (주/월) -->
-    <div
-      class="card border-0 shadow-sm mb-3"
-      v-if="!loading && !insufficient.flag && (period === 'week' || period === 'month')"
-    >
+    <div class="card border-0 shadow-sm mb-3" v-if="!loading && !insufficient.flag && (period === 'week' || period === 'month')">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div class="fw-semibold">CARE-5 레이더</div>
@@ -124,7 +161,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div class="fw-semibold">연간 추이 (월별 총점)</div>
-          <div class="small text-secondary">20–80점</div>
+          <div class="small text-secondary">40–70점</div>
         </div>
         <template v-if="yearTotals && yearTotals.length">
           <div class="line-wrap"><canvas ref="lineRef" /></div>
@@ -154,18 +191,15 @@
     </template>
 
     <!-- 주간 ‘한 줄 작업’ -->
-    <div
-      class="alert alert-primary border-0"
-      v-if="!loading && !insufficient.flag && period === 'week' && quickActionText"
-    >
+    <div class="alert alert-primary border-0" v-if="!loading && !insufficient.flag && period === 'week' && quickActionText">
       <div class="fw-semibold mb-1">이번 주 한 줄 작업</div>
       <div>{{ quickActionText }}</div>
     </div>
 
-    <!-- 항목별 자세히 보기 (AI + 규칙 하이브리드 그대로 표시) -->
+    <!-- 항목별 자세히 보기 (연간 포함) -->
     <div
       class="card border-0 shadow-sm mb-3"
-      v-if="!loading && !insufficient.flag && hybridDetailItems.length && (period === 'week' || period === 'month')"
+      v-if="!loading && !insufficient.flag && hybridDetailItems.length && period !== 'day'"
     >
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center">
@@ -187,10 +221,9 @@
                 <div class="d-flex justify-content-between">
                   <div class="fw-semibold">
                     {{ item.label }}
-                    <span
-                      class="badge ms-1"
-                      :class="item.source === 'ai' ? 'text-bg-light' : 'text-bg-secondary'"
-                    >{{ item.source === 'ai' ? 'AI' : '가이드' }}</span>
+                    <span class="badge ms-1" :class="item.source === 'ai' ? 'text-bg-light' : 'text-bg-secondary'">
+                      {{ item.source === 'ai' ? 'AI' : '가이드' }}
+                    </span>
                   </div>
                   <div class="text-secondary">{{ item.value }} / 20</div>
                 </div>
@@ -200,7 +233,7 @@
                     class="progress-bar"
                     role="progressbar"
                     :style="{ width: Math.round((item.value || 0) / 20 * 100) + '%', backgroundColor: team }"
-                  ></div>
+                  />
                 </div>
 
                 <div class="text-secondary" v-if="validText(item.text)">{{ item.text }}</div>
@@ -212,7 +245,7 @@
       </div>
     </div>
 
-    <!-- 랜덤 한 줄 팁 (보조) — 일간에는 노출 안 함 -->
+    <!-- 랜덤 한 줄 팁 (오늘 기분에는 숨김) -->
     <div class="alert alert-light border" v-if="!loading && tipText && period !== 'day'">
       <div class="fw-semibold mb-1">오늘의 작은 팁</div>
       <div>{{ tipText }}</div>
@@ -224,38 +257,60 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import axios from 'axios'
 import {
-  Chart, RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend,
-  LineController, LinearScale, CategoryScale
+  Chart,
+  RadarController,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+  LineController,
+  LinearScale,
+  CategoryScale
 } from 'chart.js'
 
 Chart.register(
-  RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend,
-  LineController, LinearScale, CategoryScale
+  RadarController,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+  LineController,
+  LinearScale,
+  CategoryScale
 )
 
 const team = '#657AE2'
 
+/* ====== 자동 갱신 설정 (오늘 기분) ====== */
+const POLL_MS = 90 * 1000
+let pollTimer = null
+let midnightTimer = null
+
 /* ---------- 상태 ---------- */
 const userId = ref(null)
-const period = ref('day') // 기본: 일간
+const period = ref('day') // 기본: 오늘 기분
 const inputs = ref({
-  onlyThisDay: todayStr(),
   anyDayInWeek: todayStr(),
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1
 })
-const report = ref(null)     // 주/월 응답(ReportVO)
-const yearResp = ref(null)   // 연간 응답 { totals, series, details, ai }
-const dailyResp = ref(null)  // 일간 응답 { userId, date, score0to100, level, emoji }
+const report = ref(null)
+const yearResp = ref(null)
+const dailyResp = ref(null)
 
 const loading = ref(false)
 const error = ref('')
 const detailOpen = ref(false)
+const lastFetchedAt = ref('')
 
-/* “기록 부족” 상태 (주/월/연 전용) */
-const insufficient = ref({ flag: false, expected: null, covered: null })
+/* “기록 부족” 상태 */
+const insufficient = ref({ flag: false, required: null, covered: null, total: null })
 
-/* 랜덤 팁 (주/월/연만 노출) */
+/* 랜덤 팁 */
 const tips = [
   '하루 물 6~8잔을 목표로 해요. 화장실 가까운 자리의 작은 물병이 도움돼요.',
   '일정은 크게 한 장에! 오늘 해야 할 일 3가지만 적어 같이 확인해요.',
@@ -264,39 +319,87 @@ const tips = [
   '복약은 식사와 묶어 습관화하고, 약 상자는 요일별로 미리 채워두세요.'
 ]
 const tipText = ref('')
-function pickTip() { tipText.value = tips[Math.floor(Math.random() * tips.length)] }
+function pickTip() {
+  tipText.value = tips[Math.floor(Math.random() * tips.length)]
+}
 
 /* 차트 refs */
-const radarRef = ref(null); let radarChart = null
-const lineRef = ref(null); let lineChart = null
+const radarRef = ref(null)
+let radarChart = null
+const lineRef = ref(null)
+let lineChart = null
+
+/* ---------- 연간 로더(단계형) ---------- */
+const yearSteps = ref([
+  { label: 'AI가 오늘의 기록을 모으는 중' },
+  { label: 'AI가 기록을 분석하는 중' },
+  { label: 'AI가 그래프를 그리는 중' },
+  { label: 'AI가 항목을 정리하는 중' }
+])
+const yearStepIndex = ref(0)
+const yearPercent = ref(0)
+const dots = ref('')
+
+let stepTimer = null
+let percentTimer = null
+let dotTimer = null
+
+function startYearLoader() {
+  stopYearLoader()
+  yearStepIndex.value = 0
+  yearPercent.value = 0
+  dots.value = ''
+  // 점(.) 애니메이션
+  dotTimer = setInterval(() => {
+    dots.value = dots.value.length >= 3 ? '' : dots.value + '.'
+  }, 400)
+  // 단계 전환(2.2초 간격)
+  stepTimer = setInterval(() => {
+    if (yearStepIndex.value < yearSteps.value.length - 1) {
+      yearStepIndex.value += 1
+    }
+  }, 2200)
+  // 진행률(최대 95%까지 자연 증가)
+  percentTimer = setInterval(() => {
+    const cap = 95
+    if (yearPercent.value < cap) {
+      yearPercent.value += Math.max(1, Math.round((cap - yearPercent.value) * 0.07))
+    }
+  }, 180)
+}
+function finishYearLoader() {
+  yearPercent.value = 100
+  dots.value = ''
+}
+function stopYearLoader() {
+  if (stepTimer) { clearInterval(stepTimer); stepTimer = null }
+  if (percentTimer) { clearInterval(percentTimer); percentTimer = null }
+  if (dotTimer) { clearInterval(dotTimer); dotTimer = null }
+}
 
 /* ---------- 헬퍼 ---------- */
-function periodLabel(p) {
-  return p === 'day' ? '일간' : p === 'week' ? '주간' : p === 'month' ? '월간' : '연간'
-}
+function periodLabel(p) { return p === 'day' ? '오늘 기분' : p === 'week' ? '주간' : p === 'month' ? '월간' : '연간' }
 function signed(n) { return (n >= 0 ? '+' : '') + n }
 function pad2(n) { return String(n).padStart(2, '0') }
 function todayStr() { return fmtLocal(new Date()) }
 function fmtLocal(d) { const y = d.getFullYear(), m = pad2(d.getMonth() + 1), day = pad2(d.getDate()); return `${y}-${m}-${day}` }
 function addDays(d, n) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x }
+function nowTimeLabel() { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}` }
 
 /* 기간 계산 */
 function weekRange(anyIso) {
-  const d = new Date(anyIso + 'T00:00:00')
+  const d = new Date((anyIso || todayStr()) + 'T00:00:00')
   const dow = d.getDay() || 7
   const mon = addDays(d, -(dow - 1))
   const nextMon = addDays(mon, 7)
-  return { start: fmtLocal(mon), end: fmtLocal(nextMon) }
+  return { start: fmtLocal(mon), end: fmtLocal(nextMon) } // [start, end)
 }
 function monthRange(y, m) { return { start: fmtLocal(new Date(y, m - 1, 1)), end: fmtLocal(new Date(y, m, 1)) } }
 function yearRange(y) { return { start: fmtLocal(new Date(y, 0, 1)), end: fmtLocal(new Date(y + 1, 0, 1)) } }
 
 /* 상단 라벨 */
 const rangeLabel = computed(() => {
-  if (period.value === 'day') {
-    return inputs.value.onlyThisDay || ''
-  }
-  if (report.value?.range?.start && report.value?.range?.end) {
+  if (report.value?.range?.start && report.value?.range?.end && period.value !== 'day') {
     return `${report.value.range.start} ~ ${report.value.range.end} (${report.value.range.label})`
   }
   if (period.value === 'year') {
@@ -309,7 +412,7 @@ const weekRangeLabelText = computed(() => {
   const r = weekRange(inputs.value.anyDayInWeek || todayStr())
   const s = new Date(r.start + 'T00:00:00')
   const e = addDays(new Date(r.end + 'T00:00:00'), -1)
-  return `${s.getFullYear()}.${pad2(s.getMonth() + 1)}.${pad2(s.getDate())} ~ ${e.getMonth() + 1}.${e.getDate()}`
+  return `${s.getFullYear()}.${pad2(s.getMonth() + 1)}.${pad2(s.getDate())} ~ ${pad2(e.getMonth() + 1)}.${pad2(e.getDate())}`
 })
 
 /* -------- JSON 파서 -------- */
@@ -318,9 +421,7 @@ function parseJsonMaybeTwice(x) {
   if (typeof x !== 'string') return x
   try {
     const a = JSON.parse(x)
-    if (typeof a === 'string') {
-      try { return JSON.parse(a) } catch { return a }
-    }
+    if (typeof a === 'string') { try { return JSON.parse(a) } catch { return a } }
     return a
   } catch { return null }
 }
@@ -349,7 +450,7 @@ const deltaScore = computed(() => {
   return (typeof d === 'number') ? d : '-'
 })
 
-/* ✅ AI 메타(뱃지용) - 주/월/연 전용 */
+/* AI 메타 */
 const aiMeta = computed(() => {
   if (period.value === 'year') {
     const meta = yearResp.value?.ai
@@ -361,10 +462,14 @@ const aiMeta = computed(() => {
   return { status: meta?.status ?? ((sec?.details?.length) ? 'ok' : 'failed') }
 })
 
-/* ✅ 항목별 자세히 보기 (주/월) */
+/* 항목별 자세히 보기 (연간 대응) */
 const hybridDetailItems = computed(() => {
-  if (period.value === 'year' || period.value === 'day') return []
-  const details = getSections(report.value)?.details
+  if (period.value === 'day') return []
+  const details =
+    period.value === 'year'
+      ? (Array.isArray(yearResp.value?.details) ? yearResp.value.details : [])
+      : (getSections(report.value)?.details || [])
+
   if (Array.isArray(details) && details.length) {
     return details.map(d => ({
       key: d.key,
@@ -395,20 +500,19 @@ const quickActionText = computed(() => {
 /* 연간 보조 계산 */
 const yearTotals = computed(() => Array.isArray(yearResp.value?.totals) ? yearResp.value.totals : [])
 
-/* ---------- 일간 한줄 메시지 ---------- */
+/* ---------- 오늘 기분: 한줄 메시지 ---------- */
 const dailyMessage = computed(() => {
   if (!dailyResp.value) return ''
+  if (dailyResp.value.coveredDays === 0 || dailyResp.value.level === 'none') {
+    return '오늘은 기록이 없어요. 편히 쉬고, 내일 한 항목만 체크해볼까요?'
+  }
   const score = Number(dailyResp.value.score0to100 ?? 0)
   const lvl = (dailyResp.value.level || inferLevel(score)).toLowerCase()
   if (lvl === 'good') return '오늘은 기분과 컨디션이 좋아 보여요. 행복한 하루 보내세요!'
-  if (lvl === 'mid')  return '오늘은 무난한 컨디션이에요. 한 가지씩 천천히 해보면 충분해요.'
+  if (lvl === 'mid') return '오늘은 무난한 컨디션이에요. 한 가지씩 천천히 해보면 충분해요.'
   return '오늘은 조금 지치실 수 있어요. 천천히 쉬고 안전을 먼저 챙겨요.'
 })
-function inferLevel(score) {
-  if (score >= 67) return 'good'
-  if (score >= 34) return 'mid'
-  return 'low'
-}
+function inferLevel(score) { if (score >= 67) return 'good'; if (score >= 34) return 'mid'; return 'low' }
 
 /* ---------- 차트 ---------- */
 async function renderRadar() {
@@ -419,16 +523,8 @@ async function renderRadar() {
     type: 'radar',
     data: {
       labels: ['단기·작업기억', '장기기억', '지남력', '일상기능', '행동·기분·안전'],
-      datasets: [{
-        label: '이번 기간',
-        data: currentArray.value,
-        fill: true,
-        backgroundColor: 'rgba(101,122,226,0.20)',
-        borderColor: team,
-        pointBackgroundColor: team,
-        pointRadius: 3,
-        borderWidth: 2
-      }]
+      datasets: [{ label: '이번 기간', data: currentArray.value, fill: true,
+        backgroundColor: 'rgba(101,122,226,0.20)', borderColor: team, pointBackgroundColor: team, pointRadius: 3, borderWidth: 2 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -442,90 +538,105 @@ async function renderYearLine() {
   const ctx = lineRef.value?.getContext?.('2d'); if (!ctx) return
   const totals = yearTotals.value || []
   if (lineChart) { lineChart.destroy(); lineChart = null }
-  const labels = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+  const labels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
   lineChart = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: '월별 총점(20–80)',
-        data: totals,
-        fill: false,
-        borderColor: team,
-        pointBackgroundColor: team,
-        pointRadius: 3,
-        borderWidth: 2
-      }]
-    },
+    data: { labels, datasets: [{ label: '월별 총점(20–80)', data: totals, fill: false,
+      borderColor: team, pointBackgroundColor: team, pointRadius: 3, borderWidth: 2 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { x: { type: 'category' }, y: { type: 'linear', min: 20, max: 80, ticks: { stepSize: 10 } } },
+      scales: { x: { type: 'category' }, y: { type: 'linear', min: 40, max: 70, ticks: { stepSize: 10 } } },
       plugins: { legend: { display: false }, tooltip: { enabled: true } },
       elements: { line: { tension: 0.2 } }
     }
   })
 }
 
-/* ---------- API ---------- */
-function computeRange() {
-  if (period.value === 'day') {
-    return { date: inputs.value.onlyThisDay, apiPeriod: 'daily' }
-  }
-  if (period.value === 'week') {
-    const r = weekRange(inputs.value.anyDayInWeek)
-    return { start: r.start, end: r.end, apiPeriod: 'weekly' }
-  }
-  if (period.value === 'month') {
-    const r = monthRange(inputs.value.year, inputs.value.month)
-    return { start: r.start, end: r.end, apiPeriod: 'monthly' }
-  }
-  const r = yearRange(inputs.value.year)
-  return { start: r.start, end: r.end, apiPeriod: 'yearly' }
+/* ---------- 요구일수 계산 (주 5일 / 월·연 70%) ---------- */
+function computeRequirement(periodKind, startIso, endIso) {
+  if (periodKind === 'week') return { total: 7, required: 5 }
+  const d0 = new Date(startIso + 'T00:00:00')
+  const d1 = new Date(endIso + 'T00:00:00')
+  const total = Math.max(0, Math.round((d1 - d0) / 86400000))
+  const required = Math.ceil(total * 0.7)
+  return { total, required }
 }
 
+/* ---------- API ---------- */
+function computeRange() {
+  if (period.value === 'day') { return { date: todayStr(), apiPeriod: 'daily' } }
+  if (period.value === 'week') { const r = weekRange(inputs.value.anyDayInWeek); return { start: r.start, end: r.end, apiPeriod: 'weekly' } }
+  if (period.value === 'month') { const r = monthRange(inputs.value.year, inputs.value.month); return { start: r.start, end: r.end, apiPeriod: 'monthly' } }
+  const r = yearRange(inputs.value.year); return { start: r.start, end: r.end, apiPeriod: 'yearly' }
+}
+
+async function fetchTodayMoodOnce() {
+  if (!userId.value) return
+  try {
+    const { date } = computeRange()
+    const { data } = await axios.get('/api/ai/report', { params: { userId: userId.value, period: 'daily', date } })
+    dailyResp.value = data || null
+    lastFetchedAt.value = nowTimeLabel()
+  } catch (e) { console.error(e) }
+}
+
+/* 메인 호출 (주/월/연 자동 갱신 대상) */
 async function loadOrCreate() {
+  if (!userId.value) {
+    error.value = '환자 연결 정보가 없습니다. 먼저 환자를 연결해 주세요.'
+    report.value = null
+    yearResp.value = null
+    insufficient.value = { flag: true, required: null, covered: null, total: null }
+    return
+  }
+
   error.value = ''
-  insufficient.value = { flag: false, expected: null, covered: null }
+  insufficient.value = { flag: false, required: null, covered: null, total: null }
   report.value = null
   yearResp.value = null
-  dailyResp.value = null
 
-  if (!userId.value) { error.value = '환자 연결 정보가 없습니다.'; return }
+  if (period.value === 'day') { await fetchTodayMoodOnce(); return }
 
-  const { start, end, apiPeriod, date } = computeRange()
+  const { start, end, apiPeriod } = computeRange()
   try {
     loading.value = true
-
-    if (apiPeriod === 'daily') {
-      const { data } = await axios.get('/api/ai/report', {
-        params: { userId: userId.value, period: 'daily', date }
-      })
-      dailyResp.value = data || null
-      return
-    }
+    if (apiPeriod === 'yearly') startYearLoader()
 
     const { data } = await axios.get('/api/ai/report', {
       params: { userId: userId.value, period: apiPeriod, start, end, mode: 'loadOrCreate' }
     })
 
     if (data && data.eligibility === 'INSUFFICIENT') {
-      insufficient.value = { flag: true, expected: (data.expectedDays ?? null), covered: (data.coveredDays ?? null) }
+      const { total, required } = computeRequirement(period.value, start, end)
+      insufficient.value = { flag: true, required, covered: (data.coveredDays ?? null), total }
       return
     }
 
     if (period.value === 'year' && (Array.isArray(data?.totals) || Array.isArray(data?.series) || Array.isArray(data?.details))) {
+      const totals = Array.isArray(data?.totals) ? data.totals : []
+      const hasMeaningful =
+        (totals.length && totals.some(v => (v ?? 0) > 0)) ||
+        (Array.isArray(data?.details) && data.details.length > 0)
+      if (!hasMeaningful) {
+        const { total, required } = computeRequirement('year', start, end)
+        insufficient.value = { flag: true, required, covered: 0, total }
+        return
+      }
       yearResp.value = data
       return
     }
 
-    if (data) { report.value = data }
-    else { insufficient.value = { flag: true, expected: null, covered: null } }
-
-    pickTip()
+    report.value = data || null
+    if (!data) {
+      const { total, required } = computeRequirement(period.value, start, end)
+      insufficient.value = { flag: true, required, covered: null, total }
+    }
+    if (period.value !== 'day') pickTip()
   } catch (e) {
     console.error(e)
     error.value = `응답 오류(${e?.response?.status ?? '???'})`
   } finally {
+    if (period.value === 'year') { finishYearLoader(); stopYearLoader() }
     loading.value = false
     await nextTick()
     if (period.value === 'year') renderYearLine()
@@ -535,48 +646,129 @@ async function loadOrCreate() {
   }
 }
 
-/* 초기화 */
+/* ====== 오늘 기분 자동 갱신 제어 ====== */
+function startDailyAutoRefresh() {
+  stopDailyAutoRefresh()
+  fetchTodayMoodOnce()
+  if (!document.hidden) {
+    pollTimer = setInterval(() => { if (!document.hidden && period.value === 'day') fetchTodayMoodOnce() }, POLL_MS)
+  }
+  scheduleMidnightRefresh()
+}
+function stopDailyAutoRefresh() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  if (midnightTimer) { clearTimeout(midnightTimer); midnightTimer = null }
+}
+function scheduleMidnightRefresh() {
+  if (midnightTimer) { clearTimeout(midnightTimer); midnightTimer = null }
+  const now = new Date()
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5)
+  const ms = Math.max(0, midnight.getTime() - now.getTime())
+  midnightTimer = setTimeout(async () => { await fetchTodayMoodOnce(); scheduleMidnightRefresh() }, ms)
+}
+function onVisibilityChange() {
+  if (period.value !== 'day') return
+  if (document.hidden) {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  } else {
+    fetchTodayMoodOnce()
+    if (!pollTimer) {
+      pollTimer = setInterval(() => { if (!document.hidden && period.value === 'day') fetchTodayMoodOnce() }, POLL_MS)
+    }
+  }
+}
+
+/* ====== 디바운스 ====== */
+function debounce(fn, ms = 400) {
+  let t = null
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms) }
+}
+const loadOrCreateDebounced = debounce(() => { if (period.value !== 'day') loadOrCreate() }, 400)
+
+/* 초기화 & 워처 */
 function setPeriod(p) {
   period.value = p; detailOpen.value = false
-  if (p === 'day') {
-    inputs.value.onlyThisDay = todayStr()
-  } else if (p === 'week') {
+  if (p === 'week') {
     inputs.value.anyDayInWeek = todayStr()
   } else if (p === 'month') {
     const now = new Date()
     inputs.value.year = now.getFullYear()
     inputs.value.month = now.getMonth() + 1
-  } else {
+  } else if (p === 'year') {
     inputs.value.year = new Date().getFullYear()
   }
-  if (p !== 'day') pickTip()
+
+  if (p === 'day') {
+    startDailyAutoRefresh()
+  } else {
+    stopDailyAutoRefresh()
+    loadOrCreateDebounced()
+    pickTip()
+  }
 }
+
 onMounted(async () => {
   try {
     const me = await fetch('/api/user/my-patient', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null).catch(() => null)
-    userId.value = me?.userNo ?? me?.id ?? me ?? 4 // 없으면 4로 테스트
+    userId.value = me?.userNo ?? me?.id ?? null
   } finally {
-    if (period.value !== 'day') pickTip()
+    startDailyAutoRefresh()
+    document.addEventListener('visibilitychange', onVisibilityChange)
     await nextTick()
-    if (period.value === 'year') renderYearLine()
-    else if (period.value === 'week' || period.value === 'month') renderRadar()
   }
 })
-watch([report, period, yearResp], async () => {
+
+watch(() => inputs.value.anyDayInWeek, () => { if (period.value === 'week') loadOrCreateDebounced() })
+watch(() => inputs.value.month, () => { if (period.value === 'month') loadOrCreateDebounced() })
+watch(() => inputs.value.year, () => { if (period.value === 'month' || period.value === 'year') loadOrCreateDebounced() })
+watch([report, period, yearResp, insufficient], async () => {
   await nextTick()
   if (period.value === 'year') renderYearLine()
   else if ((period.value === 'week' || period.value === 'month') && !insufficient.value.flag) renderRadar()
 }, { deep: true })
+
 onBeforeUnmount(() => {
+  stopDailyAutoRefresh()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   if (radarChart) { radarChart.destroy(); radarChart = null }
   if (lineChart) { lineChart.destroy(); lineChart = null }
+  stopYearLoader()
 })
 </script>
 
 <style scoped>
 .container-sm { padding-bottom: 24px; }
 .radar-wrap, .line-wrap { position: relative; width: 100%; height: 280px; }
+
 .fade-enter-active, .fade-leave-active { transition: opacity .15s ease }
 .fade-enter-from, .fade-leave-to { opacity: 0 }
+
+/* 단계형 로더 */
+.step-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #d0d4e4; margin-top: 6px; flex: none;
+}
+.step-dot.active { background: #657AE2; box-shadow: 0 0 0 0 rgba(101,122,226,.6); animation: pulse 1.4s infinite; }
+.step-dot.done { background: #20c997; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(101,122,226,.6) }
+  70% { box-shadow: 0 0 0 12px rgba(101,122,226,0) }
+  100% { box-shadow: 0 0 0 0 rgba(101,122,226,0) }
+}
+
+.dots { display:inline-block; width: 16px; text-align:left }
+
+/* 로딩 스켈레톤 효과 */
+.shimmer {
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f2f4ff 0%, #e9ecff 30%, #f2f4ff 60%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0 }
+  100% { background-position: -200% 0 }
+}
 </style>
