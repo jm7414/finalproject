@@ -1,5 +1,7 @@
 -- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
 -- 자식 테이블부터 부모 테이블 순서로 삭제
+DROP TABLE IF EXISTS missing_alert_check CASCADE;
+DROP TABLE IF EXISTS post_comments CASCADE;
 DROP TABLE IF EXISTS user_location CASCADE;
 DROP TABLE IF EXISTS neighbor_schedule CASCADE;
 DROP TABLE IF EXISTS plaza CASCADE;
@@ -111,6 +113,7 @@ CREATE INDEX idx_safe_zone_user ON safe_zone(user_no);
 CREATE INDEX idx_safe_zone_type ON safe_zone(zone_type);
 
 -- === 일정(schedule) 테이블 ===
+-- [수정] CHECK 제약 개선: NULL 값 안전하게 처리
 CREATE TABLE schedule (
     schedule_no SERIAL PRIMARY KEY,
     schedule_title VARCHAR(200) NOT NULL,
@@ -120,7 +123,7 @@ CREATE TABLE schedule (
     end_time TIME(0),
     user_no INTEGER NOT NULL,
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
-    CHECK (end_time > start_time)
+    CHECK ((start_time IS NULL) OR (end_time IS NULL) OR (end_time > start_time))
 );
 
 CREATE INDEX idx_schedule_user ON schedule(user_no);
@@ -153,19 +156,19 @@ CREATE TABLE route (
 CREATE INDEX idx_route_schedule ON route(schedule_no);
 
 -- === 게시물(post) 테이블 ===
+-- [수정] user_id 컬럼명을 user_no로 변경하여 FK 일관성 확보
 CREATE TABLE post (
     post_id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    user_id INTEGER NOT NULL,
+    user_no INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     content TEXT NOT NULL,
     view_count INT DEFAULT 0,
     image_path VARCHAR(255),
-	notice_check VARCHAR(255) CHECK (notice_check IN ('공지'))
-    FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_post_user_id ON post(user_id);
+CREATE INDEX idx_post_user_no ON post(user_no);
 CREATE INDEX idx_post_created_at ON post(created_at);
 CREATE INDEX idx_post_view_count ON post(view_count);
 
@@ -188,16 +191,34 @@ CREATE INDEX idx_missing_post_reported_at ON missing_post(reported_at);
 CREATE INDEX idx_missing_post_status ON missing_post(status);
 
 -- === 함께 찾기(search_Together) 테이블 ===
+-- [수정] user_id 컬럼명을 user_no로 변경하여 FK 일관성 확보
 CREATE TABLE search_Together (
     missing_post_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    PRIMARY KEY (missing_post_id, user_id),
+    user_no INTEGER NOT NULL,
+    PRIMARY KEY (missing_post_id, user_no),
     FOREIGN KEY (missing_post_id) REFERENCES missing_post(missing_post_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_search_together_missing_post ON search_Together(missing_post_id);
-CREATE INDEX idx_search_together_user ON search_Together(user_id);
+CREATE INDEX idx_search_together_user ON search_Together(user_no);
+
+-- === 실종 발생시 알람 테이블 ===
+-- [수정] user_id 컬럼명을 user_no로 변경하여 FK 일관성 확보
+CREATE TABLE missing_alert_check (
+    user_no INTEGER NOT NULL,
+    missing_post_id INTEGER NOT NULL,
+    
+    -- 한 사용자가 한 알림을 한 번만 확인할 수 있도록 PK 설정
+    PRIMARY KEY (user_no, missing_post_id), 
+    
+    -- 실종 신고가 삭제되면 이 기록도 자동 삭제
+    FOREIGN KEY (missing_post_id) REFERENCES missing_post(missing_post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_missing_alert_user ON missing_alert_check(user_no);
+CREATE INDEX idx_missing_alert_post ON missing_alert_check(missing_post_id);
 
 -- === 이웃 일정(neighbor_schedule) 테이블 ===
 CREATE TABLE neighbor_schedule (
@@ -301,15 +322,17 @@ BEFORE INSERT OR UPDATE ON report
 FOR EACH ROW EXECUTE FUNCTION trg_lower_period_type();
 
 
+-- === record 테이블 ===
+-- [수정] user_id 컬럼명을 user_no로 변경하여 FK 일관성 확보
 CREATE TABLE IF NOT EXISTS record (
   record_id   SERIAL PRIMARY KEY,
-  user_id     INT NOT NULL,
+  user_no     INT NOT NULL,
   record_date DATE NOT NULL,
   content     JSONB NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE,
-  CONSTRAINT uq_record_user_date UNIQUE (user_id, record_date)
+  CONSTRAINT fk_record_user FOREIGN KEY(user_no) REFERENCES users(user_no) ON DELETE CASCADE,
+  CONSTRAINT uq_record_user_date UNIQUE (user_no, record_date)
 );
 
 -- 주형 user_location 테이블 추가
@@ -318,7 +341,7 @@ CREATE TABLE IF NOT EXISTS user_location (
   user_no INT NOT NULL,
   latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
   longitude DECIMAL(11,8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
-  record_time TIMESTAMPZ DEFAULT NOW(),
+  record_time TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT fk_user_no FOREIGN KEY(user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
 -- 주형 수정 끝
@@ -365,7 +388,8 @@ INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_
 ('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 2),
 ('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 4);
 
-INSERT INTO post (title, user_id, content, view_count, image_path) VALUES
+-- [수정] post 테이블 INSERT - user_no로 변경
+INSERT INTO post (title, user_no, content, view_count, image_path) VALUES
 (
     '치매에 좋은 음식 (DB 테스트)',
     1,
@@ -382,7 +406,8 @@ INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, descrip
     '성함: 서지현 (78세)\n실종일시: 2025년 10월 9일 오전 9시경\n실종장소: 안산시 단원구 중앙동 인근\n인상착의: 연한 회색 가디건, 검정색 바지, 흰색 운동화 착용.'
 );
 
-INSERT INTO search_Together (missing_post_id, user_id) VALUES
+-- [수정] search_Together INSERT - user_no로 변경
+INSERT INTO search_Together (missing_post_id, user_no) VALUES
 (1, 2);
 
 -- 4번 서지현(구독자): 보호자 3명 연결 가능
@@ -399,20 +424,20 @@ SELECT setseed(0.42);  -- 랜덤 시드(옵션)
 -- 4번 환자(서지현) 기록 생성
 WITH params AS (
   SELECT
-    4::int           AS user_id,        -- 서지현(환자)
+    4::int           AS user_no,        -- 서지현(환자)
     DATE '2024-01-01' AS start_date,
     DATE '2025-10-27' AS end_date
 ),
 dates AS (
-  SELECT p.user_id, gs::date AS record_date
+  SELECT p.user_no, gs::date AS record_date
   FROM params p
   JOIN generate_series((SELECT start_date FROM params),
                        (SELECT end_date   FROM params),
                        INTERVAL '1 day') gs ON TRUE
 )
-INSERT INTO record (user_id, record_date, content)
+INSERT INTO record (user_no, record_date, content)
 SELECT
-  d.user_id,
+  d.user_no,
   d.record_date,
   jsonb_build_object(
     'act', jsonb_build_object(
@@ -460,25 +485,25 @@ SELECT
     )
   )
 FROM dates d
-ON CONFLICT (user_id, record_date) DO NOTHING;
+ON CONFLICT (user_no, record_date) DO NOTHING;
 
 -- 6번 환자(김병욱) 기록 생성
 WITH params AS (
   SELECT
-    6::int           AS user_id,        -- 김병욱(환자)
+    6::int           AS user_no,        -- 김병욱(환자)
     DATE '2024-01-01' AS start_date,
     DATE '2025-10-27' AS end_date
 ),
 dates AS (
-  SELECT p.user_id, gs::date AS record_date
+  SELECT p.user_no, gs::date AS record_date
   FROM params p
   JOIN generate_series((SELECT start_date FROM params),
                        (SELECT end_date   FROM params),
                        INTERVAL '1 day') gs ON TRUE
 )
-INSERT INTO record (user_id, record_date, content)
+INSERT INTO record (user_no, record_date, content)
 SELECT
-  d.user_id,
+  d.user_no,
   d.record_date,
   jsonb_build_object(
     'act', jsonb_build_object(
@@ -526,8 +551,7 @@ SELECT
     )
   )
 FROM dates d
-ON CONFLICT (user_id, record_date) DO NOTHING;
+ON CONFLICT (user_no, record_date) DO NOTHING;
 
--- 7번 고영준 방장으로(광장명: 경1)
 insert into plaza(plaza_no, plaza_name, member_name, user_no) values
-('1', '경1', '방장', '7');
+(1, '경1', '방장', 7);
