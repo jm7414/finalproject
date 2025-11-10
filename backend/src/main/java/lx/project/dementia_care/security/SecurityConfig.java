@@ -68,6 +68,9 @@ public class SecurityConfig {
 
                         // 이웃 페이지 (보호자와 이웃 접근 가능)
                         .requestMatchers("/NH").hasAnyRole("GUARDIAN", "NEIGHBOR")
+                        // 주형 수정시작
+                        .requestMatchers("/NH/api/**").hasAnyRole("NEIGHBOR")
+                        // 주형 수정끝
 
                         // 본인정보 수정 API 권한
                         .requestMatchers(HttpMethod.POST, "/api/user/update").hasAnyRole("GUARDIAN","PATIENT", "SUBSCRIBER", "NEIGHBOR")

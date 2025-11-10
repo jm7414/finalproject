@@ -20,11 +20,24 @@ function closeModal() {
 
 // '함께 찾기' 버튼 클릭 시 (ID 전달)
 function joinSearch() {
-  if (props.person && props.person.missingPostId !== null) {
+
+if (props.person.currentUserJoined === true) {
+    // 이미 참여한 사람은 경고창 없이 미싱 커뮤니티에 요청보내기
     emit('join-search', props.person.missingPostId);
-  } else {
-    console.error("MissingPostId is missing in person data:", props.person);
-    // 사용자에게 알림 추가 가능
+    return; // 함수 종료
+  }
+
+  // --- 2. 신규 참여자인 경우 경고창 띄우기 ---
+  const isConfirmed = confirm("위치가 함께찾는사람들에게 공유됩니다.\n위 사실을 동의하십니까?");
+
+  if (isConfirmed) {
+    // 사용자가 동의했니까 미싱 커뮤니티에 요청 보내기
+    if (props.person && props.person.missingPostId !== null) {
+      emit('join-search', props.person.missingPostId);
+    } else {
+      console.error("MissingPostId is missing in person data:", props.person);
+      alert("오류: 게시물 ID가 없어 '함께 찾기'를 진행할 수 없습니다.");
+    }
   }
 }
 

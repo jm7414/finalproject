@@ -20,6 +20,10 @@ import networkx as nx
 import srtm
 from geopy.distance import geodesic
 
+# ⭐⭐ 아두이노 센서에 필요한 라이브러리
+import serial
+import threading
+
 # ============= 전역 변수 =============
 DATA_CACHE = {}
 ELEVATION_CACHE = {}
@@ -602,6 +606,31 @@ async def health_check():
         "elevation_cache_size": len(ELEVATION_CACHE),
         "road_network_cache_size": len(ROAD_NETWORK_CACHE)
     }
+# 아두이노 센서 추가부분 이거는 안꽂혀있으면 FastAPI서버자체 안켜져서 막아놨어요
+#ser = serial.Serial('COM3', 9600, timeout=1)
+#pir_state = 0
+
+
+#def monitor_sensor():
+ #   global pir_state
+  #  while True:
+   #     if ser.in_waiting > 0:
+    #        line = ser.readline().decode('utf-8').strip()
+     #       if line in ['0', '1']:
+      #          val = int(line)
+       #         if val == 1 and pir_state == 0:
+        #            print("Movement detected! Triggering event.")
+         #           # 여기서 원하는 API 호출 또는 동작 실행 가능
+          #      pir_state = val
+
+#thread = threading.Thread(target=monitor_sensor, daemon=True)
+#thread.start()
+
+## /sensor로 들어오면 이걸 계속 보내줌
+#@app.get('/sensor')
+#def get_sensor_value():
+#    return {"pir": pir_state}
+
 
 if __name__ == "__main__":
     uvicorn.run("final_predict_api:app", host="0.0.0.0", port=8000, workers=4)
