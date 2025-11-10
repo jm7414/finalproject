@@ -184,4 +184,10 @@
         AND status = '실종'
     </delete>
 
+    <select id="findParticipantUserIds" parameterType="int" resultType="int">
+        SELECT user_id 
+        FROM search_Together 
+        WHERE missing_post_id = #{missingPostId}
+    </select>
+
 </mapper>

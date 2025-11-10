@@ -24,14 +24,13 @@
         </div>
 
         <!-- 지도 영역 -->
-        <div ref="mapContainer" class="map-area">
-            <!-- 함께하는 사람 실시간 위치 -->
+        <div class="page-container">
+            <div ref="mapContainer" class="map-area"></div>
             <ParticipantsLayer
             v-if="isParticipantsLayerVisible && map && missingPostId"
             :map="map" 
             :missingPostId="missingPostId"
             />
-
         </div>
 
         <!-- 토글 버튼 영역 -->

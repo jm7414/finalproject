@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS report CASCADE;
 DROP TABLE IF EXISTS period CASCADE;
 DROP TABLE IF EXISTS missing_post CASCADE;
 DROP TABLE IF EXISTS post_comments CASCADE;
+DROP TABLE IF EXISTS missing_alert_check CASCADE;
 DROP TABLE IF EXISTS post CASCADE;
 DROP TABLE IF EXISTS route CASCADE;
 DROP TABLE IF EXISTS schedule_location CASCADE;
@@ -204,6 +205,18 @@ CREATE TABLE search_Together (
 
 CREATE INDEX idx_search_together_missing_post ON search_Together(missing_post_id);
 CREATE INDEX idx_search_together_user ON search_Together(user_id);
+
+-- === 실종 발생시 알람 테이블 ===
+CREATE TABLE missing_alert_check (
+    user_id INTEGER NOT NULL,
+    missing_post_id INTEGER NOT NULL,
+    
+    -- 한 사용자가 한 알림을 한 번만 확인할 수 있도록 PK 설정
+    PRIMARY KEY (user_id, missing_post_id), 
+    
+    -- 실종 신고가 삭제되면 이 기록도 자동 삭제
+    FOREIGN KEY (missing_post_id) REFERENCES missing_post(missing_post_id) ON DELETE CASCADE
+);
 
 -- === period, report, record 테이블 ===
 
