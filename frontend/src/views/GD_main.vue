@@ -125,7 +125,7 @@
               style="height:100%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.14) translateY(2%);">
           </div>
           <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
-            style="height:44px">기본 안심존 설정</div>
+            style="height:44px; letter-spacing: -0.5px;">기본 안심존 설정</div>
         </button>
       </div>
 
