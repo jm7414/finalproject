@@ -26,6 +26,8 @@
         <result property="image" column="image_path"/>
     </resultMap>
 
+    <!-- 지겸 수정-->
+    <!-- WHERE 조건 추가 -->
     <select id="findAllPosts" resultMap="PostListResultMap">
         SELECT
             p.post_id,
@@ -42,9 +44,13 @@
             post p
         JOIN
             users u ON p.user_id = u.user_no
+        <!-- 공지 제외 조건 -->
+        WHERE
+            p.notice_check IS NULL OR p.notice_check != '공지'
         ORDER BY
             p.post_id DESC
     </select>
+
 
     <select id="findPostById" parameterType="int" resultMap="PostResponseResultMap">
         SELECT
@@ -66,13 +72,52 @@
             p.post_id = #{postId}
     </select>
 
+    <!-- 지겸 추가 -->
+    <!-- 공지만 조회 SQL -->
+    <select id="findNotices" resultMap="PostListResultMap">
+        SELECT
+            p.post_id,
+            p.title,
+            u.name AS author,
+            p.content,
+            u.profile_photo,
+            p.view_count,
+            p.created_at,
+            p.image_path AS "image",
+            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS likes,
+            (SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id = p.post_id) AS comments
+        FROM
+            post p
+        JOIN
+            users u ON p.user_id = u.user_no
+        WHERE
+            p.notice_check = '공지'
+        ORDER BY
+            p.created_at DESC
+    </select>
+
+    <!-- 지겸 수정-->
+    <!-- notice_check 필드 추가 -->
     <insert id="createPost" parameterType="lx.project.dementia_care.dto.PostRequestDto">
         <selectKey keyProperty="postId" resultType="int" order="AFTER">
             SELECT CURRVAL('post_post_id_seq')
         </selectKey>
-        INSERT INTO post (title, content, user_id, image_path)
-        VALUES (#{title}, #{content}, #{userId}, #{image})
+        INSERT INTO post (title, content, user_id, image_path, notice_check)
+        VALUES (
+            #{title}, 
+            #{content}, 
+            #{userId}, 
+            #{image},
+            <!-- [추가] 동적 SQL로 공지/일반 구분 -->
+            <if test="noticeCheck == '공지'">
+                '공지'
+            </if>
+            <if test="noticeCheck == null or noticeCheck == ''">
+                NULL
+            </if>
+        )
     </insert>
+
 
     <update id="updatePost">
         UPDATE post
@@ -88,11 +133,14 @@
         DELETE FROM post WHERE post_id = #{postId}
     </delete>
 
+    <!-- 지겸 수정-->
     <!-- 조회수 -->
     <update id="incrementViewCount" parameterType="int">
         UPDATE post
         SET view_count = view_count + 1
         WHERE post_id = #{postId}
+        <!-- [추가] 공지는 조회수 필요 없음 -->
+        AND (notice_check IS NULL OR notice_check != '공지')
     </update>
 
     <!-- 좋아요 -->

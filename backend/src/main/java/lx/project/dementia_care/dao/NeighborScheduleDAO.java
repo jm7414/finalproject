@@ -44,4 +44,8 @@ public class NeighborScheduleDAO {
     public String getPlazaNameByUserNo(int userNo) {
         return sqlSession.selectOne("getPlazaNameByUserNo", userNo);
     }
+    // 오늘, 내일 일정 2개 조회
+    public List<NeighborScheduleVO> selectUpcomingSchedules(int userNo) {
+        return sqlSession.selectList("selectUpcomingSchedules", userNo);
+    }
 }

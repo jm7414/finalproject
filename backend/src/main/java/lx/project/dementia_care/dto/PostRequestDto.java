@@ -20,4 +20,9 @@ public class PostRequestDto {
 
     // 어떤 유저가 작성했는지 식별하기 위한 ID
     private Integer userId;
+
+    //지겸
+    // 공지 여부: '공지' 또는 null
+    private String noticeCheck;
+
 }

@@ -161,6 +161,7 @@ CREATE TABLE post (
     content TEXT NOT NULL,
     view_count INT DEFAULT 0,
     image_path VARCHAR(255),
+	notice_check VARCHAR(255) CHECK (notice_check IN ('공지'))
     FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
 );
 
