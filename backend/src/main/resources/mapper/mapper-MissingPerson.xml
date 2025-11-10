@@ -31,6 +31,7 @@
         WHERE user_status = 1 
     </select>
 
+    <!-- 실종자 정보를 불러오는 쿼리 -->
     <select id="findAllMissingPersons" resultMap="MissingPersonResultMap">
         SELECT
             mp.missing_post_id,
@@ -175,5 +176,12 @@
         VALUES (#{userId}, #{missingPostId})
         ON CONFLICT (user_id, missing_post_id) DO NOTHING
     </insert>
+
+    <!-- 실종포스트 삭제 시 관련 데이터 삭제 -->
+    <delete id="resolveActivePostsByPatientNo" parameterType="int">
+        DELETE FROM missing_post
+        WHERE patient_user_no = #{patientUserNo}
+        AND status = '실종'
+    </delete>
 
 </mapper>

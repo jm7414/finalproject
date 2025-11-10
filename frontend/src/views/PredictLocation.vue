@@ -24,7 +24,15 @@
         </div>
 
         <!-- 지도 영역 -->
-        <div ref="mapContainer" class="map-area"></div>
+        <div ref="mapContainer" class="map-area">
+            <!-- 함께하는 사람 실시간 위치 -->
+            <ParticipantsLayer
+            v-if="isParticipantsLayerVisible && map && missingPostId"
+            :map="map" 
+            :missingPostId="missingPostId"
+            />
+
+        </div>
 
         <!-- 토글 버튼 영역 -->
         <div class="toggle-button-wrapper">
@@ -310,8 +318,10 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import axios from 'axios'
+import ParticipantsLayer from '@/components/ParticipantsLayer.vue';
 
 const route = useRoute();
+const isParticipantsLayerVisible = ref(false);  // 함께하는 사람 마커용
 
 // ========================================================================================
 // jjamTong 데이터 정의
@@ -1589,8 +1599,14 @@ function selectLocation(loc, index) {
     drawRoute(index, displayZoneLevel.value)
 }
 
-function wherePeople() {
-    alert('함께하는 사람 보기 기능 (미구현)')
+function wherePeople() { // ParticipantsLayer.vue 컴포넌트로 이동
+    isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
+  
+  if (isParticipantsLayerVisible.value) {
+    console.log("함께하는 사람 위치 표시 ON");
+  } else {
+    console.log("함께하는 사람 위치 표시 OFF");
+  } 
 }
 
 // ========================================================================================

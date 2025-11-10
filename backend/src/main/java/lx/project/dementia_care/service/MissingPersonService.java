@@ -12,18 +12,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lx.project.dementia_care.dao.UserDAO;
-import lx.project.dementia_care.dao.MissingPersonDAO;
-
-import lx.project.dementia_care.dto.MissingPersonDto;
 import lx.project.dementia_care.vo.UserVO;
+import lx.project.dementia_care.dao.MissingPersonDAO;
+import lx.project.dementia_care.dto.MissingPersonDto;
 
 @Service
-public class MissingPersonService {
+public class MissingPersonService {   
 
     @Autowired
     private UserDAO userDAO;
     @Autowired
     private MissingPersonDAO missingPersonDAO;
+    @Autowired
+    private MissingPersonDAO missingPostDAO;
 
     /**
      * user_status가 1인 ('실종' 상태) 사용자 목록과
@@ -262,6 +263,34 @@ public class MissingPersonService {
     @Transactional
     public void confirmAlert(Integer missingPostId, Integer userId) {
         missingPersonDAO.addAlertConfirmation(missingPostId, userId);
+    }
+
+    /**
+     * 환자의 '실종' 상태 게시물을 일괄 삭제(해제) 처리합니다.
+     * (UserController의 updateUserStatus에서 호출됩니다.)
+     *
+     * @param patientUserNo 실종 해제할 환자의 user_no
+     */
+    @Transactional // 이 작업이 실패하면 롤백되도록 설정
+    public void resolveActivePostsByPatientNo(Integer patientUserNo) {
+        if (patientUserNo == null) {
+            System.out.println("SERVICE: patientUserNo가 null이므로 삭제 작업을 건너뜁니다.");
+            return; 
+        }
+        
+        System.out.println("SERVICE: 환자 ID " + patientUserNo + "의 '실종' 상태 게시물 삭제를 시도합니다.");
+        
+        // DAO를 호출하여 '실종' 상태인 게시물 삭제
+        int deletedRows = missingPostDAO.resolveActivePostsByPatientNo(patientUserNo);
+
+        if (deletedRows > 0) {
+            System.out.println("SERVICE: " + deletedRows + "건의 실종 게시물이 삭제되었습니다.");
+        } else {
+            System.out.println("SERVICE: 삭제할 '실종' 상태의 게시물이 없었습니다.");
+        }
+        
+        // 참고: 'users' 테이블의 user_status 변경은 
+        // 이 함수를 호출한 UserController에서 이미 처리했습니다.
     }
 
 }
