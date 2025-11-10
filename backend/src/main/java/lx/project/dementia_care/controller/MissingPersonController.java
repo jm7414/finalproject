@@ -77,10 +77,10 @@ public class MissingPersonController {
     @GetMapping("/patient/{patientUserNo}/latest")
     public ResponseEntity<MissingPersonDto> getLatestMissingReportByPatient(
             @PathVariable Integer patientUserNo,
-            Authentication authentication) { // <-- [수정 1] Authentication 추가
+            Authentication authentication) {
 
         try {
-            // --- [수정 2] 현재 사용자 ID 추출 ---
+            // 현재 사용자 ID 추출
             Integer currentUserId = null;
             if (authentication != null && authentication.isAuthenticated()
                     && !"anonymousUser".equals(authentication.getPrincipal())) {
@@ -88,7 +88,7 @@ public class MissingPersonController {
                 currentUserId = userVO.getUserNo();
             }
 
-            // --- [수정 3] 서비스 호출 시 currentUserId 전달 ---
+            // 서비스 호출 시 currentUserId 전달
             MissingPersonDto latestReport = missingPersonService.findLatestReportByPatientNo(patientUserNo,
                     currentUserId);
 
@@ -232,6 +232,55 @@ public class MissingPersonController {
             System.err.println("참여자 목록 조회 중 오류 발생: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "참여자 목록 조회 중 오류 발생"));
+        }
+    }
+
+    /**
+     * [추가] 폴링(Polling) 알림용 API
+     * 로그인한 사용자가 '확인'하지 않은 '최신 실종 신고' 1건을 조회합니다.
+     */
+    @GetMapping("/latest-alert") // (수정) /latest 대신 /latest-alert로 주소 변경 (기존 API와 충돌 방지)
+    public ResponseEntity<MissingPersonDto> getLatestMissingAlert(Authentication authentication) {
+        
+        Integer currentUserId = null;
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            UserVO userVO = (UserVO) authentication.getPrincipal();
+            currentUserId = userVO.getUserNo();
+        } else {
+            // 비로그인 사용자는 알림 없음
+            return ResponseEntity.noContent().build();
+        }
+
+        MissingPersonDto latestAlert = missingPersonService.findLatestAlertForUser(currentUserId);
+
+        if (latestAlert != null) {
+            return ResponseEntity.ok(latestAlert); // (200 OK) 새 알림 반환
+        } else {
+            return ResponseEntity.noContent().build(); // (204 No Content) 알림 없음
+        }
+    }
+
+    /**
+     * [추가] 사용자가 실종 알림을 "확인"했음을 기록하는 API
+     */
+    @PostMapping("/{missingPostId}/confirm-alert")
+    public ResponseEntity<Void> confirmMissingAlert(
+            @PathVariable Integer missingPostId,
+            Authentication authentication) {
+        
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401
+        }
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        Integer currentUserId = userVO.getUserNo();
+        
+        try {
+            missingPersonService.confirmAlert(missingPostId, currentUserId);
+            return ResponseEntity.ok().build(); // (200 OK)
+        } catch (Exception e) {
+            // 이미 확인했거나, DB 오류 발생 시
+            System.err.println("알림 확인 처리 중 오류: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409
         }
     }
 

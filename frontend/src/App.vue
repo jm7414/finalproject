@@ -14,7 +14,23 @@
   </div>
 
   <!-- 안심존 이탈 알림 모달 (mobile-frame 밖으로 이동) -->
-  <SafeZoneAlertModal :show="showSafeZoneAlert" :patient-name="alertPatientName" @close="closeSafeZoneAlert" />
+  <SafeZoneAlertModal 
+    :show="showSafeZoneAlert"
+    :patient-name="alertPatientName"
+    @close="closeSafeZoneAlert"
+  />
+
+<ConfirmModal 
+    :show="showMissingAlert"
+    title="긴급 실종 알림"
+    :message="alertMessage"
+    confirmText="지금 확인하기"
+    cancelText="나중에 확인하기"
+    @close="handleCloseAlert"
+    @confirm="handleConfirmAndNavigate"
+    @cancel="handleCloseAlert"
+  />
+
 </template>
 
 <script setup>
@@ -26,6 +42,27 @@ import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue-3/dist/bootstrap-vue-3.css'
+
+// ====================
+// 실종자 알림 추가 시작
+// ====================
+
+import { useAlertPolling, showMissingAlert, alertMessage, handleConfirmAlert, handleCloseAlert } from './composables/useAlertPolling';
+import ConfirmModal from './components/ConfirmModal.vue';
+import { useRouter } from 'vue-router'
+
+const router = useRouter();
+useAlertPolling();
+
+function handleConfirmAndNavigate() {
+
+  handleConfirmAlert(); 
+  router.push({ path: '/communityView', query: { tab: 'Missing' } });
+}
+
+// ====================
+// 실종자 알림 추가 끝
+// ====================
 
 const route = useRoute()
 

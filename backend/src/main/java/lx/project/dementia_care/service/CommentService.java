@@ -50,7 +50,7 @@ public class CommentService {
             throw new IllegalArgumentException("해당 댓글이 없습니다. id=" + commentId);
         }
 
-        // 2. ✨✨✨ 가장 중요한 권한 체크 로직 ✨✨✨
+        // 2. 가장 중요한 권한 체크 로직
         // 만약 (현재 사용자가 댓글 작성자가 아니고) AND (현재 사용자가 운영자(1번)도 아니라면)
         if (!comment.getUserId().equals(currentUserId) && currentUserId != 1) {
             // AccessDeniedException을 발생시켜 삭제를 막습니다.

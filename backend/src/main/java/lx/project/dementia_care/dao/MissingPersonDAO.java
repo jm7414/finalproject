@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.session.SqlSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,9 +23,9 @@ public class MissingPersonDAO {
     /**
      * 특정 실종자(user_no 2번) 정보를 조회합니다.
      */
-    public MissingPersonDto findMissingPersonByUserNo2() {
-        return session.selectOne(NAMESPACE + ".findMissingPersonByUserNo2");
-    }
+    // public MissingPersonDto findMissingPersonByUserNo2() {
+    //     return session.selectOne(NAMESPACE + ".findMissingPersonByUserNo2");
+    // }
 
     /**
      * 모든 '실종' 상태인 실종자 목록을 조회합니다.
@@ -83,4 +85,34 @@ public class MissingPersonDAO {
     public List<UserVO> findParticipantsByMissingPostId(Integer missingPostId) {
         return session.selectList(NAMESPACE + ".findParticipantsByMissingPostId", missingPostId);
     }
+
+    /**
+     * [추가] 확인하지 않은 최신 알림 1건 조회 (폴링용)
+     */
+    public MissingPersonDto findLatestAlertForUser(Integer userId) {
+        return session.selectOne(NAMESPACE + ".findLatestAlertForUser", userId);
+    }
+
+    /**
+     * [추가] missing_alert_check 테이블에 확인 기록 INSERT
+     */
+    public void addAlertConfirmation(Integer missingPostId, Integer userId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("missingPostId", missingPostId);
+        params.put("userId", userId);
+        session.insert(NAMESPACE + ".addAlertConfirmation", params);
+    }
+
+    /**
+     * 환자 번호(patient_user_no)를 기준으로 '실종' 상태인 모든 게시물을 삭제합니다.
+     * (UserController에서 실종 해제 시 호출)
+     *
+     * @param patientUserNo 환자의 user_no
+     * @return 삭제된 행(post)의 수
+     */
+    public int resolveActivePostsByPatientNo(Integer patientUserNo) {
+        // Mapper XML의 <delete id="resolveActivePostsByPatientNo">를 호출합니다.
+        return session.delete(NAMESPACE + ".resolveActivePostsByPatientNo", patientUserNo); 
+    }
+
 }

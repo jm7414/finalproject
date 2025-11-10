@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import lx.project.dementia_care.dao.ConnectDAO;
 import lx.project.dementia_care.dao.UserDAO;
 import lx.project.dementia_care.vo.UserVO;
+import lx.project.dementia_care.service.MissingPersonService;
 
 @RestController
 public class UserController {
@@ -33,6 +34,9 @@ public class UserController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private MissingPersonService missingPersonService;    
 
     @GetMapping("/api/user/check-duplicate")
     public ResponseEntity<?> checkDuplicateId(@RequestParam String userId) {
@@ -243,6 +247,11 @@ public class UserController {
             // 3. UserDAO를 호출하여 실제 DB 상태 업데이트
             userDAO.updateUserStatus(userNo, userStatus);
 
+            if (userStatus == 0) {
+                // '실종' 상태인 missing_post를 삭제/업데이트
+                // (이 메소드는 MissingPersonService에 만들어야 함)
+                missingPersonService.resolveActivePostsByPatientNo(userNo);
+            }
             // 4. 프론트엔드에 성공 응답 전송
             return ResponseEntity.ok(Map.of("message", "사용자 상태가 성공적으로 업데이트되었습니다."));
 
