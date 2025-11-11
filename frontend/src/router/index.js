@@ -313,7 +313,6 @@ const router = createRouter({
       component: MapMain,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-
     // 지겸
     {
       path: '/nhCalender',
@@ -321,13 +320,13 @@ const router = createRouter({
       component: NH_Calender,
       meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
-        {
+    {
       path: '/nhAddSchedule',
       name: 'NH_AddSchedule',
-      component: NH_AddSchedule, 
+      component: NH_AddSchedule,
       meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
-        {
+    {
       path: '/nhNotice',
       name: 'NH_Notice',
       component: NH_Notice,

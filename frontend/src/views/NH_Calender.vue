@@ -704,7 +704,7 @@ onMounted(() => {
 }
 
 .calendar-day.today .day-number {
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
   border-radius: 50%;
   width: 28px;
@@ -810,7 +810,7 @@ onMounted(() => {
   right: 20px;
   width: 56px;
   height: 56px;
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
   border: none;
   border-radius: 50%;
@@ -824,7 +824,7 @@ onMounted(() => {
 }
 
 .fab:hover {
-  background: #4f46e5;
+  background: #9bbe0f;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
 }
