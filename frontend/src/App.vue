@@ -2,19 +2,35 @@
   <div class="mobile-frame">
     <div class="app-layout">
       <AppHeader
-        v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect)" />
+        v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isGame)" />
       <main class="main-content"
         :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage || MissingReport || PredictLocation || CommunityPost || CommunityPostWrite, 'neighbor-page': isNeighborPage }">
         <RouterView />
       </main>
       <AppFooter
-        v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isNeighborPage)" />
+        v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isNeighborPage || isGame)" />
     </div>
 
   </div>
 
   <!-- 안심존 이탈 알림 모달 (mobile-frame 밖으로 이동) -->
-  <SafeZoneAlertModal :show="showSafeZoneAlert" :patient-name="alertPatientName" @close="closeSafeZoneAlert" />
+  <SafeZoneAlertModal 
+    :show="showSafeZoneAlert"
+    :patient-name="alertPatientName"
+    @close="closeSafeZoneAlert"
+  />
+
+<ConfirmModal 
+    :show="showMissingAlert"
+    title="긴급 실종 알림"
+    :message="alertMessage"
+    confirmText="지금 확인하기"
+    cancelText="나중에 확인하기"
+    @close="handleCloseAlert"
+    @confirm="handleConfirmAndNavigate"
+    @cancel="handleCloseAlert"
+  />
+
 </template>
 
 <script setup>
@@ -23,9 +39,33 @@ import AppFooter from './components/AppFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
 
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue-3/dist/bootstrap-vue-3.css'
+
+// ====================
+// 실종자 알림 추가 시작
+// ====================
+
+import { useAlertPolling, showMissingAlert, alertMessage, handleConfirmAlert, handleCloseAlert } from './composables/useAlertPolling';
+import ConfirmModal from './components/ConfirmModal.vue';
+import { useRouter } from 'vue-router'
+
+const router = useRouter();
+useAlertPolling();
+
+function handleConfirmAndNavigate() {
+
+  handleConfirmAlert(); 
+  router.push({ path: '/communityView', query: { tab: 'Missing' } });
+}
+
+// ====================
+// 실종자 알림 추가 끝
+// ====================
+const currentUser = ref(null);
+useMyCurrentLocation(computed(() => currentUser.value?.userNo));
 
 const route = useRoute()
 
@@ -90,6 +130,11 @@ const CommunityPost = computed(() => {
 // 게시물 페이지
 const CommunityPostWrite = computed(() => {
   return route.name === 'CommunityPostWrite'
+})
+
+// 두뇌 게임
+const isGame = computed(() => {
+  return route.name === 'game'
 })
 
 /* ===== 안심존 이탈 알림 시스템 ===== */
@@ -529,6 +574,8 @@ onMounted(async () => {
   if (!isLoginPage.value && !isSignUpPage.value) {
     // 약간의 지연을 주어 인증 상태가 완전히 설정되도록 함
     setTimeout(async () => {
+      // ⭐ 4. (중요) 안심존 모니터링 전에 사용자 정보부터 가져와서 ref에 채웁니다.
+      currentUser.value = await getCurrentUser();
       await startSafeZoneMonitoring()
     }, 500)
   }

@@ -54,4 +54,18 @@
         WHERE schedule_no = #{scheduleNo}
     </delete>
     
+    <!-- 오늘, 내일 일정 2개 조회 -->
+    <select id="selectUpcomingSchedules" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT 
+            schedule_no as scheduleNo,
+            schedule_title as scheduleTitle,
+            schedule_date as scheduleDate,
+            user_no as userNo
+        FROM neighbor_schedule
+        WHERE user_no = #{userNo}
+        AND schedule_date >= CURRENT_DATE
+        ORDER BY schedule_date ASC
+        LIMIT 2
+    </select>
+
 </mapper>

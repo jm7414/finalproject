@@ -49,7 +49,7 @@ function handleStatusChangeClick() {
 
   // 기능 9: 환자 상태(user_status) 값에 따라 분기
 if (props.patientInfo.user_status === 0) {
-    // ★★★ 이 로그를 추가하여 userNo 값 확인 ★★★
+    // 이 로그를 추가하여 userNo 값 확인
     console.log(`실종 신고 페이지(/MissingReport/:id)로 이동 시도. 전달할 ID:`, props.patientInfo.userNo);
 
     // userNo 값이 유효한 숫자인지 확인 후 push

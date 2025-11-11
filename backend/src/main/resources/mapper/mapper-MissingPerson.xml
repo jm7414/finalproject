@@ -31,6 +31,7 @@
         WHERE user_status = 1 
     </select>
 
+    <!-- 실종자 정보를 불러오는 쿼리 -->
     <select id="findAllMissingPersons" resultMap="MissingPersonResultMap">
         SELECT
             mp.missing_post_id,
@@ -143,6 +144,50 @@
             search_Together st ON u.user_no = st.user_id
         WHERE
             st.missing_post_id = #{missingPostId}
+    </select>
+
+<!-- 실종자 감지 알림 -->
+<select id="findLatestAlertForUser" parameterType="int" resultMap="MissingPersonResultMap">
+        SELECT 
+            mp.missing_post_id,
+            mp.patient_user_no,
+            mp.reported_at,
+            u.name AS patient_name,
+            u.birth_date 
+        FROM 
+            missing_post mp
+        JOIN 
+            users u ON mp.patient_user_no = u.user_no
+        WHERE 
+            mp.status = '실종'
+            AND NOT EXISTS (
+                SELECT 1
+                FROM missing_alert_check mac
+                WHERE mac.missing_post_id = mp.missing_post_id
+                  AND mac.user_id = #{userId}
+            )
+        ORDER BY 
+            mp.reported_at DESC
+        LIMIT 1
+    </select>
+
+    <insert id="addAlertConfirmation" parameterType="map">
+        INSERT INTO missing_alert_check (user_id, missing_post_id)
+        VALUES (#{userId}, #{missingPostId})
+        ON CONFLICT (user_id, missing_post_id) DO NOTHING
+    </insert>
+
+    <!-- 실종포스트 삭제 시 관련 데이터 삭제 -->
+    <delete id="resolveActivePostsByPatientNo" parameterType="int">
+        DELETE FROM missing_post
+        WHERE patient_user_no = #{patientUserNo}
+        AND status = '실종'
+    </delete>
+
+    <select id="findParticipantUserIds" parameterType="int" resultType="int">
+        SELECT user_id 
+        FROM search_Together 
+        WHERE missing_post_id = #{missingPostId}
     </select>
 
 </mapper>

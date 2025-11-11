@@ -21,9 +21,9 @@ public class MissingPersonDAO {
     /**
      * 특정 실종자(user_no 2번) 정보를 조회합니다.
      */
-    public MissingPersonDto findMissingPersonByUserNo2() {
-        return session.selectOne(NAMESPACE + ".findMissingPersonByUserNo2");
-    }
+    // public MissingPersonDto findMissingPersonByUserNo2() {
+    //     return session.selectOne(NAMESPACE + ".findMissingPersonByUserNo2");
+    // }
 
     /**
      * 모든 '실종' 상태인 실종자 목록을 조회합니다.
@@ -51,7 +51,7 @@ public class MissingPersonDAO {
 
     /**
      * 환자 번호로 가장 최근 실종 신고 정보를 조회합니다.
-     * [수정] currentUserId를 받아 '내가 참여했는지' 여부도 조회합니다.
+     * currentUserId를 받아 '내가 참여했는지' 여부도 조회합니다.
      */
     public MissingPersonDto findLatestMissingReportByPatientNo(Integer patientUserNo, Integer currentUserId) {
         Map<String, Object> params = new HashMap<>();
@@ -83,4 +83,41 @@ public class MissingPersonDAO {
     public List<UserVO> findParticipantsByMissingPostId(Integer missingPostId) {
         return session.selectList(NAMESPACE + ".findParticipantsByMissingPostId", missingPostId);
     }
+
+    /**
+     * 확인하지 않은 최신 알림 1건 조회 (폴링용)
+     */
+    public MissingPersonDto findLatestAlertForUser(Integer userId) {
+        return session.selectOne(NAMESPACE + ".findLatestAlertForUser", userId);
+    }
+
+    /**
+     * missing_alert_check 테이블에 확인 기록 INSERT
+     */
+    public void addAlertConfirmation(Integer missingPostId, Integer userId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("missingPostId", missingPostId);
+        params.put("userId", userId);
+        session.insert(NAMESPACE + ".addAlertConfirmation", params);
+    }
+
+    /**
+     * 환자 번호(patient_user_no)를 기준으로 '실종' 상태인 모든 게시물을 삭제합니다.
+     * (UserController에서 실종 해제 시 호출)
+     *
+     * @param patientUserNo 환자의 user_no
+     * @return 삭제된 행(post)의 수
+     */
+    public int resolveActivePostsByPatientNo(Integer patientUserNo) {
+        // Mapper XML의 <delete id="resolveActivePostsByPatientNo">를 호출합니다.
+        return session.delete(NAMESPACE + ".resolveActivePostsByPatientNo", patientUserNo); 
+    }
+
+    /**
+     * 특정 실종 신고에 참여 중인 사람들의 'user_id' 목록만 조회합니다.
+     */
+    public List<Integer> findParticipantUserIds(Integer missingPostId) {
+        return session.selectList(NAMESPACE + ".findParticipantUserIds", missingPostId);
+    }
+
 }
