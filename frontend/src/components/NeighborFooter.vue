@@ -32,8 +32,8 @@ function navigate(item) {
 </script>
 
 <template>
-  <footer class="neighbor-footer">
-    <nav class="nav-container">
+<footer class="neighbor-footer">
+  <nav class="nav-container">
       <div
         v-for="item in navItems"
         :key="item.name"
@@ -54,21 +54,19 @@ function navigate(item) {
 
 <style scoped>
 .neighbor-footer {
-  width: 100%;
-  position: fixed;
-  bottom: 0;
+  position: absolute;
   left: 0;
   right: 0;
+  bottom: 0;
   height: 70px;
+  width: 100%;
   z-index: 1000;
 }
 
 .nav-container {
   display: flex;
-  position: absolute;
-  bottom: 0;
   width: 100%;
-  height: 70px;
+  height: 100%;
   background-color: #FFFFFF;
   box-shadow: 0 -2px 10px rgba(84, 87, 92, 0.1);
 }

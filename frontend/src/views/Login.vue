@@ -72,6 +72,10 @@
                     style="padding:10px;">
                     회원가입
                 </router-link>
+                <button type="button" class="btn btn-outline-dark w-100 rounded-3 mt-2"
+                    style="padding:10px;" @click="goToDesktopLogin">
+                    PC 버전에서 보기
+                </button>
             </form>
         </div>
 
@@ -152,6 +156,10 @@ async function onLogin() {
       alert('로그인 처리 중 오류가 발생했습니다.')
     }
   }
+}
+
+function goToDesktopLogin() {
+  router.push('/desktop/login')
 }
 
 </script>

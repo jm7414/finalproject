@@ -45,6 +45,8 @@ import NH_main from '@/views/NH_main.vue'
 import NH_Calender from '@/views/NH_Calender.vue'
 import NH_AddSchedule from '@/views/NH_AddSchedule.vue'
 import NH_Notice from '@/views/NH_Notice.vue'
+import DesktopMain from '@/views/desktop/DesktopMain.vue'
+import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -87,6 +89,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1] } // 보호자(1) 전용
     },
     {
+      path: '/desktop/main',
+      name: 'desktop-main',
+      component: DesktopMain,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
       path: '/NH',
       name: 'NH',
       component: NH_main,
@@ -103,6 +111,12 @@ const router = createRouter({
       name: 'login',
       component: Login,
       meta: { requiresGuest: true }
+    },
+    {
+      path: '/desktop/login',
+      name: 'desktop-login',
+      component: DesktopLogin,
+      meta: { requiresGuest: true, layout: 'desktop' }
     },
 
     // 병욱 게시판 시작

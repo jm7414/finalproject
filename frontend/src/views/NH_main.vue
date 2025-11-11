@@ -136,9 +136,6 @@
         </button>
       </div>
     </div>
-
-    <!-- 이웃 전용 푸터 -->
-    <NeighborFooter />
   </div>
 </template>
 
@@ -147,7 +144,6 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKakaoMap } from '@/composables/useKakaoMap'
 import { logout } from '@/utils/auth'
-import NeighborFooter from '@/components/NeighborFooter.vue'
 
 import zone1 from '@/assets/images/zone 1.svg'
 import locationIcon from '@/assets/images/location.svg'
