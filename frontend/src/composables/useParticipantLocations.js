@@ -1,8 +1,9 @@
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, watch } from 'vue';
 import axios from 'axios';
 
 // props: 부모(PredictLocation)로부터 'map'과 'missingPostId'를 받음
-export function useParticipantLocations(props) {
+// (ref 객체를 받기 위해 props 대신 구조화된 객체를 인수로 받음)
+export function useParticipantLocations({ map, missingPostId }) {
     
     // 1. 상태: 마커 배열과 타이머
     const participantMarkers = ref([]);
@@ -10,36 +11,40 @@ export function useParticipantLocations(props) {
 
     // 2. API 호출: '함께하는 사람들'의 위치를 가져옴
     async function fetchParticipantLocations() {
-        if (!props.map.value || !props.missingPostId.value) {
+        // (지도와 ID가 ref.value로 준비되었는지 확인)
+        if (!map.value || !missingPostId.value) {
             console.warn("참여자 위치 조회: 지도 또는 ID가 준비되지 않음");
             return;
         }
 
         try {
-            // ⭐ [로직 변경] API 주소 변경
+            // (404가 났던 바로 그 API 호출)
             const response = await axios.get(
-                `/api/missing-persons/${props.missingPostId.value}/participants/locations`,
+                `/api/missing-persons/${missingPostId.value}/participants/locations`,
                 { withCredentials: true }
             );
-
-            // ⭐ [로직 변경] 이전 마커 모두 삭제
+            console.log("백엔드로부터 받은 참여자 데이터:", response.data);
+            
+            // (이전 마커 모두 삭제)
             clearMarkers();
-
-            // ⭐ [로직 변경] N명의 마커 새로 그리기
+            
+            // (N명의 마커 새로 그리기)
             response.data.forEach(person => {
-                const position = new window.kakao.maps.LatLng(person.lat, person.lon);
+                // (백엔드가 LocationResponseDTO를 반환한다고 가정)
+                const position = new window.kakao.maps.LatLng(person.latitude, person.longitude);
                 
-                // (이웃용 아이콘이 있다면 여기서 image: ... 로 수정)
+                // (TODO: 이웃용 마커 아이콘 생성 로직 추가)
                 const marker = new window.kakao.maps.Marker({
-                    map: props.map.value, // 부모의 지도 사용
+                    map: map.value, // 부모의 지도 사용
                     position: position,
                 });
                 participantMarkers.value.push(marker); // 마커 배열에 추가
             });
+            console.log(`[useParticipantLocations] 참여자 ${response.data.length}명의 위치를 표시합니다.`);
 
         } catch (err) {
-            console.error("참여자 위치 조회 실패:", err);
-            // (404는 백엔드 API가 아직 없다는 뜻이므로 정상)
+            console.error("[useParticipantLocations] 참여자 위치 조회 실패:", err);
+            // (404는 백엔드 API가 아직 없다는 뜻)
             stopParticipantTracking(); // 오류 발생 시 폴링 중지
         }
     }
@@ -54,8 +59,16 @@ export function useParticipantLocations(props) {
     function startParticipantTracking() {
         console.log("▶️ '함께하는 사람' 위치 추적 시작");
         stopParticipantTracking(); // 중복 방지
-        fetchParticipantLocations(); // 1회 즉시 실행
-        pollingTimer = setInterval(fetchParticipantLocations, 5000); // 5초마다 반복
+        
+        // 지도와 ID가 준비될 때까지 잠시 기다렸다가 실행
+        watch([map, missingPostId], ([newMap, newId]) => {
+            if (newMap && newId) {
+                fetchParticipantLocations(); // 1회 즉시 실행
+                // 타이머 재설정
+                if (pollingTimer) clearInterval(pollingTimer);
+                pollingTimer = setInterval(fetchParticipantLocations, 5000); // 5초마다 반복
+            }
+        }, { immediate: true }); // 즉시 실행
     }
 
     // 5. 추적 중지 (wherePeople 함수가 다시 호출되거나, 페이지 나갈 때)
@@ -66,12 +79,12 @@ export function useParticipantLocations(props) {
         clearMarkers(); // 추적 중지 시 마커도 삭제
     }
 
-    // 6. 컴포넌트 소멸 시 정리
+    // 6. PredictLocation.vue가 언마운트될 때 정리
     onUnmounted(() => {
         stopParticipantTracking();
     });
 
-    // 부모(PredictLocation)가 사용할 함수들을 반환
+    // PredictLocation.vue가 사용할 함수들을 반환
     return {
         startParticipantTracking,
         stopParticipantTracking

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import lx.project.dementia_care.dto.MissingPersonDto;
 import lx.project.dementia_care.service.MissingPersonService;
 import lx.project.dementia_care.vo.UserVO;
+import lx.project.dementia_care.dto.LocationResponseDTO;
 
 @RestController
 @RequestMapping("/api/missing-persons")
@@ -281,6 +282,26 @@ public class MissingPersonController {
             // 이미 확인했거나, DB 오류 발생 시
             System.err.println("알림 확인 처리 중 오류: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409
+        }
+    }
+
+    /**
+     * 특정 실종 신고에 참여하는 사용자들의 '실시간 위치' 목록을 조회하는 API
+     */
+    // ⭐ 3. ResponseEntity의 타입을 LocationResponseDTO로 변경
+    @GetMapping("/{missingPostId}/participants/locations")
+    public ResponseEntity<List<LocationResponseDTO>> getParticipantLocations(
+            @PathVariable Integer missingPostId) {
+        
+        try {
+            // Service의 새 로직을 호출
+            List<LocationResponseDTO> locations = missingPersonService.findParticipantLocations(missingPostId);
+            return ResponseEntity.ok(locations);
+            
+        } catch (Exception e) {
+            System.err.println("참여자 위치 목록 조회 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

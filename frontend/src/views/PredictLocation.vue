@@ -1,6 +1,6 @@
 <template>
     <div class="page-container">
-        
+
         <!-- ⭐ 전체 화면 로딩 오버레이 추가 -->
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-content">
@@ -26,11 +26,6 @@
         <!-- 지도 영역 -->
         <div class="page-container">
             <div ref="mapContainer" class="map-area"></div>
-            <ParticipantsLayer
-            v-if="isParticipantsLayerVisible && map && missingPostId"
-            :map="map" 
-            :missingPostId="missingPostId"
-            />
         </div>
 
         <!-- 토글 버튼 영역 -->
@@ -178,7 +173,8 @@
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'
+                                }}</span>
                         </div>
 
                         <div>
@@ -198,9 +194,10 @@
                             <span class="info-content">{{ (personDetail && personDetail.searchTogetherCount != null) ?
                                 personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
-                                <button class="btn btn-info modern-btn" @click="wherePeople">
+                                <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
+                                    @click="wherePeople">
                                     <i class="bi bi-arrow-right-circle"></i>
-                                    함께하는 사람 보기
+                                    {{ isParticipantsLayerVisible ? '함께하는 중...' : '함께하는 사람 보기' }}
                                 </button>
                             </div>
                         </div>
@@ -314,13 +311,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router';
 import axios from 'axios'
-import ParticipantsLayer from '@/components/ParticipantsLayer.vue';
+import { useParticipantLocations } from '@/composables/useParticipantLocations';
+import { useSearchStore } from '@/stores/useSearchStore';
 
 const route = useRoute();
-const isParticipantsLayerVisible = ref(false);  // 함께하는 사람 마커용
+const searchStore = useSearchStore(); // 함께찾는 사람들
 
 // ========================================================================================
 // jjamTong 데이터 정의
@@ -653,7 +651,7 @@ const timelineWrapper = ref(null)
 const showAllLocations = ref(false)
 
 // ============================================================================
-// [수정] ID 관리 변수 - 환자 번호와 실종 신고 ID를 명확히 구분
+// ID 관리 변수 - 환자 번호와 실종 신고 ID를 명확히 구분
 // ============================================================================
 const patientUserNo = ref(null)
 const missingPostId = ref(null)
@@ -836,7 +834,7 @@ function calcElapsedTime() {
         const diffInMs = now.getTime() - missingTime.getTime()
         const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
         const minutes = Math.max(0, diffInMinutes)
-        
+
         if (minutes < 60) {
             elapsedTimeText.value = `${minutes}분 전`
         } else {
@@ -880,12 +878,12 @@ async function findMissingReportId() {
         // 환자 ID로 최신 실종 신고 조회
         console.log(`[ID 찾기] 환자 ID(${myPatientId})로 '최신 실종 신고'를 조회합니다.`);
         const reportResponse = await axios.get(
-            `/api/missing-persons/patient/${myPatientId}/latest`, 
+            `/api/missing-persons/patient/${myPatientId}/latest`,
             { withCredentials: true }
         );
-        
+
         // 실종 신고 ID 반환
-        return reportResponse.data.missingPostId; 
+        return reportResponse.data.missingPostId;
 
     } catch (err) {
         if (err.response && err.response.status === 404) {
@@ -902,7 +900,7 @@ async function findMissingReportId() {
 // 실종자의 정보를 조회하는 함수
 async function fetchPatientAndMissingReport() {
     // (이 함수는 missingPostId.value가 있다는 것이 보장될 때 호출됨)
-    
+
     personLoading.value = true;
     personError.value = null; // (오류 메시지 초기화 - ID 찾기 오류를 덮어쓰기 위함)
 
@@ -918,7 +916,7 @@ async function fetchPatientAndMissingReport() {
         if (response.data && response.data.reportedAt) {
             missingTimeDB.value = new Date(response.data.reportedAt).getTime();
         }
-        
+
         fetchParticipants(); // 참가자 조회
         return true; // 성공
 
@@ -1311,11 +1309,11 @@ function updateMapForTime(minutes) {
     }
     else {
         circles.value.circle700.setRadius(600)
-        
+
         if (circles.value.circle1500) {
             circles.value.circle1500.setRadius(1300)
         }
-        
+
         if (circles.value.circle2100) {
             circles.value.circle2100.setRadius(2000)
         }
@@ -1328,7 +1326,7 @@ function updateMapForTime(minutes) {
 
 async function initializeWithJjamTong() {
     console.log('🎯 jjamTong 데이터로 초기화 시작...')
-    
+
     isLoading.value = true
 
     try {
@@ -1338,13 +1336,13 @@ async function initializeWithJjamTong() {
 
         // 주소 조회
         await getMissingAddress()
-        
+
         // 경과 시간 계산
         calcElapsedTime()
 
         // 지도 중심 설정
         setCenter()
-        
+
         // 마커 생성
         makeMarker()
 
@@ -1379,15 +1377,15 @@ onMounted(async () => {
         // ID를 찾았음
         console.log("최종 로드할 ID:", idToLoad);
         missingPostId.value = idToLoad; // ⭐ 핵심: 찾은 ID를 state에 저장
-        
+
         // 4 찾은 ID로 실제 데이터 불러오기
         const fetchSuccess = await fetchPatientAndMissingReport();
-        
+
         if (fetchSuccess) {
             // 데이터 로드 성공 -> 지도 그리기
             try {
                 loadKakaoMap(mapContainer.value);
-                setTimeout(() => initializeWithJjamTong(), 1000); 
+                setTimeout(() => initializeWithJjamTong(), 1000);
             } catch (e) {
                 console.error("지도 초기화 중 오류:", e);
                 personError.value = "지도 로딩 중 오류가 발생했습니다.";
@@ -1401,6 +1399,13 @@ onMounted(async () => {
         // ID를 못 찾았음 (신고가 없거나(404), 환자 연결이 없거나)
         console.log("로드할 ID가 없습니다. (신고 없음 또는 오류)");
         isLoading.value = false; // 로딩 끄기
+    }
+});
+
+onUnmounted(() => {
+    if (isParticipantsLayerVisible.value) {
+        searchStore.stopSearch();
+        console.log("[PredictLocation] 페이지 이탈. '함께 찾기' 스위치를 끕니다.");
     }
 });
 
@@ -1598,14 +1603,39 @@ function selectLocation(loc, index) {
     drawRoute(index, displayZoneLevel.value)
 }
 
+const { startParticipantTracking, stopParticipantTracking } = useParticipantLocations({
+    map: map, // (map.value 아님)
+    missingPostId: missingPostId
+});
+const isParticipantsLayerVisible = ref(false);  // 함께하는 사람 마커용
+
+
 function wherePeople() { // ParticipantsLayer.vue 컴포넌트로 이동
     isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
-  
-  if (isParticipantsLayerVisible.value) {
-    console.log("함께하는 사람 위치 표시 ON");
-  } else {
-    console.log("함께하는 사람 위치 표시 OFF");
-  } 
+
+    if (isParticipantsLayerVisible.value) {
+        // --- [ON] 버튼을 켰을 때 ---
+
+        // 1. (기존) 다른 사람들 위치 *조회* 시작
+        startParticipantTracking();
+
+        // 2. (신규) '나의' 위치 *전송* 시작
+        // (App.vue의 useMyCurrentLocation 엔진을 켬)
+        if (missingPostId.value) {
+            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value}`);
+            searchStore.startSearch(missingPostId.value);
+        }
+
+    } else {
+        // --- [OFF] 버튼을 껐을 때 ---
+
+        // 1. (기존) 다른 사람들 위치 *조회* 중지
+        stopParticipantTracking();
+
+        // 2. (신규) '나의' 위치 *전송* 중지
+        console.log("[PredictLocation] '함께 찾기' 스위치를 끕니다.");
+        searchStore.stopSearch();
+    }
 }
 
 // ========================================================================================
@@ -1679,6 +1709,7 @@ function getTimeRangeText(minutes) {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -1723,10 +1754,13 @@ function getTimeRangeText(minutes) {
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translate(-50%, -50%) scale(1);
         box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
     }
+
     50% {
         transform: translate(-50%, -50%) scale(1.1);
         box-shadow: 0 0 0 15px rgba(102, 126, 234, 0);
@@ -1778,6 +1812,7 @@ function getTimeRangeText(minutes) {
         transform: translate(-50%, -50%) scale(0.8);
         opacity: 1;
     }
+
     100% {
         transform: translate(-50%, -50%) scale(1.5);
         opacity: 0;
@@ -1826,9 +1861,11 @@ function getTimeRangeText(minutes) {
     0% {
         transform: translateX(-100%);
     }
+
     50% {
         transform: translateX(0);
     }
+
     100% {
         transform: translateX(100%);
     }
@@ -1909,10 +1946,10 @@ function getTimeRangeText(minutes) {
 }
 
 .content-section {
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fd 100%);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fd 100%);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .info-header-section {
@@ -1967,7 +2004,7 @@ function getTimeRangeText(minutes) {
 }
 
 .detail-sections {
-    position : relative;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -2698,7 +2735,7 @@ function getTimeRangeText(minutes) {
 .age-info i,
 .missing-datetime i,
 .missing-location i {
-    font-size: 14px; 
+    font-size: 14px;
     color: #667eea;
 }
 
@@ -2849,5 +2886,19 @@ function getTimeRangeText(minutes) {
     margin: 0;
     line-height: 1.3;
     word-break: keep-all;
+}
+
+/* '함께하는 이웃' 라벨이 활성화되었을 때 */
+.info-badge .badge-label.active {
+    color: #667eea;
+    font-weight: 900;
+}
+
+/* '함께하는 사람 보기' 버튼이 활성화되었을 때 */
+.modern-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #ae8ad1 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
+    border: none;
 }
 </style>
