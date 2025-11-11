@@ -2,7 +2,7 @@
   <div class="desktop-auth">
     <div class="auth-card">
       <section class="hero">
-        <h1>맘마미아 보호자 센터</h1>
+        <h1>맘마미아</h1>
         <p>PC 전용 화면에서 더 넓은 시야로 가족을 돌보세요.</p>
       </section>
 

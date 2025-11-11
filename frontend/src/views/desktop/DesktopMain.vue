@@ -4,8 +4,8 @@
       <div class="sidebar-header">
         <div class="avatar">👤</div>
         <div class="caretaker">
-          <span class="label">보호자님</span>
-          <span class="name">{{ guardianName }}</span>
+          <span class="label">보호자</span>
+          <span class="name">{{ guardianName }}님</span>
         </div>
       </div>
 
@@ -30,18 +30,33 @@
       <div class="map-column">
         <div class="map-header">
           <div>
-            <h1>안전존 관리</h1>
+            <h1>안심존 관리</h1>
             <p class="subtitle">환자의 현재 위치와 안전존을 모니터링하세요.</p>
           </div>
           <button type="button" class="create-zone-btn">+ 새 안전존 추가</button>
         </div>
 
-        <div class="map-placeholder">
-          <div class="map-empty-state">
-            <div class="icon-circle">🗺️</div>
-            <p class="title">지도 준비 중</p>
-            <p class="desc">실제 지도 연동 전까지는 이 영역이 자리잡고 있어요.</p>
-          </div>
+        <!-- Kakao Map 영역 -->
+        <div class="map-surface">
+          <div ref="mapEl" class="map-view"></div>
+          
+          <!-- 지도 컨트롤 (지도 영역 내부) -->
+          <MapControls 
+            :desktop="true"
+            :is-patient-connected="isPatientConnected"
+            :is-safe-zone-enabled="isSafeZoneEnabled"
+            :is-safe-zone-control-expanded="isSafeZoneControlExpanded"
+            :current-active-zone="currentActiveZone"
+            :selected-level="selectedLevel"
+            :buffer-levels="bufferLevels"
+            :location-btn-bottom="20"
+            @toggle-safe-zone="toggleSafeZone"
+            @toggle-safe-zone-control="toggleSafeZoneControl"
+            @select-level="selectLevel"
+            @zoom-in="zoomIn"
+            @zoom-out="zoomOut"
+            @move-to-patient-location="moveToPatientLocation"
+          />
         </div>
       </div>
 
@@ -52,34 +67,42 @@
             <button type="button" class="panel-action">상세 보기</button>
           </header>
           <div class="patient-body">
-            <div class="patient-avatar">🙂</div>
+            <div class="patient-avatar">
+              <img 
+                v-if="patientInfo.profileImageUrl || defaultProfileImage"
+                :src="patientInfo.profileImageUrl || defaultProfileImage" 
+                alt="프로필"
+                @error="handleImageError"
+              />
+              <div v-else class="avatar-placeholder">🙂</div>
+            </div>
             <div class="patient-meta">
-              <strong>{{ patient.name }}</strong>
+              <strong>{{ patientInfo.name || patient.name }}</strong>
               <span>{{ patient.age }}세 · {{ patient.gender }}</span>
               <span>등록일 {{ patient.registeredAt }}</span>
             </div>
             <ul class="patient-stats">
               <li>
                 <span class="label">현재 상태</span>
-                <span class="value" :class="{ alert: !safeZoneStatus.isInside }">
-                  {{ safeZoneStatus.isInside ? '안전존 내부' : '안전존 이탈' }}
+                <span class="value" :class="{ alert: !safeZoneStatus.isInside, inside: safeZoneStatus.isInside }">
+                  {{ safeZoneStatus.isInside ? '안심존 내부' : safeZoneStatus.status }}
                 </span>
               </li>
               <li>
                 <span class="label">마지막 업데이트</span>
-                <span class="value">{{ safeZoneStatus.lastUpdated }}</span>
+                <span class="value">{{ safeZoneStatus.lastUpdated || '2분 전' }}</span>
               </li>
               <li>
                 <span class="label">현재 위치</span>
-                <span class="value">{{ safeZoneStatus.currentArea }}</span>
+                <span class="value">{{ safeZoneStatus.currentArea || '서울시 강남구' }}</span>
               </li>
             </ul>
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel schedule-panel">
           <header class="panel-header">
-            <h2>등록된 안전존</h2>
+            <h2>오늘의 일정</h2>
             <span class="badge">{{ safeZones.length }}개</span>
           </header>
           <ul class="safezone-list">
@@ -92,100 +115,903 @@
             </li>
           </ul>
         </section>
-
-        <section class="panel">
-          <header class="panel-header">
-            <h2>최근 활동</h2>
-          </header>
-          <ul class="activity-list">
-            <li v-for="(activity, index) in activities" :key="index">
-              <div class="dot" :class="activity.type"></div>
-              <div class="activity-meta">
-                <strong>{{ activity.title }}</strong>
-                <span class="muted">{{ activity.timeAgo }}</span>
-              </div>
-            </li>
-          </ul>
-        </section>
       </aside>
     </section>
   </div>
 </template>
 
 <script setup>
-const guardianName = '김보호';
+import { nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { lineString, buffer, circle } from '@turf/turf'
+import { useKakaoMap } from '@/composables/useKakaoMap'
+import { useSchedule } from '@/composables/useSchedule'
+import { usePatientLocation } from '@/composables/usePatientLocation'
+import { getCurrentUser } from '@/utils/auth'
+import MapControls from '@/components/MapControls.vue'
+import defaultProfileImage from '@/assets/default-profile.png'
+
+const router = useRouter()
+const guardianName = ref('보호자')
 
 const menuItems = [
-  '안전존',
+  '안심존',
   '예상위치',
   'AI보고서',
   '환자 연결관리',
   '일정',
   '커뮤니티',
   '종합 지원'
-];
+]
 
+// 더미 데이터 (나중에 실제 API로 교체)
 const patient = {
   name: '김영희',
   age: 78,
   gender: '여성',
   registeredAt: '2025.01.15'
-};
-
-const safeZoneStatus = {
-  isInside: true,
-  lastUpdated: '2분 전',
-  currentArea: '서울시 강남구'
-};
+}
 
 const safeZones = [
-  { id: 1, name: '집', address: '서울시 강남구 한복판로 123', distance: '500m' },
-  { id: 2, name: '병원', address: '서울시 강남구 논현로 456', distance: '300m' },
-  { id: 3, name: '공원', address: '서울시 강남구 선릉로 789', distance: '400m' }
-];
+  { id: 1, name: '병원 가기', address: '치매 정기 검진 3회', distance: '500m' },
+  { id: 2, name: '꽃집 방문', address: '서울시 강남구 논현로 456', distance: '300m' },
+  { id: 3, name: '구청 민증 재발급', address: '서울시 강남구 선릉로 789', distance: '400m' }
+]
 
 const activities = [
   { title: '안전존 내부 확인', timeAgo: '5분 전', type: 'safe' },
   { title: '위치 업데이트', timeAgo: '15분 전', type: 'info' },
   { title: '안전존 이탈 감지', timeAgo: '1시간 전', type: 'alert' }
-];
+]
+
+// 환자 정보 데이터
+const patientInfo = ref({
+  name: '',
+  userNo: null,
+  isOnline: false,
+  lastActivity: null,
+  user_status: 0,
+  profileImageUrl: '',
+  imageError: false
+})
+
+// 안심존 상태 관련
+const safeZoneStatus = ref({
+  isInside: true,
+  status: '연결 필요',
+  color: '#9CA3AF',
+  bgColor: '#F3F4F6',
+  lastUpdated: '',
+  currentArea: ''
+})
+
+// 안심존 관련
+let currentSafeZone = null // 현재 표시 중인 안심존 폴리곤/원형
+let previewSafeZone = null // 미리보기 안심존
+
+// 안심존 활성화 상태 관리
+const isSafeZoneEnabled = ref(true)
+const isPatientConnected = ref(false)
+
+// 안심존 범위 설정 컨트롤 상태
+const isSafeZoneControlExpanded = ref(false)
+const selectedLevel = ref(1)
+const currentActiveZone = ref(null)
+const originalLevel = ref(1)
+
+// 버퍼 레벨 설정
+const bufferLevels = [
+  { value: 1, name: '1단계', desc: '30m' },
+  { value: 2, name: '2단계', desc: '60m' },
+  { value: 3, name: '3단계', desc: '100m' }
+]
+
+/* ===== Kakao Map 초기화 ===== */
+const {
+  mapEl,
+  mapInstance,
+  initMap,
+  zoomIn,
+  zoomOut,
+  setCenter,
+  setBounds,
+  moveToPatientLocation: moveToPatientLocationMap
+} = useKakaoMap({
+  kakaoKey: import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891',
+  center: { lat: 37.4943524920695, lng: 126.88767655688868 },
+  defaultLevel: 3,
+  enableControls: true,
+  enableTracking: true
+})
+
+/* ===== 환자 정보 관리 ===== */
+async function fetchPatientInfo() {
+  try {
+    const response = await fetch(`/api/user/my-patient`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      isPatientConnected.value = false
+      throw new Error('환자 정보를 가져올 수 없습니다.')
+    }
+    
+    const patient = await response.json()
+    
+    if (patient.message) {
+      console.warn(patient.message)
+      isPatientConnected.value = false
+      patientInfo.value = { name: '', userNo: null, isOnline: false, lastActivity: null, user_status: 0, profileImageUrl: null, imageError: false }
+      return null
+    } else {
+      isPatientConnected.value = true
+      const imageUrl =
+        patient.profilePhoto ||
+        patient.imageUrl ||
+        patient.photoPath ||
+        patient.profileImageUrl ||
+        patient.profileImgUrl ||
+        ''
+
+      patientInfo.value = {
+        name: patient.name || '',
+        userNo: patient.userNo,
+        isOnline: patient.isOnline ?? false,
+        lastActivity: patient.lastActivity || null,
+        user_status: patient.userStatus === 1 ? 1 : 0,
+        profileImageUrl: imageUrl,
+        imageError: false
+      }
+      return patient.userNo
+    }
+  } catch (error) {
+    console.error('환자 정보 조회 오류:', error)
+    isPatientConnected.value = false
+    return null
+  }
+}
+
+/* ===== 일정 관련 composable ===== */
+const {
+  patientUserNo,
+  allSchedules,
+  scheduleLocations,
+  todaySchedules,
+  formatTime,
+  formatLocation,
+  getScheduleStatus,
+  getScheduleCardStyle,
+  loadScheduleData,
+  getCurrentSchedule
+} = useSchedule({
+  fetchPatientInfo,
+  onScheduleLoaded: () => {
+    checkPatientInSafeZone()
+  }
+})
+
+// 환자 위치 추적 composable
+const {
+  patientLocation,
+  patientMarker,
+  startPatientLocationTracking,
+  stopPatientLocationTracking,
+  fetchPatientLocation,
+  updatePatientMarker
+} = usePatientLocation({
+  patientUserNo,
+  patientInfo,
+  mapInstance,
+  onLocationUpdate: (location) => {
+    checkPatientInSafeZone()
+  },
+  onPatientInfoUpdate: (info) => {
+    // 환자 정보 업데이트
+  },
+  onError: (error) => {
+    console.error('환자 위치 추적 오류:', error)
+  }
+})
+
+/* ===== 안심존 데이터 관리 ===== */
+async function fetchScheduleSafeZone(scheduleNo) {
+  try {
+    const response = await fetch(`/api/schedule/${scheduleNo}/route`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      throw new Error('경로 정보를 가져올 수 없습니다.')
+    }
+    
+    const route = await response.json()
+    if (!route.bufferCoordinates) return null
+    
+    const bufferCoordinates = JSON.parse(route.bufferCoordinates)
+    
+    if (Array.isArray(bufferCoordinates)) {
+      return {
+        level: 1,
+        coordinates: bufferCoordinates
+      }
+    }
+    
+    return bufferCoordinates
+  } catch (error) {
+    console.error('일정 안심존 조회 오류:', error)
+    return null
+  }
+}
+
+async function fetchBasicSafeZone(userNo) {
+  try {
+    const response = await fetch(`/api/schedule/basic-safe-zone/${userNo}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      throw new Error('기본 안심존을 가져올 수 없습니다.')
+    }
+    
+    const result = await response.json()
+    
+    if (result.message) {
+      console.warn(result.message)
+      return null
+    }
+    
+    return result.boundaryCoordinates ? JSON.parse(result.boundaryCoordinates) : null
+  } catch (error) {
+    console.error('기본 안심존 조회 오류:', error)
+    return null
+  }
+}
+
+/* ===== 안심존 시각화 ===== */
+function drawScheduleSafeZone(map, bufferCoordinates) {
+  if (!map || !bufferCoordinates) return
+  
+  try {
+    if (currentSafeZone) {
+      currentSafeZone.setMap(null)
+    }
+    
+    let coordinates
+    if (Array.isArray(bufferCoordinates)) {
+      coordinates = bufferCoordinates
+    } else if (bufferCoordinates.coordinates) {
+      coordinates = bufferCoordinates.coordinates
+    } else {
+      console.error('지원하지 않는 bufferCoordinates 형식:', bufferCoordinates)
+      return
+    }
+    
+    const kakaoPath = coordinates.map(coord => 
+      new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
+    )
+    
+    currentSafeZone = new window.kakao.maps.Polygon({
+      path: kakaoPath,
+      strokeWeight: 2,
+      strokeColor: '#EF4444',
+      strokeOpacity: 0.8,
+      fillColor: '#EF4444',
+      fillOpacity: 0.3
+    })
+    
+    currentSafeZone.setMap(map)
+    
+    const bounds = new window.kakao.maps.LatLngBounds()
+    kakaoPath.forEach(latLng => bounds.extend(latLng))
+    map.setBounds(bounds)
+    
+    console.log('경로형 안심존 표시 완료')
+  } catch (error) {
+    console.error('경로형 안심존 표시 오류:', error)
+  }
+}
+
+function drawBasicSafeZone(map, boundaryData) {
+  if (!map || !boundaryData) return
+  
+  try {
+    if (currentSafeZone) {
+      currentSafeZone.setMap(null)
+    }
+    
+    if (boundaryData.type === 'Circle') {
+      const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
+      const radius = boundaryData.radius
+      
+      const circlePoints = []
+      const steps = 64
+      const earthRadius = 6371000
+      
+      for (let i = 0; i < steps; i++) {
+        const angle = (Math.PI * 2 * i) / steps
+        const dx = radius * Math.cos(angle)
+        const dy = radius * Math.sin(angle)
+        
+        const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
+        const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)
+        
+        circlePoints.push(new window.kakao.maps.LatLng(lat, lng))
+      }
+      
+      currentSafeZone = new window.kakao.maps.Polygon({
+        path: circlePoints,
+        strokeWeight: 3,
+        strokeColor: '#6366f1',
+        strokeOpacity: 0.8,
+        fillColor: '#6366f1',
+        fillOpacity: 0.2
+      })
+      
+      currentSafeZone.setMap(map)
+      
+      const bounds = new window.kakao.maps.LatLngBounds()
+      circlePoints.forEach(point => bounds.extend(point))
+      map.setBounds(bounds)
+      
+      console.log('기본형 안심존 표시 완료')
+    }
+  } catch (error) {
+    console.error('기본형 안심존 표시 오류:', error)
+  }
+}
+
+/* ===== 안심존 업데이트 및 관리 ===== */
+async function updateSafeZone(map) {
+  if (!map || !patientUserNo.value) return
+  
+  if (!isSafeZoneEnabled.value) {
+    if (currentSafeZone) {
+      currentSafeZone.setMap(null)
+      currentSafeZone = null
+      currentActiveZone.value = null
+    }
+    return
+  }
+  
+  try {
+    const currentSchedule = getCurrentSchedule()
+    
+    if (currentSchedule) {
+      console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
+      const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
+      
+      if (bufferCoordinates && (
+        (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) ||
+        (typeof bufferCoordinates === 'object' && bufferCoordinates.coordinates && bufferCoordinates.coordinates.length > 0)
+      )) {
+        const level = detectRouteSafeZoneLevel(bufferCoordinates)
+        currentActiveZone.value = {
+          type: '경로형',
+          data: bufferCoordinates,
+          scheduleNo: currentSchedule.scheduleNo,
+          level: level
+        }
+        selectedLevel.value = level
+        originalLevel.value = level
+        
+        drawScheduleSafeZone(map, bufferCoordinates)
+        return
+      }
+    }
+    
+    console.log('기본 안심존 표시')
+    const basicSafeZone = await fetchBasicSafeZone(patientUserNo.value)
+    
+    if (basicSafeZone) {
+      const level = detectBasicSafeZoneLevel(basicSafeZone)
+      currentActiveZone.value = {
+        type: '기본형',
+        data: basicSafeZone,
+        level: level
+      }
+      selectedLevel.value = level
+      originalLevel.value = level
+      
+      drawBasicSafeZone(map, basicSafeZone)
+    } else {
+      console.warn('표시할 안심존이 없습니다.')
+      currentActiveZone.value = null
+    }
+  } catch (error) {
+    console.error('안심존 업데이트 오류:', error)
+    currentActiveZone.value = null
+  }
+}
+
+/* ===== 안심존 레벨 감지 ===== */
+function detectBasicSafeZoneLevel(boundaryData) {
+  if (!boundaryData || boundaryData.type !== 'Circle') return 1
+  
+  if (boundaryData.level) {
+    return boundaryData.level
+  }
+  
+  const radius = boundaryData.radius
+  if (radius <= 30) return 1
+  if (radius <= 60) return 2
+  if (radius <= 100) return 3
+  return 1
+}
+
+function detectRouteSafeZoneLevel(bufferCoordinates) {
+  if (!bufferCoordinates || bufferCoordinates.length === 0) return 1
+  
+  if (typeof bufferCoordinates === 'object' && !Array.isArray(bufferCoordinates)) {
+    if (bufferCoordinates.level) {
+      return bufferCoordinates.level
+    }
+    
+    if (bufferCoordinates.coordinates && Array.isArray(bufferCoordinates.coordinates)) {
+      const firstCoord = bufferCoordinates.coordinates[0]
+      if (firstCoord && firstCoord.level) {
+        return firstCoord.level
+      }
+    }
+  }
+  
+  if (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) {
+    const firstCoord = bufferCoordinates[0]
+    if (firstCoord && typeof firstCoord === 'object' && firstCoord.level) {
+      return firstCoord.level
+    }
+  }
+  
+  return 1
+}
+
+/* ===== 안심존 설정 및 컨트롤 ===== */
+function toggleSafeZoneControl() {
+  if (!currentActiveZone.value || !isSafeZoneEnabled.value) return
+  
+  if (isSafeZoneControlExpanded.value) {
+    saveSafeZoneLevel()
+  } else {
+    isSafeZoneControlExpanded.value = true
+  }
+}
+
+function selectLevel(level) {
+  selectedLevel.value = level
+  updatePreviewSafeZone()
+}
+
+function updatePreviewSafeZone() {
+  if (!mapInstance.value || !currentActiveZone.value) return
+  
+  if (previewSafeZone) {
+    previewSafeZone.setMap(null)
+  }
+  
+  const level = selectedLevel.value
+  const radiusMap = { 1: 30, 2: 60, 3: 100 }
+  const radius = radiusMap[level]
+  
+  try {
+    if (currentActiveZone.value.type === '기본형') {
+      const boundaryData = currentActiveZone.value.data
+      const center = [boundaryData.center.lng, boundaryData.center.lat]
+      const options = { steps: 64, units: 'meters' }
+      const circleGeoJSON = circle(center, radius, options)
+      
+      const coordinates = circleGeoJSON.geometry.coordinates[0]
+      const kakaoPath = coordinates.map(coord => 
+        new window.kakao.maps.LatLng(coord[1], coord[0])
+      )
+      
+      previewSafeZone = new window.kakao.maps.Polygon({
+        path: kakaoPath,
+        strokeWeight: 2,
+        strokeColor: '#6366f1',
+        strokeOpacity: 0.4,
+        fillColor: '#6366f1',
+        fillOpacity: 0.1
+      })
+      
+      previewSafeZone.setMap(mapInstance.value)
+      
+    } else if (currentActiveZone.value.type === '경로형') {
+      const scheduleNo = currentActiveZone.value.scheduleNo
+      fetchRouteCoordinates(scheduleNo).then(routeCoordinates => {
+        if (!routeCoordinates || routeCoordinates.length < 2) return
+        
+        const turfCoords = routeCoordinates.map(c => [c.longitude, c.latitude])
+        const line = lineString(turfCoords)
+        const buffered = buffer(line, radius, { units: 'meters' })
+        
+        const coordinates = buffered.geometry.coordinates[0]
+        const kakaoPath = coordinates.map(coord => 
+          new window.kakao.maps.LatLng(coord[1], coord[0])
+        )
+        
+        previewSafeZone = new window.kakao.maps.Polygon({
+          path: kakaoPath,
+          strokeWeight: 2,
+          strokeColor: '#EF4444',
+          strokeOpacity: 0.4,
+          fillColor: '#EF4444',
+          fillOpacity: 0.1
+        })
+        
+        previewSafeZone.setMap(mapInstance.value)
+      })
+    }
+  } catch (error) {
+    console.error('미리보기 안심존 생성 오류:', error)
+  }
+}
+
+async function fetchRouteCoordinates(scheduleNo) {
+  try {
+    const response = await fetch(`/api/schedule/${scheduleNo}/route`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) return null
+    
+    const route = await response.json()
+    return route.routeCoordinates ? JSON.parse(route.routeCoordinates) : null
+  } catch (error) {
+    console.error('경로 좌표 조회 오류:', error)
+    return null
+  }
+}
+
+async function saveSafeZoneLevel() {
+  if (!currentActiveZone.value) return
+  
+  try {
+    const level = selectedLevel.value
+    const radiusMap = { 1: 30, 2: 60, 3: 100 }
+    const radius = radiusMap[level]
+    
+    if (currentActiveZone.value.type === '기본형') {
+      const boundaryData = currentActiveZone.value.data
+      const updatedBoundary = {
+        ...boundaryData,
+        radius: radius,
+        level: level
+      }
+      
+      const response = await fetch(`/api/schedule/basic-safe-zone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          boundaryCoordinates: JSON.stringify(updatedBoundary)
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('기본 안심존 저장에 실패했습니다.')
+      }
+      
+    } else if (currentActiveZone.value.type === '경로형') {
+      const scheduleNo = currentActiveZone.value.scheduleNo
+      const routeCoordinates = await fetchRouteCoordinates(scheduleNo)
+      
+      if (!routeCoordinates || routeCoordinates.length < 2) {
+        throw new Error('경로 정보를 찾을 수 없습니다.')
+      }
+      
+      const turfCoords = routeCoordinates.map(c => [c.longitude, c.latitude])
+      const line = lineString(turfCoords)
+      const buffered = buffer(line, radius, { units: 'meters' })
+      
+      const coordinates = buffered.geometry.coordinates[0].map(coord => ({
+        latitude: coord[1],
+        longitude: coord[0]
+      }))
+      
+      const bufferCoordinates = {
+        level: level,
+        coordinates: coordinates
+      }
+      
+      const response = await fetch(`/api/schedule/route-safe-zone/${scheduleNo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          bufferCoordinates: JSON.stringify(bufferCoordinates),
+          level: level
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('경로형 안심존 저장에 실패했습니다.')
+      }
+    }
+    
+    if (previewSafeZone) {
+      previewSafeZone.setMap(null)
+      previewSafeZone = null
+    }
+    
+    await updateSafeZone(mapInstance.value)
+    checkPatientInSafeZone()
+    
+    isSafeZoneControlExpanded.value = false
+    originalLevel.value = level
+    
+  } catch (error) {
+    console.error('안심존 저장 오류:', error)
+    alert('안심존 저장에 실패했습니다.')
+  }
+}
+
+watch(isSafeZoneControlExpanded, (newVal) => {
+  if (!newVal) {
+    if (previewSafeZone) {
+      previewSafeZone.setMap(null)
+      previewSafeZone = null
+    }
+    selectedLevel.value = originalLevel.value
+  }
+})
+
+/* ===== 안심존 상태 확인 및 판단 ===== */
+function checkPatientInSafeZone() {
+  if (!patientUserNo.value) {
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '연결 필요',
+      color: '#9CA3AF',
+      bgColor: '#F3F4F6',
+      lastUpdated: '',
+      currentArea: ''
+    }
+    return
+  }
+  
+  if (!isSafeZoneEnabled.value) {
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '안심존 비활성화',
+      color: '#9CA3AF',
+      bgColor: '#F3F4F6',
+      lastUpdated: '',
+      currentArea: ''
+    }
+    return
+  }
+  
+  if (!patientLocation.value || !currentActiveZone.value) {
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '위치 확인 중',
+      color: '#F59E0B',
+      bgColor: '#FEF3C7',
+      lastUpdated: '',
+      currentArea: ''
+    }
+    return
+  }
+  
+  try {
+    const patientLat = patientLocation.value.latitude
+    const patientLng = patientLocation.value.longitude
+    
+    let isInside = false
+    
+    if (currentActiveZone.value.type === '기본형') {
+      const boundaryData = currentActiveZone.value.data
+      const centerLat = boundaryData.center.lat
+      const centerLng = boundaryData.center.lng
+      const radius = boundaryData.radius
+      
+      const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
+      isInside = distance <= radius
+      
+    } else if (currentActiveZone.value.type === '경로형') {
+      const bufferCoordinates = currentActiveZone.value.data
+      let coordinates
+      
+      if (Array.isArray(bufferCoordinates)) {
+        coordinates = bufferCoordinates
+      } else if (bufferCoordinates.coordinates) {
+        coordinates = bufferCoordinates.coordinates
+      } else {
+        isInside = true
+      }
+      
+      if (coordinates) {
+        isInside = isPointInPolygon(patientLat, patientLng, coordinates)
+      }
+    }
+    
+    if (isInside) {
+      safeZoneStatus.value = {
+        isInside: true,
+        status: '안전',
+        color: '#16A34A',
+        bgColor: '#DCFCE7',
+        lastUpdated: '방금 전',
+        currentArea: '서울시 강남구'
+      }
+    } else {
+      safeZoneStatus.value = {
+        isInside: false,
+        status: '벗어남',
+        color: '#EF4444',
+        bgColor: '#FEE2E2',
+        lastUpdated: '방금 전',
+        currentArea: '서울시 강남구'
+      }
+    }
+    
+    console.log(`안심존 상태: ${isInside ? '안전' : '벗어남'} (환자 위치: ${patientLat}, ${patientLng})`)
+    
+  } catch (error) {
+    console.error('안심존 상태 확인 오류:', error)
+    safeZoneStatus.value = {
+      isInside: false,
+      status: '위치 확인 중',
+      color: '#F59E0B',
+      bgColor: '#FEF3C7',
+      lastUpdated: '',
+      currentArea: ''
+    }
+  }
+}
+
+/* ===== 안심존 계산 유틸리티 ===== */
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
+
+function isPointInPolygon(lat, lng, polygon) {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].longitude
+    const yi = polygon[i].latitude
+    const xj = polygon[j].longitude
+    const yj = polygon[j].latitude
+    
+    if (((yi > lng) !== (yj > lng)) && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi)) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+/* ===== 안심존 토글 및 활성화 관리 ===== */
+function toggleSafeZone() {
+  if (!isPatientConnected.value) return
+  
+  isSafeZoneEnabled.value = !isSafeZoneEnabled.value
+  localStorage.setItem('safeZoneEnabled', JSON.stringify(isSafeZoneEnabled.value))
+  
+  if (isSafeZoneEnabled.value) {
+    updateSafeZone(mapInstance.value)
+    checkPatientInSafeZone()
+  } else {
+    if (currentSafeZone) {
+      currentSafeZone.setMap(null)
+      currentSafeZone = null
+      currentActiveZone.value = null
+    }
+    isSafeZoneControlExpanded.value = false
+    checkPatientInSafeZone()
+  }
+}
+
+/* ===== 이미지 에러 핸들링 ===== */
+function handleImageError(event) {
+  console.warn('프로필 이미지 로드 실패:', event.target.src)
+  patientInfo.value.imageError = true
+  // 기본 이미지로 대체 시도
+  if (event.target.src !== defaultProfileImage) {
+    event.target.src = defaultProfileImage
+  } else {
+    // 기본 이미지도 실패하면 이모지 표시
+    event.target.style.display = 'none'
+  }
+}
+
+/* ===== 지도 컨트롤 및 네비게이션 ===== */
+function goToConnect() {
+  router.push('/gdc')
+}
+
+async function moveToPatientLocation() {
+  await moveToPatientLocationMap(
+    patientLocation.value,
+    patientUserNo.value,
+    fetchPatientLocation,
+    goToConnect
+  )
+}
+
+/* ===== 초기화 ===== */
+onMounted(async () => {
+  const saved = localStorage.getItem('safeZoneEnabled')
+  if (saved !== null) {
+    isSafeZoneEnabled.value = JSON.parse(saved)
+  }
+  
+  await loadScheduleData()
+  
+  try {
+    await nextTick()
+    await initMap()
+    
+    await updateSafeZone(mapInstance.value)
+    
+    startPatientLocationTracking()
+    
+    checkPatientInSafeZone()
+    
+    const user = await getCurrentUser()
+    if (user?.name) {
+      guardianName.value = user.name
+    }
+  } catch (e) {
+    console.error(e)
+  }
+})
+
+onBeforeUnmount(() => {
+  stopPatientLocationTracking()
+  if (previewSafeZone) {
+    previewSafeZone.setMap(null)
+  }
+})
 </script>
 
 <style scoped>
 .guardian-desktop {
   display: flex;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - 48px - 32px);
+  max-height: calc(100vh - 48px - 32px);
   background: transparent;
   color: #111827;
+  overflow: hidden;
 }
 
 .sidebar {
-  width: 240px;
+  width: 280px;
   background: #111827;
   color: #f9fafb;
   display: flex;
   flex-direction: column;
-  padding: 24px 20px;
-  border-radius: 16px;
-  margin-right: 24px;
+  padding: 16px 14px;
+  border-radius: 12px;
+  margin-right: 16px;
+  flex-shrink: 0;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .avatar {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #1f2937;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .caretaker {
@@ -213,15 +1039,15 @@ const activities = [
 
 .menu-item {
   width: 100%;
-  height: 40px;
-  border-radius: 10px;
+  height: 36px;
+  border-radius: 8px;
   border: 0;
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: left;
-  padding: 0 14px;
+  padding: 0 12px;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
 }
@@ -232,40 +1058,43 @@ const activities = [
 }
 
 .sidebar-footer {
-  margin-top: 24px;
-  padding: 14px;
-  border-radius: 12px;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.08);
   text-align: center;
 }
 
 .support-text {
-  font-size: 13px;
-  margin-bottom: 12px;
+  font-size: 11px;
+  margin-bottom: 8px;
 }
 
 .support-btn {
   width: 100%;
-  height: 36px;
-  border-radius: 10px;
+  height: 32px;
+  border-radius: 8px;
   border: 0;
   background: #f59e0b;
   color: #111827;
   font-weight: 700;
+  font-size: 12px;
   cursor: pointer;
 }
 
 .main-split {
   display: flex;
   flex: 1;
-  gap: 24px;
+  gap: 16px;
+  min-height: 0;
 }
 
 .map-column {
   flex: 1 1 60%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .map-header {
@@ -276,25 +1105,26 @@ const activities = [
 
 .map-header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: #111827;
 }
 
 .subtitle {
-  margin: 4px 0 0;
-  font-size: 14px;
+  margin: 2px 0 0;
+  font-size: 12px;
   color: #6b7280;
 }
 
 .create-zone-btn {
-  height: 36px;
-  border-radius: 18px;
+  height: 32px;
+  border-radius: 16px;
   border: 0;
   background: #6366f1;
   color: #ffffff;
   font-weight: 600;
-  padding: 0 18px;
+  font-size: 13px;
+  padding: 0 16px;
   cursor: pointer;
   transition: filter 0.2s ease;
 }
@@ -303,70 +1133,66 @@ const activities = [
   filter: brightness(0.95);
 }
 
-.map-placeholder {
+.map-surface {
   flex: 1;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 480px;
-  border: 2px dashed rgba(55, 65, 81, 0.2);
+  min-height: 400px;
+  max-height: calc(100vh - 48px - 32px - 80px);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  background: #e5e7eb;
+  position: relative;
 }
 
-.map-empty-state {
-  text-align: center;
-  color: #374151;
-  max-width: 320px;
-}
-
-.icon-circle {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.15);
-  margin: 0 auto 16px;
-  font-size: 30px;
-}
-
-.map-empty-state .title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.map-empty-state .desc {
-  font-size: 14px;
-  color: #4b5563;
+.map-view {
+  width: 100%;
+  height: 100%;
 }
 
 .info-column {
   width: 320px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
+  height: 100%;
+  align-self: stretch;
 }
 
 .panel {
   background: #ffffff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+.patient-card {
+  flex: 1 1 50%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.schedule-panel {
+  flex: 1 1 50%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .panel-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1f2937;
 }
@@ -397,18 +1223,39 @@ const activities = [
 .patient-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .patient-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   background: #eef2ff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.patient-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+}
+
+.patient-avatar .avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .patient-meta {
@@ -416,11 +1263,21 @@ const activities = [
   flex-direction: column;
   gap: 4px;
   color: #4b5563;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .patient-meta strong {
-  font-size: 18px;
+  font-size: 16px;
   color: #111827;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.patient-meta span {
+  font-size: 14px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .patient-stats {
@@ -429,26 +1286,70 @@ const activities = [
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  line-height: 1.6;
+  /* 고정 스크롤 제거 */
+  overflow: visible;
+  min-height: 0;
 }
 
 .patient-stats li {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 1.6;
   color: #4b5563;
+  padding: 8px 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  flex-shrink: 0;
+}
+
+.patient-stats .label {
+  flex-shrink: 0;
+  margin-right: 8px;
 }
 
 .patient-stats .value {
   font-weight: 600;
   color: #111827;
+  text-align: right;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  flex: 1;
+  min-width: 0;
 }
 
 .patient-stats .value.alert {
   color: #ef4444;
 }
+.patient-stats .value.inside {
+  color: #3b82f6;
+}
 
-.safezone-list,
+.safezone-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.safezone-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(238, 242, 255, 0.6);
+  flex-shrink: 0;
+}
+
 .activity-list {
   list-style: none;
   padding: 0;
@@ -456,15 +1357,6 @@ const activities = [
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.safezone-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(238, 242, 255, 0.6);
 }
 
 .safezone-list strong {
@@ -521,13 +1413,32 @@ const activities = [
   margin-top: 2px;
 }
 
+/* 데스크탑용 지도 컨트롤 위치 조정 */
+.map-surface :deep(.map-controls-left) {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+}
+
+.map-surface :deep(.map-controls-location-group) {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
+}
+
 @media (max-width: 1440px) {
-  .map-placeholder {
-    min-height: 420px;
+  .map-surface {
+    min-height: 380px;
   }
 
   .info-column {
     width: 300px;
+  }
+  
+  .sidebar {
+    width: 260px;
   }
 }
 </style>

@@ -2,7 +2,7 @@
   <div class="desktop-layout">
     <header class="desktop-header">
       <div class="brand">
-        <span class="brand-name">맘마미아 케어</span>
+        <span class="brand-name">맘마미아</span>
         <span class="brand-tagline">보호자 전용 대시보드</span>
       </div>
       <div v-if="showHeaderActions" class="header-actions">
@@ -64,11 +64,11 @@ async function handleLogout() {
 }
 
 .desktop-header {
-  height: 56px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 0 20px;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
@@ -81,13 +81,13 @@ async function handleLogout() {
 }
 
 .brand-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1f2937;
 }
 
 .brand-tagline {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
 }
 
@@ -132,9 +132,12 @@ async function handleLogout() {
 
 .desktop-main {
   flex: 1;
-  padding: 24px 32px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 </style>
 

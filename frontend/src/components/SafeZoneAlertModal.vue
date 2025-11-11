@@ -32,10 +32,11 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { onMounted } from 'vue'
 
 const router = useRouter()
+const route = useRoute()
 
 // Props
 const props = defineProps({
@@ -64,7 +65,11 @@ function closeModal() {
 
 // 지도로 이동
 function goToMap() {
-  router.push('/map-main')
+  const isDesktop =
+    (route && route.meta && route.meta.layout === 'desktop') ||
+    (route && typeof route.path === 'string' && route.path.startsWith('/desktop'))
+
+  router.push(isDesktop ? '/desktop/main' : '/map-main')
   emit('close')
 }
 </script>

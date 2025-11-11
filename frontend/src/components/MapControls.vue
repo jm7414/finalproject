@@ -1,7 +1,7 @@
 <template>
   <!-- 지도 컨트롤 버튼들 -->
   <!-- 왼쪽 상단: 안심존 버튼들 -->
-  <div class="map-controls-left">
+  <div class="map-controls-left" :class="{ desktop }">
     <!-- 안심존 활성화 버튼 (위로 이동) -->
     <button 
       class="map-btn-text" 
@@ -39,7 +39,7 @@
   </div>
 
   <!-- 현위치 버튼과 줌 버튼 그룹 (바텀시트와 연동) -->
-  <div class="map-controls-location-group" :style="{ bottom: locationBtnBottom + 'px' }">
+  <div class="map-controls-location-group" :class="{ desktop }" :style="{ bottom: locationBtnBottom + 'px' }">
     <!-- 줌 버튼들 -->
     <div class="zoom-controls">
       <button class="map-btn-square" @click="$emit('zoomIn')">
@@ -62,6 +62,11 @@ const props = defineProps({
   isPatientConnected: {
     type: Boolean,
     required: true
+  },
+  // 데스크탑 UI 스케일 업 여부
+  desktop: {
+    type: Boolean,
+    default: false
   },
   isSafeZoneEnabled: {
     type: Boolean,
@@ -315,5 +320,55 @@ const emit = defineEmits([
 .map-btn-circle i {
   font-size: 20px;
   color: #1F2937;
+}
+
+/* ===== 데스크탑 전용 확장 스타일 ===== */
+.map-controls-left.desktop {
+  gap: 12px;
+}
+.map-controls-left.desktop .map-btn-text {
+  padding: 11px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+  min-width: 148px;
+}
+.map-controls-left.desktop .level-selector {
+  gap: 9px;
+  padding: 9px;
+  border-radius: 11px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+}
+.map-controls-left.desktop .level-btn {
+  padding: 11px 13px;
+  border-radius: 9px;
+  min-width: 60px;
+}
+.map-controls-left.desktop .level-number {
+  font-size: 15px;
+}
+.map-controls-left.desktop .level-range {
+  font-size: 12px;
+}
+
+.map-controls-location-group.desktop {
+  gap: 11px;
+}
+.map-controls-location-group.desktop .zoom-controls {
+  gap: 9px;
+}
+.map-controls-location-group.desktop .map-btn-square {
+  width: 50px;
+  height: 50px;
+  border-radius: 9px;
+}
+.map-controls-location-group.desktop .map-btn-square i {
+  font-size: 21px;
+}
+.map-controls-location-group.desktop .map-btn-circle {
+  width: 50px;
+  height: 50px;
+}
+.map-controls-location-group.desktop .map-btn-circle i {
+  font-size: 21px;
 }
 </style>
