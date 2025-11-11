@@ -349,7 +349,7 @@ onMounted(() => {
 .form-input, .form-textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #b5c4a3;
   border-radius: 12px;
   background: #fafafa;
   font-size: 14px;
@@ -360,8 +360,8 @@ onMounted(() => {
 
 .form-input:focus, .form-textarea:focus {
   outline: none;
-  border-color: #6366f1;
-  background: #f5f7ff;
+  border-color: #a7cc10;
+  background: #fafaf3;
 }
 
 .form-textarea {
@@ -379,8 +379,8 @@ onMounted(() => {
 }
 
 .location-input:hover {
-  border-color: #6366f1;
-  background: #f5f7ff;
+  border-color: #a7cc10;
+  background: #fafaf3;;
 }
 
 .location-content {
@@ -395,7 +395,7 @@ onMounted(() => {
 }
 
 .plus-icon {
-  color: #6366f1;
+  color: #a7cc10;
 }
 
 .location-text {
@@ -497,7 +497,7 @@ onMounted(() => {
 .save-btn {
   width: 100%;
   padding: 12px 20px;
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -507,11 +507,11 @@ onMounted(() => {
 }
 
 .save-btn:hover:not(:disabled) {
-  background: #4f46e5;
+  background: #90b403;;
 }
 
 .save-btn:disabled {
-  background: #a5b4fc;
+  background: #c2d477;
   cursor: not-allowed;
 }
 
@@ -519,8 +519,8 @@ onMounted(() => {
   width: 100%;
   padding: 12px 20px;
   background: #ffffff;
-  color: #6366f1;
-  border: 1px solid #6366f1;
+  color: #a7cc10;
+  border: 1px solid #a7cc10;
   border-radius: 12px;
   font-size: 18px;
   font-weight: 500;
