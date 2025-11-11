@@ -68,9 +68,9 @@ public class SecurityConfig {
 
                         // 이웃 페이지 (보호자와 이웃 접근 가능)
                         .requestMatchers("/NH").hasAnyRole("GUARDIAN", "NEIGHBOR")
-                        // 주형 수정시작
-                        .requestMatchers("/NH/api/**").hasAnyRole("NEIGHBOR")
-                        // 주형 수정끝
+                        
+                        // ✅ 수정: 이웃 API (보호자와 이웃 모두 접근 가능)
+                        .requestMatchers("/NH/api/**").hasAnyRole("GUARDIAN", "NEIGHBOR")
 
                         // 본인정보 수정 API 권한
                         .requestMatchers(HttpMethod.POST, "/api/user/update").hasAnyRole("GUARDIAN","PATIENT", "SUBSCRIBER", "NEIGHBOR")
@@ -87,7 +87,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(login -> login
-                        .loginPage("https://localhost:5173/login") // Vue 로그인 페이지
+                        .loginPage("https://localhost:5173/login")
                         .loginProcessingUrl("/api/login")
                         .usernameParameter("username")
                         .passwordParameter("password")

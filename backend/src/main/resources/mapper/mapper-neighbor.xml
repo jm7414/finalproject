@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.mapper.NeighborMapper">
+
+    <!-- ==================== 친구 관계 ==================== -->
+
+    <!-- 친구 관계 추가 -->
+    <insert id="insertFriendship" parameterType="map">
+        INSERT INTO neighbor_friends (user_no_1, user_no_2)
+        VALUES (#{userNo1}, #{userNo2})
+    </insert>
+
+    <!-- 친구 관계 삭제 -->
+    <delete id="deleteFriendship" parameterType="map">
+        DELETE FROM neighbor_friends
+        WHERE user_no_1 = #{userNo1}
+          AND user_no_2 = #{userNo2}
+    </delete>
+
+    <!-- 친구 관계 존재 여부 확인 -->
+    <select id="isFriend" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM neighbor_friends
+        WHERE user_no_1 = #{userNo1}
+          AND user_no_2 = #{userNo2}
+    </select>
+
+    <!-- 내 친구 목록 조회 -->
+    <select id="getMyFriends" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborFriendVO">
+        SELECT 
+            nf.friendship_id AS friendshipId,
+            CASE 
+                WHEN nf.user_no_1 = #{userNo} THEN nf.user_no_2
+                ELSE nf.user_no_1
+            END AS userNo,
+            u.name AS name,
+            u.profile_photo AS profilePhoto
+        FROM neighbor_friends nf
+        JOIN users u ON (
+            CASE 
+                WHEN nf.user_no_1 = #{userNo} THEN nf.user_no_2
+                ELSE nf.user_no_1
+            END = u.user_no
+        )
+        WHERE nf.user_no_1 = #{userNo}
+           OR nf.user_no_2 = #{userNo}
+        ORDER BY nf.created_at DESC
+    </select>
+
+    <!-- ==================== 광장 관리 ==================== -->
+
+    <!-- 다음 plaza_no 가져오기 -->
+    <select id="getNextPlazaNo" resultType="int">
+        SELECT COALESCE(MAX(plaza_no), 0) + 1
+        FROM plaza
+    </select>
+
+    <!-- 광장 멤버 추가 -->
+    <insert id="insertPlazaMember" parameterType="lx.project.dementia_care.vo.PlazaVO">
+        INSERT INTO plaza (plaza_no, plaza_name, member_name, user_no)
+        VALUES (#{plazaNo}, #{plazaName}, #{memberName}, #{userNo})
+    </insert>
+
+    <!-- 광장 정보 조회 (첫 번째 멤버 기준) -->
+    <select id="getPlazaByNo" parameterType="int" resultType="lx.project.dementia_care.vo.PlazaVO">
+        SELECT 
+            plaza_member_no AS plazaMemberNo,
+            plaza_no AS plazaNo,
+            plaza_name AS plazaName,
+            member_name AS memberName,
+            user_no AS userNo
+        FROM plaza
+        WHERE plaza_no = #{plazaNo}
+        LIMIT 1
+    </select>
+
+    <!-- 광장 멤버 목록 조회 -->
+    <select id="getPlazaMembers" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaMemberDTO">
+        SELECT 
+            p.user_no AS userNo,
+            u.name AS userName,
+            p.member_name AS memberName,
+            u.profile_photo AS profilePhoto
+        FROM plaza p
+        JOIN users u ON p.user_no = u.user_no
+        WHERE p.plaza_no = #{plazaNo}
+        ORDER BY 
+            CASE p.member_name 
+                WHEN '방장' THEN 1 
+                ELSE 2 
+            END,
+            p.created_at ASC
+    </select>
+
+    <!-- 광장 멤버인지 확인 -->
+    <select id="isPlazaMember" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM plaza
+        WHERE plaza_no = #{plazaNo}
+          AND user_no = #{userNo}
+    </select>
+
+    <!-- 광장 방장인지 확인 -->
+    <select id="isPlazaOwner" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM plaza
+        WHERE plaza_no = #{plazaNo}
+          AND user_no = #{userNo}
+          AND member_name = '방장'
+    </select>
+
+    <!-- 사용자가 이미 방장인 광장이 있는지 확인 -->
+    <select id="countOwnedPlaza" parameterType="int" resultType="int">
+        SELECT COUNT(*)
+        FROM plaza
+        WHERE user_no = #{userNo}
+          AND member_name = '방장'
+    </select>
+
+    <!-- 광장에서 멤버 삭제 -->
+    <delete id="deletePlazaMember" parameterType="map">
+        DELETE FROM plaza
+        WHERE plaza_no = #{plazaNo}
+          AND user_no = #{userNo}
+    </delete>
+
+    <!-- 광장 전체 삭제 (모든 멤버 삭제) -->
+    <delete id="deletePlazaByNo" parameterType="int">
+        DELETE FROM plaza
+        WHERE plaza_no = #{plazaNo}
+    </delete>
+
+    <!-- ==================== 위치 관리 ==================== -->
+
+    <!-- 사용자 위치 추가 -->
+    <insert id="insertUserLocation" parameterType="lx.project.dementia_care.vo.LocationDataVO">
+        INSERT INTO user_location (user_no, latitude, longitude, record_time)
+        VALUES (#{userNo}, #{latitude}, #{longitude}, NOW())
+    </insert>
+
+    <!-- 사용자 최근 위치 조회 -->
+    <select id="getRecentUserLocation" parameterType="int" resultType="lx.project.dementia_care.vo.LocationDataVO">
+        SELECT 
+            location_no AS locationNo,
+            user_no AS userNo,
+            latitude,
+            longitude,
+            record_time AS recordTime
+        FROM user_location
+        WHERE user_no = #{userNo}
+        ORDER BY record_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 광장 멤버들의 최근 위치 조회 (5분 이내) -->
+    <select id="getPlazaMembersRecentLocation" parameterType="int" resultType="lx.project.dementia_care.dto.ActiveMemberDTO">
+        SELECT 
+            u.user_no AS userNo,
+            u.name AS name,
+            u.profile_photo AS profilePhoto,
+            ul.latitude AS latitude,
+            ul.longitude AS longitude
+        FROM plaza p
+        JOIN users u ON p.user_no = u.user_no
+        LEFT JOIN LATERAL (
+            SELECT user_no, latitude, longitude, record_time
+            FROM user_location
+            WHERE user_no = p.user_no
+            ORDER BY record_time DESC
+            LIMIT 1
+        ) ul ON ul.user_no = p.user_no
+        WHERE p.plaza_no = #{plazaNo}
+          AND ul.record_time >= NOW() - INTERVAL '5 minutes'
+    </select>
+
+    <!-- ==================== Safe Zone (광장 버퍼) ==================== -->
+
+    <!-- Safe Zone 추가 -->
+    <insert id="insertSafeZone" parameterType="lx.project.dementia_care.vo.SafeZoneVO">
+        INSERT INTO safe_zone (zone_type, boundary_coordinates, user_no)
+        VALUES (#{zoneType}, #{boundaryCoordinates}::json, #{userNo})
+    </insert>
+
+    <!-- 광장 번호로 Safe Zone 조회 -->
+    <select id="getSafeZoneByPlazaNo" parameterType="int" resultType="lx.project.dementia_care.vo.SafeZoneVO">
+        SELECT 
+            safe_zone_no AS safeZoneNo,
+            zone_type AS zoneType,
+            boundary_coordinates AS boundaryCoordinates,
+            user_no AS userNo
+        FROM safe_zone
+        WHERE zone_type = '만남의 광장'
+          AND boundary_coordinates::text LIKE '%"plazaNo":' || #{plazaNo} || '%'
+        LIMIT 1
+    </select>
+
+    <!-- 광장 번호로 Safe Zone 삭제 -->
+    <delete id="deleteSafeZoneByPlazaNo" parameterType="int">
+        DELETE FROM safe_zone
+        WHERE zone_type = '만남의 광장'
+          AND boundary_coordinates::text LIKE '%"plazaNo":' || #{plazaNo} || '%'
+    </delete>
+
+<!-- ==================== 내 광장 조회 ==================== -->
+
+<!-- 내가 방장인 광장 조회 -->
+<select id="getMyOwnedPlaza" parameterType="int" resultType="lx.project.dementia_care.vo.PlazaVO">
+    SELECT 
+        plaza_member_no AS plazaMemberNo,
+        plaza_no AS plazaNo,
+        plaza_name AS plazaName,
+        member_name AS memberName,
+        user_no AS userNo
+    FROM plaza
+    WHERE user_no = #{userNo}
+      AND member_name = '방장'
+    LIMIT 1
+</select>
+
+<!-- 내가 이웃으로 참여 중인 광장 목록 조회 -->
+<select id="getMyJoinedPlazas" parameterType="int" resultType="lx.project.dementia_care.vo.PlazaVO">
+    SELECT 
+        plaza_member_no AS plazaMemberNo,
+        plaza_no AS plazaNo,
+        plaza_name AS plazaName,
+        member_name AS memberName,
+        user_no AS userNo
+    FROM plaza
+    WHERE user_no = #{userNo}
+      AND member_name = '이웃'
+    ORDER BY created_at DESC
+</select>
+
+</mapper>

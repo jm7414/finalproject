@@ -66,6 +66,30 @@
       일정 자세히 보기
     </button>
 
+    <!-- ✅ 수정: 내 만남의 광장 버튼 추가 -->
+    <div class="mb-3">
+      <button class="btn w-100 rounded-pill neighbor-btn-plaza" @click="router.push('/myPlaza')">
+        <i class="bi bi-geo-fill me-2"></i>
+        내 만남의 광장
+      </button>
+    </div>
+
+    <!-- 지현 추가: 친구 추가 & 광장 만들기 버튼 -->
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <button class="btn w-100 rounded-pill neighbor-btn-primary" @click="router.push('/makeFriends')">
+          <i class="bi bi-person-plus-fill me-1"></i>
+          친구 추가
+        </button>
+      </div>
+      <div class="col-6">
+        <button class="btn w-100 rounded-pill neighbor-btn-secondary" @click="router.push('/createPlaza')">
+          <i class="bi bi-geo-alt-fill me-1"></i>
+          광장 만들기
+        </button>
+      </div>
+    </div>
+
     <!-- 기능 타일 -->
     <div class="row g-3 align-items-stretch mb-4">
       <!-- 1) 기본 안심존 설정 -->
@@ -170,7 +194,7 @@ const {
 /* ===== 날짜 포맷팅 ===== */
 const formatDate = (dateString) => {
   if (!dateString) return ''
-  const date = new Date(dateString + 'T00:00:00') // ISO 형식 보정
+  const date = new Date(dateString + 'T00:00:00')
   const month = date.getMonth() + 1
   const day = date.getDate()
   return `${month}/${day}`
@@ -205,13 +229,8 @@ const fetchUpcomingSchedules = async () => {
 /* ===== 초기화 ===== */
 onMounted(async () => {
   try {
-    // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
-    
-    // 지도 초기화 (빈 지도만 표시)
     await initMap()
-    
-    // 오늘, 내일 일정 2개 조회
     await fetchUpcomingSchedules()
   } catch (e) {
     console.error(e)
@@ -220,17 +239,14 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 폰트 설정 */
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
-/* 안전 상태 텍스트 */
 .safety-status-text {
   font-family: 'SUIT', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1.2rem;
   font-weight: 400;
 }
 
-/* 지도 자세히 보기 버튼 */
 .map-detail-btn {
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -238,9 +254,58 @@ onMounted(async () => {
   backdrop-filter: blur(4px);
 }
 
-/* 이웃 페이지 컨테이너 - 하단 푸터 공간 확보 */
 .neighbor-page-container {
   padding-bottom: 100px;
   margin-bottom: 30px;
+}
+
+/* ✅ 추가: 내 만남의 광장 버튼 */
+.neighbor-btn-plaza {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 14px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  transition: all 0.3s ease;
+}
+
+.neighbor-btn-plaza:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.5);
+}
+
+/* 기존 버튼 스타일 */
+.neighbor-btn-primary {
+  background: linear-gradient(135deg, #a7cc10 0%, #8fb80e 100%);
+  color: white;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 8px rgba(167, 204, 16, 0.25);
+  transition: all 0.3s ease;
+}
+
+.neighbor-btn-primary:hover {
+  background: linear-gradient(135deg, #8fb80e 0%, #7aa00c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(167, 204, 16, 0.35);
+}
+
+.neighbor-btn-secondary {
+  background: white;
+  color: #a7cc10;
+  font-weight: 600;
+  border: 2px solid #a7cc10;
+  transition: all 0.3s ease;
+}
+
+.neighbor-btn-secondary:hover {
+  background: #f5f9e8;
+  border-color: #8fb80e;
+  color: #8fb80e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(167, 204, 16, 0.2);
 }
 </style>
