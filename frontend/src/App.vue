@@ -41,6 +41,7 @@ import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
 import DesktopLayout from './layouts/DesktopLayout.vue'
 
 import 'bootstrap/dist/css/bootstrap.css'
@@ -66,6 +67,8 @@ function handleConfirmAndNavigate() {
 // ====================
 // 실종자 알림 추가 끝
 // ====================
+const currentUser = ref(null);
+useMyCurrentLocation(computed(() => currentUser.value?.userNo));
 
 const route = useRoute()
 const isDesktopLayout = computed(() => route.meta.layout === 'desktop')
@@ -614,6 +617,8 @@ onMounted(async () => {
   if (!isLoginPage.value && !isSignUpPage.value) {
     // 약간의 지연을 주어 인증 상태가 완전히 설정되도록 함
     setTimeout(async () => {
+      // ⭐ 4. (중요) 안심존 모니터링 전에 사용자 정보부터 가져와서 ref에 채웁니다.
+      currentUser.value = await getCurrentUser();
       await startSafeZoneMonitoring()
     }, 500)
   }

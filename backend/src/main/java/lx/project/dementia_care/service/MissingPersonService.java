@@ -4,6 +4,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,9 +16,11 @@ import lx.project.dementia_care.dao.UserDAO;
 import lx.project.dementia_care.vo.UserVO;
 import lx.project.dementia_care.dao.MissingPersonDAO;
 import lx.project.dementia_care.dto.MissingPersonDto;
+import lx.project.dementia_care.dto.LocationResponseDTO;
+import lx.project.dementia_care.service.LocationService;
 
 @Service
-public class MissingPersonService {   
+public class MissingPersonService {
 
     @Autowired
     private UserDAO userDAO;
@@ -25,13 +28,15 @@ public class MissingPersonService {
     private MissingPersonDAO missingPersonDAO;
     @Autowired
     private MissingPersonDAO missingPostDAO;
+    @Autowired
+    private LocationService locationService;
 
     /**
      * user_status가 1인 ('실종' 상태) 사용자 목록과
      * 관련된 최신 missing_post 정보를 조합하여 조회합니다.
      */
     @Transactional(readOnly = true)
-    public List<MissingPersonDto> findMissingPersonsWithDetails(Integer currentUserId) { 
+    public List<MissingPersonDto> findMissingPersonsWithDetails(Integer currentUserId) {
 
         // 1. UserDAO를 통해 user_status가 1인 사용자 목록(기본 정보)을 가져옵니다.
         List<UserVO> missingUsers = userDAO.findMissingUsers();
@@ -39,16 +44,19 @@ public class MissingPersonService {
         // 2. 각 사용자에 대해 MissingPersonDAO를 통해 최신 실종 신고 정보를 가져와 합칩니다.
         List<MissingPersonDto> results = new ArrayList<>();
         for (UserVO user : missingUsers) {
-            
+
             // DAO 호출 시 currentUserId 전달 (DAO/Mapper는 이전에 수정 완료)
-            MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(user.getUserNo(), currentUserId); 
+            MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(user.getUserNo(),
+                    currentUserId);
 
             // MissingPersonDto를 만들고 UserVO와 reportDetails 정보를 합칩니다.
             MissingPersonDto dto = new MissingPersonDto();
             dto.setPatientUserNo(user.getUserNo());
             dto.setPatientName(user.getName());
             dto.setPatientBirthDate(user.getBirthDate());
-            dto.setPhotoPath(reportDetails != null && reportDetails.getPhotoPath() != null ? reportDetails.getPhotoPath() : user.getProfilePhoto());
+            dto.setPhotoPath(
+                    reportDetails != null && reportDetails.getPhotoPath() != null ? reportDetails.getPhotoPath()
+                            : user.getProfilePhoto());
 
             if (reportDetails != null) {
                 dto.setMissingPostId(reportDetails.getMissingPostId());
@@ -57,8 +65,8 @@ public class MissingPersonService {
                 dto.setReportedAt(reportDetails.getReportedAt());
                 dto.setStatus(reportDetails.getStatus());
                 dto.setSearchTogetherCount(reportDetails.getSearchTogetherCount());
-                dto.setCurrentUserJoined(reportDetails.getCurrentUserJoined()); 
-                
+                dto.setCurrentUserJoined(reportDetails.getCurrentUserJoined());
+
             } else {
                 dto.setStatus("정보 없음");
                 dto.setSearchTogetherCount(0);
@@ -74,7 +82,8 @@ public class MissingPersonService {
      * 새로운 실종 신고를 등록하고, 해당 사용자의 user_status를 1로 변경합니다.
      */
     @Transactional
-    public MissingPersonDto createMissingPersonReportAndUpdateStatus(MissingPersonDto missingPersonDto, Integer reporterUserId) {
+    public MissingPersonDto createMissingPersonReportAndUpdateStatus(MissingPersonDto missingPersonDto,
+            Integer reporterUserId) {
         // 1. 기본값 설정 (Service 역할)
         missingPersonDto.setReporterUserNo(reporterUserId);
         if (missingPersonDto.getStatus() == null || missingPersonDto.getStatus().isEmpty()) {
@@ -98,8 +107,9 @@ public class MissingPersonService {
      * 실종 상태를 업데이트하고, 해당 사용자의 user_status를 0으로 변경합니다.
      */
     @Transactional
-    public void updateStatusAndUserStatus(Integer missingPostId, String newStatus, Integer currentUserId) throws AccessDeniedException {
-        
+    public void updateStatusAndUserStatus(Integer missingPostId, String newStatus, Integer currentUserId)
+            throws AccessDeniedException {
+
         // 1. MissingPersonDAO를 통해 신고 상태 변경
         missingPersonDAO.updateMissingStatus(missingPostId, newStatus);
 
@@ -114,12 +124,12 @@ public class MissingPersonService {
     }
 
     /**
-     * 특정 실종 신고 ID (missingPostId)로 
+     * 특정 실종 신고 ID (missingPostId)로
      * 신고 정보와 환자 정보를 조합하여 상세 조회합니다.
      */
     @Transactional(readOnly = true)
     public MissingPersonDto getMissingPersonDetailById(Integer missingPostId) {
-        
+
         // 1. DAO를 통해 ID로 기본 신고 정보를 조회합니다.
         MissingPersonDto reportDetails = missingPersonDAO.findMissingReportById(missingPostId);
 
@@ -137,7 +147,7 @@ public class MissingPersonService {
         // 4. 환자 ID로 UserDAO를 통해 환자의 상세 정보(UserVO)를 조회합니다.
         UserVO patientUser = null;
         try {
-             // UserDAO의 findByUserNo는 Exception을 던질 수 있으므로 try-catch
+            // UserDAO의 findByUserNo는 Exception을 던질 수 있으므로 try-catch
             patientUser = userDAO.findByUserNo(patientUserNo);
         } catch (Exception e) {
             // 예외 처리 (로그 남기기 등)
@@ -154,15 +164,16 @@ public class MissingPersonService {
                 reportDetails.setPhotoPath(patientUser.getProfilePhoto());
             }
         }
-        
+
         // 7. 정보가 조합된 DTO를 반환합니다.
         return reportDetails;
     }
 
     /**
      * 사용자가 특정 실종 신고의 '함께 찾기'에 참여합니다.
+     * 
      * @param missingPostId 참여할 실종 신고 ID
-     * @param userId 참여하는 사용자 ID
+     * @param userId        참여하는 사용자 ID
      * @return true: 새로 참여 성공 / false: 이미 참여 중
      * @throws IllegalArgumentException 실종 신고 ID가 존재하지 않거나 유효하지 않을 때
      */
@@ -179,18 +190,20 @@ public class MissingPersonService {
             missingPersonDAO.addSearchTogetherEntry(missingPostId, userId);
             return true;
         } catch (DuplicateKeyException e) {
-            //  이미 참여 중인 경우 예외를 잡아서 false 반환
+            // 이미 참여 중인 경우 예외를 잡아서 false 반환
             System.out.println("이미 참여 중인 사용자입니다 (missingPostId: " + missingPostId + ", userId: " + userId + ")");
             return false;
         } catch (DataIntegrityViolationException e) {
             // 만약 missing_post_id나 user_id가 FK 제약조건을 위반하는 경우
-             System.err.println("함께 찾기 FK 오류 (missingPostId: " + missingPostId + ", userId: " + userId + "): " + e.getMessage());
+            System.err.println(
+                    "함께 찾기 FK 오류 (missingPostId: " + missingPostId + ", userId: " + userId + "): " + e.getMessage());
             throw new IllegalArgumentException("유효하지 않은 실종 신고 ID 또는 사용자 ID 입니다.");
         }
     }
 
     /**
      * 특정 실종 신고에 참여하는 사용자 목록을 조회합니다.
+     * 
      * @param missingPostId 실종 신고 ID
      * @return 참여자 정보 목록 (UserVO 리스트)
      * @throws IllegalArgumentException 실종 신고 ID가 존재하지 않을 때
@@ -207,7 +220,7 @@ public class MissingPersonService {
     }
 
     /**
-     * [추가] 환자 번호로 최신 실종 신고를 조회하는 메서드
+     * 환자 번호로 최신 실종 신고를 조회하는 메서드
      * 
      * 기존의 getMissingPersonDetailById는 missingPostId를 받지만,
      * 이 메서드는 patientUserNo(환자 번호)를 받아서 조회합니다.
@@ -218,15 +231,16 @@ public class MissingPersonService {
     @Transactional(readOnly = true)
     // currentUserId 파라미터 추가
     public MissingPersonDto findLatestReportByPatientNo(Integer patientUserNo, Integer currentUserId) {
-        
-        // --- [수정 2] DAO 호출 시 currentUserId 전달 ---
-        MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(patientUserNo, currentUserId);
-        
+
+        // --- DAO 호출 시 currentUserId 전달 ---
+        MissingPersonDto reportDetails = missingPersonDAO.findLatestMissingReportByPatientNo(patientUserNo,
+                currentUserId);
+
         // 2. 신고 정보가 없으면 null 반환
         if (reportDetails == null) {
             return null;
         }
-        
+
         // 3. 환자 정보 추가 (기존 로직 동일)
         UserVO patientUser = null;
         try {
@@ -234,23 +248,23 @@ public class MissingPersonService {
         } catch (Exception e) {
             System.err.println("환자 정보 조회 중 오류 발생: " + e.getMessage());
         }
-        
+
         // 4. 환자 정보를 DTO에 추가
         if (patientUser != null) {
             reportDetails.setPatientName(patientUser.getName());
             reportDetails.setPatientBirthDate(patientUser.getBirthDate());
-            
+
             // 신고 사진이 없다면 사용자 프로필 사진 사용
             if (reportDetails.getPhotoPath() == null || reportDetails.getPhotoPath().isEmpty()) {
                 reportDetails.setPhotoPath(patientUser.getProfilePhoto());
             }
         }
-        
+
         return reportDetails;
     }
 
     /**
-     * [추가] 확인하지 않은 최신 알림 1건 조회 (폴링용)
+     * 확인하지 않은 최신 알림 1건 조회 (폴링용)
      */
     @Transactional(readOnly = true)
     public MissingPersonDto findLatestAlertForUser(Integer userId) {
@@ -258,7 +272,7 @@ public class MissingPersonService {
     }
 
     /**
-     * [추가] 알림 확인 기록을 DB에 저장 (확인 버튼 클릭 시)
+     * 알림 확인 기록을 DB에 저장 (확인 버튼 클릭 시)
      */
     @Transactional
     public void confirmAlert(Integer missingPostId, Integer userId) {
@@ -275,11 +289,11 @@ public class MissingPersonService {
     public void resolveActivePostsByPatientNo(Integer patientUserNo) {
         if (patientUserNo == null) {
             System.out.println("SERVICE: patientUserNo가 null이므로 삭제 작업을 건너뜁니다.");
-            return; 
+            return;
         }
-        
+
         System.out.println("SERVICE: 환자 ID " + patientUserNo + "의 '실종' 상태 게시물 삭제를 시도합니다.");
-        
+
         // DAO를 호출하여 '실종' 상태인 게시물 삭제
         int deletedRows = missingPostDAO.resolveActivePostsByPatientNo(patientUserNo);
 
@@ -288,9 +302,34 @@ public class MissingPersonService {
         } else {
             System.out.println("SERVICE: 삭제할 '실종' 상태의 게시물이 없었습니다.");
         }
-        
-        // 참고: 'users' 테이블의 user_status 변경은 
+
+        // 참고: 'users' 테이블의 user_status 변경은
         // 이 함수를 호출한 UserController에서 이미 처리했습니다.
+    }
+
+    /**
+     * '함께하는 사람'의 위치를 조회하는 로직
+     * 
+     * @param missingPostId 실종 신고 ID
+     * @return LocationResponseDTO 리스트 (기존 DTO 재사용)
+     */
+    // 반환 타입을 LocationResponseDTO로 변경
+    public List<LocationResponseDTO> findParticipantLocations(Integer missingPostId) {
+        if (missingPostId == null) {
+            return new ArrayList<>();
+        }
+
+        // 실종 신고에 참여한 '참여자 ID 목록'을 가져옵니다.
+        List<Integer> participantIds = missingPersonDAO.findParticipantUserIds(missingPostId);
+
+        if (participantIds.isEmpty()) {
+            System.out.println("SERVICE: " + missingPostId + "번에 참여자가 없습니다.");
+            return new ArrayList<>();
+        }
+
+        // 그 ID 목록으로 'LocationService'에서 위치 목록을 가져옵니다.
+        // DTO 변환(map) 없이 원본 그대로 반환
+        return locationService.getParticipantLocations(participantIds);
     }
 
 }

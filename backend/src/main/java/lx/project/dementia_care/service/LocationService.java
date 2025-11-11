@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -60,6 +62,40 @@ public class LocationService {
         }
         
         return location;
+    }
+
+    /**
+     * '함께하는 사람들' 위치 조회 (임시 저장소에서) - 여러 명 조회
+     * (MissingPersonService에서 호출됨)
+     *
+     * @param userIds '함께하는 사람'들의 user_no 리스트
+     * @return 위치 정보 DTO 리스트
+     */
+    public List<LocationResponseDTO> getParticipantLocations(List<Integer> userIds) {
+        List<LocationResponseDTO> locations = new ArrayList<>();
+        if (userIds == null || userIds.isEmpty()) {
+            return locations; // ID 리스트가 비어있으면 빈 목록 반환
+        }
+
+        long currentTime = System.currentTimeMillis();
+
+        // ID 목록을 순회하며 'temporaryLocations' 맵에서 위치를 찾음
+        for (Integer userId : userIds) {
+            LocationResponseDTO location = temporaryLocations.get(userId);
+            
+            if (location != null) {
+                // ⭐ (재사용) 1명 조회 로직과 동일하게 오프라인 상태 체크
+                if (currentTime - location.getLastUpdateTime() > 5 * 60 * 1000) {
+                    location.setStatus("offline");
+                }
+                
+                // 찾은 위치를 리스트에 추가
+                locations.add(location);
+            }
+            // (location == null 인 경우: 참여는 했지만 아직 위치 전송을 안 한 사람 -> 무시)
+        }
+        
+        return locations;
     }
 
     /**

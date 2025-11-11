@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.session.SqlSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -53,7 +51,7 @@ public class MissingPersonDAO {
 
     /**
      * 환자 번호로 가장 최근 실종 신고 정보를 조회합니다.
-     * [수정] currentUserId를 받아 '내가 참여했는지' 여부도 조회합니다.
+     * currentUserId를 받아 '내가 참여했는지' 여부도 조회합니다.
      */
     public MissingPersonDto findLatestMissingReportByPatientNo(Integer patientUserNo, Integer currentUserId) {
         Map<String, Object> params = new HashMap<>();
@@ -87,14 +85,14 @@ public class MissingPersonDAO {
     }
 
     /**
-     * [추가] 확인하지 않은 최신 알림 1건 조회 (폴링용)
+     * 확인하지 않은 최신 알림 1건 조회 (폴링용)
      */
     public MissingPersonDto findLatestAlertForUser(Integer userId) {
         return session.selectOne(NAMESPACE + ".findLatestAlertForUser", userId);
     }
 
     /**
-     * [추가] missing_alert_check 테이블에 확인 기록 INSERT
+     * missing_alert_check 테이블에 확인 기록 INSERT
      */
     public void addAlertConfirmation(Integer missingPostId, Integer userId) {
         Map<String, Object> params = new HashMap<>();
@@ -113,6 +111,13 @@ public class MissingPersonDAO {
     public int resolveActivePostsByPatientNo(Integer patientUserNo) {
         // Mapper XML의 <delete id="resolveActivePostsByPatientNo">를 호출합니다.
         return session.delete(NAMESPACE + ".resolveActivePostsByPatientNo", patientUserNo); 
+    }
+
+    /**
+     * 특정 실종 신고에 참여 중인 사람들의 'user_id' 목록만 조회합니다.
+     */
+    public List<Integer> findParticipantUserIds(Integer missingPostId) {
+        return session.selectList(NAMESPACE + ".findParticipantUserIds", missingPostId);
     }
 
 }
