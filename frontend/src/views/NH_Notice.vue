@@ -5,7 +5,6 @@ import NH_NoticeBoard from '@/components/NH_NoticeBoard.vue';
 import NH_NoticeWrite from '@/components/NH_NoticeWrite.vue';
 import CommunityMissing from '@/components/CommunityMissing.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
-import NeighborFooter from '@/components/NeighborFooter.vue'
 
 const router = useRouter();
 
@@ -127,7 +126,6 @@ function goToEvent() {
       <CommunityMissing v-if="activeTab === 'Missing'" />
       <CommunityEvent v-if="activeTab === 'Event'" />
     </div>
-    <NeighborFooter />
   </div>
 
 </template>

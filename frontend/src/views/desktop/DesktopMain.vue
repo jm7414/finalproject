@@ -15,8 +15,10 @@
           :key="idx"
           type="button"
           class="menu-item"
+          :class="{ active: activeMenu === item.route }"
+          @click="navigateToMenu(item.route)"
         >
-          <span>{{ item }}</span>
+          <span>{{ item.name }}</span>
         </button>
       </nav>
 
@@ -103,17 +105,35 @@
         <section class="panel schedule-panel">
           <header class="panel-header">
             <h2>오늘의 일정</h2>
-            <span class="badge">{{ safeZones.length }}개</span>
+            <button type="button" class="panel-action more-btn" @click="goToSchedule">
+              더보기
+            </button>
           </header>
-          <ul class="safezone-list">
-            <li v-for="zone in safeZones" :key="zone.id">
-              <div>
-                <strong>{{ zone.name }}</strong>
-                <span class="muted">{{ zone.address }}</span>
+          <div v-if="todayScheduleCards.length > 0" class="today-schedule-list">
+            <div
+              v-for="schedule in todayScheduleCards"
+              :key="schedule.scheduleNo"
+              class="today-schedule-item"
+            >
+              <div class="today-schedule-header">
+                <span class="today-schedule-time">
+                  {{ formatTime(schedule.startTime) }} - {{ formatTime(schedule.endTime) }}
+                </span>
+                <span
+                  :class="['today-schedule-status', scheduleStatusMeta(schedule).class]"
+                >
+                  {{ scheduleStatusMeta(schedule).label }}
+                </span>
               </div>
-              <span class="distance">{{ zone.distance }}</span>
-            </li>
-          </ul>
+              <strong class="today-schedule-title">{{ schedule.scheduleTitle }}</strong>
+              <div v-if="formatLocation(schedule.scheduleNo)" class="today-schedule-route">
+                {{ formatLocation(schedule.scheduleNo) }}
+              </div>
+            </div>
+          </div>
+          <div v-else class="today-schedule-empty">
+            오늘 예정된 일정이 없습니다.
+          </div>
         </section>
       </aside>
     </section>
@@ -121,7 +141,7 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { lineString, buffer, circle } from '@turf/turf'
 import { useKakaoMap } from '@/composables/useKakaoMap'
@@ -133,16 +153,24 @@ import defaultProfileImage from '@/assets/default-profile.png'
 
 const router = useRouter()
 const guardianName = ref('보호자')
+const activeMenu = ref('/desktop/main')
 
 const menuItems = [
-  '안심존',
-  '예상위치',
-  'AI보고서',
-  '환자 연결관리',
-  '일정',
-  '커뮤니티',
-  '종합 지원'
+  { name: '안심존', route: '/desktop/main' },
+  { name: '예상위치', route: null },
+  { name: 'AI보고서', route: null },
+  { name: '환자 연결관리', route: null },
+  { name: '일정', route: '/desktop/schedule' },
+  { name: '커뮤니티', route: null },
+  { name: '종합 지원', route: null }
 ]
+
+function navigateToMenu(route) {
+  if (route) {
+    activeMenu.value = route
+    router.push(route)
+  }
+}
 
 // 더미 데이터 (나중에 실제 API로 교체)
 const patient = {
@@ -151,18 +179,6 @@ const patient = {
   gender: '여성',
   registeredAt: '2025.01.15'
 }
-
-const safeZones = [
-  { id: 1, name: '병원 가기', address: '치매 정기 검진 3회', distance: '500m' },
-  { id: 2, name: '꽃집 방문', address: '서울시 강남구 논현로 456', distance: '300m' },
-  { id: 3, name: '구청 민증 재발급', address: '서울시 강남구 선릉로 789', distance: '400m' }
-]
-
-const activities = [
-  { title: '안전존 내부 확인', timeAgo: '5분 전', type: 'safe' },
-  { title: '위치 업데이트', timeAgo: '15분 전', type: 'info' },
-  { title: '안전존 이탈 감지', timeAgo: '1시간 전', type: 'alert' }
-]
 
 // 환자 정보 데이터
 const patientInfo = ref({
@@ -277,11 +293,9 @@ const {
   patientUserNo,
   allSchedules,
   scheduleLocations,
-  todaySchedules,
   formatTime,
   formatLocation,
   getScheduleStatus,
-  getScheduleCardStyle,
   loadScheduleData,
   getCurrentSchedule
 } = useSchedule({
@@ -289,6 +303,14 @@ const {
   onScheduleLoaded: () => {
     checkPatientInSafeZone()
   }
+})
+
+const todayScheduleCards = computed(() => {
+  const now = new Date()
+  const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return allSchedules.value
+    .filter(schedule => schedule.scheduleDate === key)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
 })
 
 // 환자 위치 추적 composable
@@ -938,6 +960,22 @@ async function moveToPatientLocation() {
   )
 }
 
+// 일정 상태 메타 정보
+function scheduleStatusMeta(schedule) {
+  const status = getScheduleStatus(schedule)
+  if (status === 'active') {
+    return { label: '진행 중', class: 'active' }
+  }
+  if (status === 'waiting') {
+    return { label: '대기 중', class: 'waiting' }
+  }
+  return { label: '종료', class: 'finished' }
+}
+
+function goToSchedule() {
+  router.push('/desktop/schedule')
+}
+
 /* ===== 초기화 ===== */
 onMounted(async () => {
   const saved = localStorage.getItem('safeZoneEnabled')
@@ -1055,6 +1093,13 @@ onBeforeUnmount(() => {
 .menu-item:hover {
   background: rgba(255, 255, 255, 0.12);
   transform: translateX(3px);
+}
+
+.menu-item.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #ffffff;
+  font-weight: 700;
+  border-left: 3px solid #6366f1;
 }
 
 .sidebar-footer {
@@ -1206,18 +1251,96 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 24px;
-  padding: 0 10px;
+.more-btn {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: transparent;
+  color: #4f46e5;
   font-size: 12px;
   font-weight: 600;
-  color: #4c1d95;
-  background: rgba(129, 140, 248, 0.18);
+  transition: all 0.2s;
+}
+
+.more-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.today-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.today-schedule-item {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(238, 242, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.today-schedule-time {
+  font-size: 13px;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.today-schedule-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
   border-radius: 999px;
+}
+
+.today-schedule-status.waiting {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.today-schedule-status.active {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.today-schedule-status.finished {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.today-schedule-title {
+  font-size: 15px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.today-schedule-route {
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.today-schedule-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 13px;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .patient-body {
@@ -1336,91 +1459,6 @@ onBeforeUnmount(() => {
 }
 .patient-stats .value.inside {
   color: #3b82f6;
-}
-
-.safezone-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.safezone-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgba(238, 242, 255, 0.6);
-  flex-shrink: 0;
-}
-
-.activity-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.safezone-list strong {
-  font-size: 15px;
-  color: #111827;
-}
-
-.muted {
-  display: block;
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.distance {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4338ca;
-}
-
-.activity-list li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #f9fafb;
-}
-
-.dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.dot.safe {
-  background: #10b981;
-}
-
-.dot.info {
-  background: #3b82f6;
-}
-
-.dot.alert {
-  background: #ef4444;
-}
-
-.activity-meta strong {
-  font-size: 14px;
-  color: #111827;
-}
-
-.activity-meta .muted {
-  margin-top: 2px;
 }
 
 /* 데스크탑용 지도 컨트롤 위치 조정 */

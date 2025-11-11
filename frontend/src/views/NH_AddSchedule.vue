@@ -294,7 +294,8 @@ onMounted(() => {
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding-bottom: 100px;
+  padding-bottom: 220px;
+  position: relative;
 }
 
 .header {
@@ -482,8 +483,8 @@ onMounted(() => {
 }
 
 .action-buttons {
-  position: fixed;
-  bottom: 0;
+  position: absolute;
+  bottom: 70px;
   left: 0;
   right: 0;
   padding: 20px;
@@ -492,6 +493,8 @@ onMounted(() => {
   gap: 12px;
   background: #ffffff;
   border-top: 1px solid #f1f5f9;
+  z-index: 1001;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .save-btn {

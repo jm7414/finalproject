@@ -397,13 +397,13 @@ function cancelSettings() {
 
 <style scoped>
 .page {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -424,7 +424,8 @@ function cancelSettings() {
   border-top: 1px solid #e5e7eb;
   padding: 24px 20px;
   overflow-y: auto;
-  margin-bottom: 60px; /* 하단 네비게이션 여유 공간 */
+  padding-bottom: 80px; /* 하단 네비게이션 여유 공간 */
+  max-height: 45vh; /* 컨트롤 패널 최대 높이 제한 */
 }
 
 .control-header {
@@ -544,7 +545,8 @@ function cancelSettings() {
 
   .controls {
     padding: 20px 16px;
-    margin-bottom: 60px;
+    padding-bottom: 80px;
+    max-height: 40vh;
   }
 
   .level-options {
