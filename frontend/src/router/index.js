@@ -11,7 +11,9 @@ import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
-import CommunityMissingDetail from '@/components/MissingDetailModal.vue'
+import SightingReportBoard from '@/views/SightingReportBoard.vue'
+import SightingReport from '@/components/SightingReport.vue'
+import SightingReportWrite from '@/components/SightingReportWrite.vue'
 import CommunityPost from '@/components/CommunityPost.vue'
 import CommunityEvent from '@/components/CommunityEvent.vue'
 import TotalSupport from '@/views/TotalSupport.vue'
@@ -154,8 +156,31 @@ const router = createRouter({
       name: 'PostEdit',
       component: CommunityPostWrite // PostWrite 재활용 가능
     },
+    {
+      path: '/SightingReportBoard/:id',
+      name: 'SightingReportBoard',
+      component: SightingReportBoard,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },
+    {
+      path: '/SightingReportWrite/:id',
+      name: 'SightingReportWrite',
+      component: SightingReportWrite,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },
+    {
+      path: '/report-edit/:id',
+      name: 'ReportEdit',
+      component: SightingReportWrite,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },    
+    {
+      path: '/SightingReport/:id',
+      name: 'SightingReport',
+      component: SightingReport,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },
     // 병욱 게시판 끝
-
     {
       path: '/geo-fencing',
       name: 'geo-fencing',

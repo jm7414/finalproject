@@ -677,10 +677,16 @@ const missingPostId = ref(null)
 // 제보 게시판으로 이동
 function goToReportPage() {
     console.log('제보하기 페이지로 이동합니다...');
+    if (!missingPostId.value) {
+        alert("현재 실종 건 ID를 찾을 수 없어 제보 페이지로 이동할 수 없습니다.");
+        return;
+    }
 
-    // 'ReportCreate'는 라우터에 등록된 페이지의 이름(name)입니다.
-    // 또는 router.push('/report/create'); 처럼 직접 경로를 쓸 수도 있습니다.
-    router.push({ name: 'ReportCreate' });
+    // 제보게시판은 실종자 포스트 ID를 가지고 가야 함
+    router.push({ 
+        name: 'SightingReportBoard',
+        params: { id: missingPostId.value } 
+    });
 }
 
 // 함께하는 사람들 조회하는 함수
