@@ -31,9 +31,9 @@
         <div class="map-header">
           <div>
             <h1>안심존 관리</h1>
-            <p class="subtitle">환자의 현재 위치와 안전존을 모니터링하세요.</p>
+            <p class="subtitle">환자의 현재 위치와 안심존을 모니터링하세요.</p>
           </div>
-          <button type="button" class="create-zone-btn">+ 새 안전존 추가</button>
+          <button type="button" class="create-zone-btn">기본 안심존 변경</button>
         </div>
 
         <!-- Kakao Map 영역 -->
@@ -1223,7 +1223,7 @@ onBeforeUnmount(() => {
 .patient-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-height: 0;
   overflow: hidden;
 }
@@ -1286,8 +1286,7 @@ onBeforeUnmount(() => {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  line-height: 1.6;
+  gap: 25px;
   /* 고정 스크롤 제거 */
   overflow: visible;
   min-height: 0;
@@ -1298,17 +1297,23 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.4;
   color: #4b5563;
-  padding: 8px 0;
+  padding: 6px 0;
   word-break: break-word;
   overflow-wrap: break-word;
   flex-shrink: 0;
+  min-height: 20px;
+  height: 20px;
 }
 
 .patient-stats .label {
   flex-shrink: 0;
   margin-right: 8px;
+  line-height: 1.4;
+  height: 20px;
+  display: flex;
+  align-items: center;
 }
 
 .patient-stats .value {
@@ -1319,6 +1324,11 @@ onBeforeUnmount(() => {
   overflow-wrap: break-word;
   flex: 1;
   min-width: 0;
+  line-height: 1.4;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .patient-stats .value.alert {
