@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="lx.project.dementia_care.dao.NeighborScheduleDAO">
+    
+    <!-- 이웃 일정 저장 -->
+    <insert id="insertNeighborSchedule" parameterType="lx.project.dementia_care.vo.NeighborScheduleVO" useGeneratedKeys="true" keyProperty="scheduleNo">
+        INSERT INTO neighbor_schedule (schedule_title, content, schedule_date, user_no)
+        VALUES (#{scheduleTitle}, #{content}, #{scheduleDate}, #{userNo})
+    </insert>
+    
+    <!-- 특정 이웃의 모든 일정 조회 (개인용) -->
+    <select id="getNeighborSchedulesByUserNo" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT schedule_no, schedule_title, content, schedule_date, user_no, created_at
+        FROM neighbor_schedule
+        WHERE user_no = #{userNo}
+        ORDER BY schedule_date DESC
+    </select>
+    
+    <!-- ✅ 같은 광장의 모든 일정 조회 (광장용) -->
+    <select id="getNeighborSchedulesByPlazaName" parameterType="String" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT 
+            ns.schedule_no,
+            ns.schedule_title,
+            ns.content,
+            ns.schedule_date,
+            ns.user_no,
+            u.name as user_name
+        FROM neighbor_schedule ns
+        JOIN (
+            SELECT DISTINCT user_no FROM plaza WHERE plaza_name = #{plazaName}
+        ) p ON ns.user_no = p.user_no
+        JOIN users u ON ns.user_no = u.user_no
+        ORDER BY ns.schedule_date DESC
+    </select>
+    
+    <!-- ✅ 사용자의 광장명 조회 -->
+    <select id="getPlazaNameByUserNo" parameterType="int" resultType="String">
+        SELECT DISTINCT plaza_name FROM plaza WHERE user_no = #{userNo} LIMIT 1
+    </select>
+    
+    <!-- 특정 일정 조회 -->
+    <select id="getNeighborScheduleByNo" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT schedule_no, schedule_title, content, schedule_date, user_no, created_at
+        FROM neighbor_schedule
+        WHERE schedule_no = #{scheduleNo}
+    </select>
+    
+    <!-- 이웃 일정 삭제 -->
+    <delete id="deleteNeighborSchedule" parameterType="int">
+        DELETE FROM neighbor_schedule
+        WHERE schedule_no = #{scheduleNo}
+    </delete>
+    
+    <!-- 오늘, 내일 일정 2개 조회 -->
+    <select id="selectUpcomingSchedules" parameterType="int" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT 
+            schedule_no as scheduleNo,
+            schedule_title as scheduleTitle,
+            schedule_date as scheduleDate,
+            user_no as userNo
+        FROM neighbor_schedule
+        WHERE user_no = #{userNo}
+        AND schedule_date >= CURRENT_DATE
+        ORDER BY schedule_date ASC
+        LIMIT 2
+    </select>
+
+</mapper>

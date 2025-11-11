@@ -30,15 +30,25 @@
 
         <!-- 토글 버튼 영역 -->
         <div class="toggle-button-wrapper">
-            <button class="toggle-button" :class="{ active: selectedType === 'info' }" @click="mapOrInfo('info')">
-                <i class="bi bi-person-fill"></i>
-                <span class="button-text">실종자 정보</span>
-            </button>
-
-            <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
-                <i class="bi bi-map-fill"></i>
-                <span class="button-text">예상위치</span>
-            </button>
+            <div class="d-flex">
+                <button class="toggle-button" :class="{ active: selectedType === 'info' }" @click="mapOrInfo('info')">
+                    <i class="bi bi-person-fill"></i>
+                    <span class="button-text">실종자 정보</span>
+                </button>
+                
+                <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
+                    <i class="bi bi-map-fill"></i>
+                    <span class="button-text">예상위치</span>
+                </button>
+            </div>
+            <div v-if="!lessData" class="">
+                <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
+                <span>예측 위치들이 부정확할 수 있습니다.</span>
+                <!-- 추후에 수정할 예정 + 이 부분 predictLocationBackup파일에 적어놨어요!
+                    3분간격으로 28일 안되면 예측위치 부정확하다고하고 막아버림
+                    모델 결정 후 전체 수정예정
+                -->
+            </div>
         </div>
 
         <!-- ⭐ 드래그 가능한 타임라인 프로그레스 바 -->
@@ -1883,6 +1893,7 @@ function getTimeRangeText(minutes) {
 
 .toggle-button-wrapper {
     display: flex;
+    flex-direction: column;
     width: 100%;
     background: #ffffff;
     border-bottom: 2px solid #e0e0e0;

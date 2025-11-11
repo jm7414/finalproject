@@ -28,6 +28,12 @@ public class PostDAO {
         return sqlSession.selectList(NAMESPACE + ".findAllPosts");
     }
 
+    // 지겸
+    // 공지만 조회
+    public List<PostListDto> findNotices() {
+        return sqlSession.selectList(NAMESPACE + ".findNotices");
+    }
+
     public void createPost(PostRequestDto requestDto) {
         sqlSession.insert(NAMESPACE + ".createPost", requestDto);
     }
