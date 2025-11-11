@@ -35,7 +35,7 @@
                     <i class="bi bi-person-fill"></i>
                     <span class="button-text">실종자 정보</span>
                 </button>
-                
+
                 <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
                     <i class="bi bi-map-fill"></i>
                     <span class="button-text">예상위치</span>
@@ -184,7 +184,7 @@
                                 <span class="badge-label">착의사항</span>
                             </div>
                             <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'
-                                }}</span>
+                            }}</span>
                         </div>
 
                         <div>
@@ -208,6 +208,11 @@
                                     @click="wherePeople">
                                     <i class="bi bi-arrow-right-circle"></i>
                                     {{ isParticipantsLayerVisible ? '함께하는 중...' : '함께하는 사람 보기' }}
+                                </button>
+
+                                <button class="btn btn-warning modern-btn report-btn" @click="goToReportPage">
+                                    <i class="bi bi-megaphone-fill"></i>
+                                    제보하기
                                 </button>
                             </div>
                         </div>
@@ -322,12 +327,13 @@
 
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
 import { useSearchStore } from '@/stores/useSearchStore';
 
 const route = useRoute();
+const router = useRouter();
 const searchStore = useSearchStore(); // 함께찾는 사람들
 
 // ========================================================================================
@@ -667,6 +673,17 @@ const patientUserNo = ref(null)
 const missingPostId = ref(null)
 
 // 병욱 작업공간 확보 시작 
+
+// 제보 게시판으로 이동
+function goToReportPage() {
+    console.log('제보하기 페이지로 이동합니다...');
+
+    // 'ReportCreate'는 라우터에 등록된 페이지의 이름(name)입니다.
+    // 또는 router.push('/report/create'); 처럼 직접 경로를 쓸 수도 있습니다.
+    router.push({ name: 'ReportCreate' });
+}
+
+// 함께하는 사람들 조회하는 함수
 async function fetchParticipants() {
     if (!missingPostId.value) {
         console.warn('⚠️ missingPostId가 없어서 참여자 조회를 건너뜁니다.')
@@ -2912,4 +2929,26 @@ function getTimeRangeText(minutes) {
     box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
     border: none;
 }
+
+/* 버튼 두 개를 감싸는 그룹 */
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px; /* 버튼 사이의 간격 */
+    width: 100%;
+}
+
+/* '제보하기' 버튼 스타일 (주황색 계열) */
+.report-btn {
+    background: linear-gradient(135deg, #667eea 0%);
+    color: white;
+    border: none;
+    flex-grow: 1;
+}
+
+/* '함께하는 사람 보기' 버튼도 동일하게 공간을 나눠가지도록 */
+.modern-btn {
+    flex-grow: 1;
+}
+
 </style>

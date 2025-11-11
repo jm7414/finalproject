@@ -366,7 +366,7 @@ INSERT INTO post (title, user_no, content, view_count, image_path) VALUES
     1,
     '뇌 건강에 좋은 음식으로는 등 푸른 생선, 견과류, 베리류 등이 있습니다.',
     14,
-    '/images/sample_food_image.jpg'
+    'https://localhost:8080/uploads/images/23a43088-ac8f-4753-aa34-1bf4c06648a9_sample_food_image.jpg'
 );
 
 INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, description) VALUES
