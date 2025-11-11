@@ -50,7 +50,7 @@ function closeMissingDetailModal() {
 // 5. 모달의 '함께 찾기' 이벤트 처리 -> PredictLocation으로 이동
 // 5. 모달의 '함께 찾기' 이벤트 처리 -> API 호출 후 PredictLocation으로 이동
 async function navigateToPredictLocation(missingPostId) {
-  
+
   // 1. ID가 있는지 다시 한번 확인
   if (missingPostId === null || missingPostId === undefined) {
     console.error("ID가 없어 '함께 찾기' 및 이동을 할 수 없습니다.");
@@ -62,7 +62,7 @@ async function navigateToPredictLocation(missingPostId) {
     // --- [추가된 부분] "함께 찾기" API 호출 ---
     // 컨트롤러의 POST /api/missing-persons/{missingPostId}/join 를 호출
     const response = await axios.post(
-      `/api/missing-persons/${missingPostId}/join`, 
+      `/api/missing-persons/${missingPostId}/join`,
       {}, // POST 본문이 비어있으면 빈 객체 전송
       { withCredentials: true } // 로그인 세션(인증)을 함께 보냄
     );
@@ -83,11 +83,11 @@ async function navigateToPredictLocation(missingPostId) {
   } catch (err) {
     // axios 호출이 실패했거나(401, 404, 500 등) 위에서 throw new Error를 던진 경우
     console.error("'함께 찾기' 처리 중 오류 발생:", err);
-    
+
     if (err.response && err.response.status === 401) {
-        alert("로그인이 필요합니다.");
+      alert("로그인이 필요합니다.");
     } else {
-        alert(err.message || "처리 중 오류가 발생했습니다.");
+      alert(err.message || "처리 중 오류가 발생했습니다.");
     }
   }
 }
@@ -115,37 +115,37 @@ function formatTimeAgo(dateString) {
 
 // 날짜/시간 표시 함수 (예: "10월 29일 오후 5:48")
 function formatDateTime(dateString) {
-    if (!dateString) return '정보 없음';
-     try {
-        const date = new Date(dateString);
-        if (isNaN(date)) return '날짜 형식 오류';
-        return date.toLocaleString('ko-KR', {
-          year: 'numeric', // 년도 제외
-          month: 'numeric', day: 'numeric',
-          hour: 'numeric', minute: '2-digit', hour12: true
-        });
-     } catch(e) {
-         console.error("날짜 포맷 오류:", e, dateString);
-         return '날짜 형식 오류';
-     }
+  if (!dateString) return '정보 없음';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date)) return '날짜 형식 오류';
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric', // 년도 제외
+      month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    });
+  } catch (e) {
+    console.error("날짜 포맷 오류:", e, dateString);
+    return '날짜 형식 오류';
+  }
 }
 
 // 나이 계산 함수
 function calculateAge(birthDateString) {
   if (!birthDateString) return '?';
   try {
-      const birthDate = new Date(birthDateString);
-      if (isNaN(birthDate)) return '?';
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age >= 0 ? age : '?'; // 계산 결과가 음수면 '?' 반환
-  } catch(e) {
-      console.error("나이 계산 오류:", e, birthDateString);
-      return '?';
+    const birthDate = new Date(birthDateString);
+    if (isNaN(birthDate)) return '?';
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : '?'; // 계산 결과가 음수면 '?' 반환
+  } catch (e) {
+    console.error("나이 계산 오류:", e, birthDateString);
+    return '?';
   }
 }
 
@@ -159,8 +159,10 @@ const defaultPersonImage = '/default-person.png';
     <main class="missing-list">
       <div v-if="loading" class="status-message">...</div>
       <div v-else-if="error" class="status-message error">{{ error }}</div>
-      <div v-else-if="missingPeople.length === 0" class="status-message"><p>실종자 없음!</p>맘마미아!</div>
-    
+      <div v-else-if="missingPeople.length === 0" class="status-message">
+        <p>실종자 없음!</p>맘마미아!
+      </div>
+
 
       <div v-else v-for="person in missingPeople" :key="person.missingPostId" class="card"
         @click="openMissingDetailModal(person)">

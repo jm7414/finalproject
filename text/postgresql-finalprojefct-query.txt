@@ -1,5 +1,7 @@
 -- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
 -- 자식 테이블부터 부모 테이블 순서로 삭제
+DROP TABLE IF EXISTS sighting_report_comments CASCADE;
+DROP TABLE IF EXISTS sighting_report CASCADE;
 DROP TABLE IF EXISTS missing_alert_check CASCADE;
 DROP TABLE IF EXISTS post_comments CASCADE;
 DROP TABLE IF EXISTS user_location CASCADE;
@@ -163,6 +165,7 @@ CREATE TABLE post (
     user_no INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     content TEXT NOT NULL,
+	notice_check VARCHAR(20),
     view_count INT DEFAULT 0,
     image_path VARCHAR(255),
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
@@ -171,6 +174,18 @@ CREATE TABLE post (
 CREATE INDEX idx_post_user_no ON post(user_no);
 CREATE INDEX idx_post_created_at ON post(created_at);
 CREATE INDEX idx_post_view_count ON post(view_count);
+
+CREATE TABLE post_comments (
+    comment_id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL,
+    user_no INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) 
+        REFERENCES post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_no) 
+        REFERENCES users(user_no) ON DELETE SET NULL
+);
 
 -- === 실종자 게시물(missing_post) 테이블 ===
 CREATE TABLE missing_post (
@@ -220,6 +235,42 @@ CREATE TABLE missing_alert_check (
 CREATE INDEX idx_missing_alert_user ON missing_alert_check(user_no);
 CREATE INDEX idx_missing_alert_post ON missing_alert_check(missing_post_id);
 
+-- === 제보하기 (sighting_report) 테이블 ===
+CREATE TABLE sighting_report (
+    sighting_report_id SERIAL PRIMARY KEY,
+    missing_post_id INTEGER NOT NULL,
+    user_no INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    image_path VARCHAR(255),
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (missing_post_id) 
+        REFERENCES missing_post(missing_post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_no) 
+        REFERENCES users(user_no) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_sighting_report_missing_post ON sighting_report(missing_post_id);
+CREATE INDEX idx_sighting_report_user ON sighting_report(user_no);
+
+
+-- === 제보 댓글 (sighting_report_comments) 테이블 ===
+CREATE TABLE sighting_report_comments (
+    comment_id SERIAL PRIMARY KEY,
+    sighting_report_id INTEGER NOT NULL,
+    user_no INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sighting_report_id) 
+        REFERENCES sighting_report(sighting_report_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_no) 
+        REFERENCES users(user_no) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_sighting_report_comments_report_id ON sighting_report_comments(sighting_report_id);
+CREATE INDEX idx_sighting_report_comments_user_no ON sighting_report_comments(user_no);
+
 -- === 이웃 일정(neighbor_schedule) 테이블 ===
 CREATE TABLE neighbor_schedule (
     schedule_no SERIAL PRIMARY KEY,
@@ -237,7 +288,7 @@ CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
 CREATE TABLE plaza (
     plaza_no SERIAL PRIMARY KEY,
     plaza_name VARCHAR(200) NOT NULL,
-	member_name VARCHAR(200) NOT NULL CHECK (member_name IN ('방장','이웃')),
+   member_name VARCHAR(200) NOT NULL CHECK (member_name IN ('방장','이웃')),
     user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
@@ -379,14 +430,14 @@ FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
 -- 5~6번: subscription_status = 0 (미구독 상태)
 -- 4번, 6번: 환자이므로 invitation_code 포함
 -- 7번: 이웃
-INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_code, subscription_status, role_no) VALUES
-('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 1),
-('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 1),
-('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 1),
-('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 3),
-('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 1),
-('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 2),
-('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 4);
+INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_code, subscription_status, user_status, role_no) VALUES
+('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 0, 1),
+('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 0, 1),
+('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 0, 1),
+('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 1, 3),
+('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 0, 1),
+('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 0, 2),
+('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 0, 4);
 
 -- [수정] post 테이블 INSERT - user_no로 변경
 INSERT INTO post (title, user_no, content, view_count, image_path) VALUES

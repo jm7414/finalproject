@@ -141,6 +141,11 @@ const isGame = computed(() => {
   return route.name === 'game'
 })
 
+// GeoFencing 페이지인지 확인하는 computed 속성
+const isGeoFencingPage = computed(() => {
+  return route.name === 'geo-fencing'
+})
+
 const showMobileHeader = computed(() => {
   if (isDesktopLayout.value) return false
   return !(isAddSchedulePage.value ||
@@ -175,7 +180,8 @@ const mobileMainContentClass = computed(() => {
       MissingReport.value ||
       PredictLocation.value ||
       CommunityPost.value ||
-      CommunityPostWrite.value,
+      CommunityPostWrite.value ||
+      isGeoFencingPage.value,
     'neighbor-page': isNeighborPage.value
   }
 })

@@ -31,7 +31,6 @@
         WHERE user_status = 1 
     </select>
 
-    <!-- 실종자 정보를 불러오는 쿼리 -->
     <select id="findAllMissingPersons" resultMap="MissingPersonResultMap">
         SELECT
             mp.missing_post_id,
@@ -92,8 +91,8 @@
                     SELECT 1 
                     FROM search_Together st 
                     WHERE st.missing_post_id = mp.missing_post_id 
-                      AND st.user_id = #{currentUserId}
-                )
+                      AND st.user_no = #{currentUserId}                 
+                    )
             END AS currentUserJoined
             
         FROM
@@ -129,11 +128,11 @@
     </select>
 
     <insert id="addSearchTogetherEntry" parameterType="map">
-        INSERT INTO search_Together (missing_post_id, user_id)
+        INSERT INTO search_Together (missing_post_id, user_no)
         VALUES (#{missingPostId}, #{userId})
     </insert>
 
-    <select id="findParticipantsByMissingPostId" parameterType="int" resultType="lx.project.dementia_care.vo.UserVO">
+        <select id="findParticipantsByMissingPostId" parameterType="int" resultType="lx.project.dementia_care.vo.UserVO">
         SELECT
             u.user_no,
             u.user_id,
@@ -141,13 +140,12 @@
         FROM
             users u
         JOIN
-            search_Together st ON u.user_no = st.user_id
-        WHERE
+            search_Together st ON u.user_no = st.user_no
+            WHERE
             st.missing_post_id = #{missingPostId}
     </select>
 
-<!-- 실종자 감지 알림 -->
-<select id="findLatestAlertForUser" parameterType="int" resultMap="MissingPersonResultMap">
+    <select id="findLatestAlertForUser" parameterType="int" resultMap="MissingPersonResultMap">
         SELECT 
             mp.missing_post_id,
             mp.patient_user_no,
@@ -164,20 +162,19 @@
                 SELECT 1
                 FROM missing_alert_check mac
                 WHERE mac.missing_post_id = mp.missing_post_id
-                  AND mac.user_id = #{userId}
-            )
+                  AND mac.user_no = #{userId}
+                )
         ORDER BY 
             mp.reported_at DESC
         LIMIT 1
     </select>
 
     <insert id="addAlertConfirmation" parameterType="map">
-        INSERT INTO missing_alert_check (user_id, missing_post_id)
+        INSERT INTO missing_alert_check (user_no, missing_post_id)
         VALUES (#{userId}, #{missingPostId})
-        ON CONFLICT (user_id, missing_post_id) DO NOTHING
+        ON CONFLICT (user_no, missing_post_id) DO NOTHING     
     </insert>
 
-    <!-- 실종포스트 삭제 시 관련 데이터 삭제 -->
     <delete id="resolveActivePostsByPatientNo" parameterType="int">
         DELETE FROM missing_post
         WHERE patient_user_no = #{patientUserNo}
@@ -185,7 +182,7 @@
     </delete>
 
     <select id="findParticipantUserIds" parameterType="int" resultType="int">
-        SELECT user_id 
+        SELECT user_no         
         FROM search_Together 
         WHERE missing_post_id = #{missingPostId}
     </select>
