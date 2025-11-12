@@ -310,9 +310,9 @@ CREATE TABLE IF NOT EXISTS record (
 CREATE TABLE IF NOT EXISTS user_location (
   location_no SERIAL PRIMARY KEY,
   user_no INT NOT NULL,
-  latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
-  longitude DECIMAL(11,8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
-  record_time TIMESTAMPTZ DEFAULT NOW(),
+  latitude DOUBLE PRECISION NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+  longitude DOUBLE PRECISION NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+  record_time TIMESTAMP DEFAULT NOW(),
   CONSTRAINT fk_user_no FOREIGN KEY(user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
 -- 주형 수정 끝

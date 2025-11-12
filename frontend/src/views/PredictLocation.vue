@@ -169,7 +169,7 @@
                 <div v-if="!isLoading" class="detail-sections">
                     <div class="info-item glass-card">
 
-                        <div>
+                        <div class="d-flex align-items-center gap-1">
                             <div class="info-badge">
                                 <i class="bi bi-person-badge"></i>
                                 <span class="badge-label">신체 특징</span>
@@ -178,7 +178,7 @@
                                 || '170cm 마른 체형' }}</span>
                         </div>
 
-                        <div>
+                        <div class="d-flex align-items-center gap-1">
                             <div class="info-badge">
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
@@ -187,7 +187,7 @@
                                 }}</span>
                         </div>
 
-                        <div>
+                        <div class="d-flex align-items-center gap-1">
                             <div class="info-badge">
                                 <i class="bi bi-exclamation-triangle"></i>
                                 <span class="badge-label">특이사항</span>
@@ -201,7 +201,7 @@
                                 <i class="bi bi-people"></i>
                                 <span class="badge-label">함께하는 이웃</span>
                             </div>
-                            <span class="info-content">{{ (personDetail && personDetail.searchTogetherCount != null) ?
+                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount != null) ?
                                 personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
                                 <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
@@ -261,21 +261,16 @@
                                 <h4 class="location-name">
                                     {{ loc.sgg_nm + ' ' + loc.emd_nm + ' ' + loc.ri_nm || '주소 정보 없음' }}에 있는
                                 </h4>
-                                <p class="location-detail">
-                                    {{ loc.name + ' ' +loc.address2 }}
+                                <p class="location-detail" v-if="loc.name">
+                                    {{ loc.name }}에 있을 것 같아요!
+                                </p>
+                                <p class="location-detail" v-else>
+                                    {{ loc.address2 }}
                                 </p>
                             </div>
 
-                            <div class="probability-badge-modern" :style="{
-                                '--progress': loc.value,
-                                '--color': getProbabilityColor(loc.value)
-                            }">
-                                <svg class="progress-ring" viewBox="0 0 36 36">
-                                    <circle class="progress-ring-bg" cx="18" cy="18" r="15.915" />
-                                    <circle class="progress-ring-progress" cx="18" cy="18" r="15.915"
-                                        :style="{ strokeDashoffset: 100 - (loc.value * 100) }" />
-                                </svg>
-                                <span class="probability-text">{{ (loc.value * 40).toFixed(0) }}%</span>
+                            <div class="probability-badge-modern">
+                                <span class="probability-text">최근 한달간 {{ loc.visitCount }}회 방문</span>
                             </div>
                         </div>
                         <p class="location-distance">
@@ -309,9 +304,18 @@
                             </div>
                             <div class="stat-content-modern">
                                 <p class="stat-label-modern">분석 지점</p>
-                                <p class="stat-value-modern"><span class="stat-unit">개의 위치 분석 결과</span>
+                                <p class="stat-value-modern"><span class="stat-unit"> {{total_cluster}}개의 위치 분석 결과</span>
                                 </p>
-                                <p class="stat-sublabel-modern-1">각 시간 별 확률이 높은 상위 10개 지역을 보여줍니다</p>
+                                <p class="stat-sublabel-modern-1">{{personDetail.patientName}}님의 실종위치로부터 각 시간대별</p>
+                                <p class="stat-sublabel-modern-1">최대 5개의 위치를 보여줍니다</p>
+                            </div>
+                        </div>
+                        <div class="stat-card-modern">
+                            <div class="stat-icon-modern" style="--stat-color: #667eea;">
+                                <i class="bi bi-geo-alt"></i>
+                            </div>
+                            <div class="stat-content-modern">
+                                <p class="stat-sublabel-modern-1">여기 모달로 띄울겁니다</p>
                             </div>
                         </div>
                     </div>
@@ -405,7 +409,7 @@ let fullAddress = ''
 
 // 유효 데이터 수
 let less_data = ref(false)
-
+let total_cluster = ref(null)
 // ========================================================================================
 // API 호출 함수 - 예측 데이터 가져오기
 // ========================================================================================
@@ -432,9 +436,18 @@ async function fetchPredictionData() {
 
         const data = response.data
 
-        if(data.less_data === 'yes') {
+        // 여기가 데이터가 일주일이면 아예 돌려보내고 1주일~한달 애매띠하게 들어오면 부정확하다고 알려줄거임
+        if (data.data_sufficiency === 'nono') {
+            alert(`데이터가 충분하지않아 예상위치가 제공되지 않습니다. 홈으로 돌아갑니다.`)
+            router.push(`/GD_main`)
+        } else if (data.data_sufficiency === 'no') {
             less_data.value = true
         }
+
+        console.log(`총 클러스터 수 : ${data.total_clusters_found}`)
+
+        // 전체 클러스터 분석 수
+        total_cluster.value = data.total_clusters_found
 
         // ⭐ API 응답 데이터 처리
         processDestinationsToZones(data)
@@ -471,7 +484,7 @@ async function processDestinationsToZones(apiResponse) {
         id: dest.destination_id,
         lat: dest.latitude,
         lon: dest.longitude,
-        name: dest.name || `목적지 ${index + 1}`,
+        name: dest.name,
         visitCount: dest.visit_count,
         distance: dest.distance_meters,
         waypoints: dest.waypoints || [],
@@ -494,7 +507,7 @@ async function processDestinationsToZones(apiResponse) {
         id: dest.destination_id,
         lat: dest.latitude,
         lon: dest.longitude,
-        name: dest.name || `목적지 ${index + 1}`,
+        name: dest.name,
         visitCount: dest.visit_count,
         distance: dest.distance_meters,
         waypoints: dest.waypoints || [],
@@ -517,7 +530,7 @@ async function processDestinationsToZones(apiResponse) {
         id: dest.destination_id,
         lat: dest.latitude,
         lon: dest.longitude,
-        name: dest.name || `목적지 ${index + 1}`,
+        name: dest.name,
         visitCount: dest.visit_count,
         distance: dest.distance_meters,
         waypoints: dest.waypoints || [],
@@ -1008,7 +1021,7 @@ async function requestAllRoutes() {
                 if (data && data.features && Array.isArray(data.features) && data.features.length > 0) {
                     zone.storage.value.push(data.features)
                     console.log(`✅ Zone ${zone.level}-${i + 1} 경로 저장 (${data.features.length}개 feature)`)
-                    
+
                     // ⭐ 응답 데이터 디버깅
                     if (data.features[0]) {
                         const firstFeature = data.features[0]
@@ -1803,8 +1816,8 @@ function mapOrInfo(type) {
  */
 function selectLocation(loc, index) {
     // 같은 위치를 다시 클릭하면 선택 해제
-    if (selectedLocation.value && 
-        selectedLocation.value.lat === loc.lat && 
+    if (selectedLocation.value &&
+        selectedLocation.value.lat === loc.lat &&
         selectedLocation.value.lon === loc.lon) {
         selectedLocation.value = null
         clearAllRoutes()  // 경로 제거
@@ -1919,6 +1932,9 @@ function calcElapsedTime() {
         const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
         const minutes = Math.max(0, diffInMinutes)
 
+        // 🧩 90분 이상이면 90으로 고정
+        const clampedMinutes = Math.min(minutes, 90)
+
         if (minutes < 60) {
             elapsedTimeText.value = `${minutes}분 전`
         } else {
@@ -1927,7 +1943,7 @@ function calcElapsedTime() {
         }
 
         console.log(`⏱️ 경과 시간: ${minutes}분 → 표시: ${elapsedTimeText.value}`)
-        setTime(minutes)
+        setTime(clampedMinutes)
 
     } catch (error) {
         console.error('❌ 경과 시간 계산 중 오류:', error)
@@ -2635,9 +2651,9 @@ function setCenter(force = false) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 14px;
+    padding: 6px 14px;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-radius: 20px;
+    border-radius: 15px;
     flex-shrink: 0;
     border: 1px solid rgba(102, 126, 234, 0.2);
     width: fit-content;
@@ -2877,10 +2893,6 @@ function setCenter(force = false) {
     transition: all 0.3s ease;
 }
 
-.timeline-handle:hover .handle-icon {
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-}
-
 .handle-tooltip {
     position: absolute;
     top: -40px;
@@ -3108,7 +3120,7 @@ function setCenter(force = false) {
 
 .probability-badge-modern {
     position: relative;
-    width: 44px;
+    width: 60px;
     height: 44px;
     flex-shrink: 0;
     display: flex;
@@ -3140,9 +3152,9 @@ function setCenter(force = false) {
 }
 
 .probability-text {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
-    color: var(--color);
+    color: #888888;
     z-index: 1;
 }
 
@@ -3231,7 +3243,7 @@ function setCenter(force = false) {
 .stat-label-modern {
     font-size: 12px;
     font-weight: 600;
-    color: #999;
+    color: #585858;
     margin: 0 0 6px 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;

@@ -14,27 +14,28 @@ pip install numpy pandas
 2. 오픈스트리트 라이브러리 불러오기
 pip install osmnx 
 
-3. srtm 라이브러리
-pip install srtm-py
+3. sqlalchemy, asyncio, asyncpg
+pip install sqlalchemy asyncio asyncpg
 
-4. geopy
-pip install geopy
-
-5. fastapi
+4. fastapi
 pip install fastapi
 
-6. uvicorn
+5. uvicorn
 pip install uvicorn
 
-7. sklearn (랜덤포레스트를 위해 불러와야함)
-pip install scikit-learn
+6. hdbscan
+pip install hdbscan
 ---
 
 이렇게 다 했으면 이제 FastAPI.py파일을 열어봤을 때 아무런 노란색 밑줄이 없을거에요
 그렇다면 이제 서버를 실행시켜봅시다.
 ---
 
-uvicorn FastAPI:app --host 0.0.0.0 --port 8000 --reload
+uvicorn FastAPI_v2:app --host 0.0.0.0 --port 8000 --reload
+
+or
+
+python FastAPI_v2.py
 
 이제 이러면 Application startup complete가 보이면 완전히 실행된것임
 
@@ -42,9 +43,19 @@ localhost:8000/docs
 
 로 이동하면 여기서 실행된 FastAPI가 보일텐데 여기는 그냥 Test용도임 그냥 궁굼하면 여기서 뚝딱뚝딱하면됨
 
-RequestBody를 저렇게 잘 만져서 user_no와 missing_time만 넣은 뒤 Execute하면 됩니다.
-
 ![첫번째 : 가상환경 실행하기](image.png)
 ![두번째 : numpy, pandas 설치](image-1.png)
 ![uvicorn 실행시 나타나는 로그? ](image-2.png)
 ![docs에서 test실행](image-3.png)
+
+
+==============================================================================
+추가적으로 postgreSQL에 넣어야할 것 ((각자 파일경로 달라서 두번째줄에 FROM 'C:\~~이 부분 고쳐야함'))
+
+-- user_location 테이블에 CSV 데이터 삽입
+COPY user_location(user_no, latitude, longitude, record_time)
+FROM 'C:\final-project\python\gps_trajectory_1year.csv'
+DELIMITER ','
+CSV HEADER;
+
+
