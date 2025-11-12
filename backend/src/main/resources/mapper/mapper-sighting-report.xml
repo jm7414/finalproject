@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- SightingReportDAO 인터페이스와 연결 -->
+<mapper namespace="lx.project.dementia_care.dao.SightingReportDAO">
+
+    <!-- 제보 목록 DTO 매핑 -->
+    <resultMap id="SightingReportListMap" type="lx.project.dementia_care.dto.SightingReportListDto">
+        <id property="sightingReportId" column="sighting_report_id"/>
+        <result property="author" column="author_name"/>
+        <result property="authorProfileImage" column="profile_photo"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="content" column="content"/>
+        <result property="imagePath" column="image_path"/>
+        <result property="commentCount" column="comment_count"/>
+    </resultMap>
+
+    <!-- 제보 상세 DTO 매핑 -->
+    <resultMap id="SightingReportResponseMap" type="lx.project.dementia_care.dto.SightingReportResponseDto">
+        <id property="sightingReportId" column="sighting_report_id"/>
+        <result property="userNo" column="user_no"/>
+        <result property="author" column="author_name"/>
+        <result property="authorProfileImage" column="profile_photo"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="content" column="content"/>
+        <result property="imagePath" column="image_path"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="commentCount" column="comment_count"/>
+    </resultMap>
+
+    <!-- 특정 실종 건(missingPostId)에 달린 모든 제보 목록 조회 -->
+    <select id="findReportsByMissingPostId" parameterType="int" resultMap="SightingReportListMap">
+        SELECT
+            sr.sighting_report_id,
+            u.name AS author_name,
+            u.profile_photo,
+            sr.created_at,
+            sr.content,
+            sr.image_path,
+            (SELECT COUNT(*) FROM sighting_report_comments src WHERE src.sighting_report_id = sr.sighting_report_id) AS comment_count
+        FROM
+            sighting_report sr
+        JOIN
+            users u ON sr.user_no = u.user_no
+        WHERE
+            sr.missing_post_id = #{missingPostId}
+        ORDER BY
+            sr.created_at DESC
+    </select>
+
+    <!-- 제보 ID로 1건의 상세 정보를 조회 -->
+    <select id="findReportById" parameterType="int" resultMap="SightingReportResponseMap">
+        SELECT
+            sr.sighting_report_id,
+            sr.user_no,
+            u.name AS author_name,
+            u.profile_photo,
+            sr.created_at,
+            sr.content,
+            sr.image_path,
+            (SELECT COUNT(*) FROM sighting_report_comments src WHERE src.sighting_report_id = sr.sighting_report_id) AS comment_count
+        FROM
+            sighting_report sr
+        JOIN
+            users u ON sr.user_no = u.user_no
+        WHERE
+            sr.sighting_report_id = #{sightingReportId}
+    </select>
+
+    <!-- 새로운 제보 1건을 생성 -->
+    <insert id="createReport" parameterType="map" useGeneratedKeys="true" keyProperty="sighting_report_id" keyColumn="sighting_report_id">
+        INSERT INTO sighting_report (
+            missing_post_id, 
+            user_no, 
+            content, 
+            image_path
+        ) VALUES (
+            #{dto.missingPostId}, 
+            #{userNo}, 
+            #{dto.content}, 
+            #{dto.imagePath}
+        )
+    </insert>
+
+    <!-- 제보 1건의 내용을 수정 -->
+    <update id="updateReport" parameterType="map">
+        UPDATE sighting_report
+        SET
+            content = #{dto.content},
+            image_path = #{dto.imagePath}
+        WHERE
+            sighting_report_id = #{reportId}
+    </update>
+
+    <!-- 제보 ID로 1건을 삭제 -->
+    <delete id="deleteReport" parameterType="int">
+        DELETE FROM sighting_report 
+        WHERE sighting_report_id = #{sightingReportId}
+    </delete>
+
+</mapper>

@@ -11,7 +11,9 @@ import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
-import CommunityMissingDetail from '@/components/MissingDetailModal.vue'
+import SightingReportBoard from '@/views/SightingReportBoard.vue'
+import SightingReport from '@/components/SightingReport.vue'
+import SightingReportWrite from '@/components/SightingReportWrite.vue'
 import CommunityPost from '@/components/CommunityPost.vue'
 import CommunityEvent from '@/components/CommunityEvent.vue'
 import TotalSupport from '@/views/TotalSupport.vue'
@@ -45,6 +47,9 @@ import NH_main from '@/views/NH_main.vue'
 import NH_Calender from '@/views/NH_Calender.vue'
 import NH_AddSchedule from '@/views/NH_AddSchedule.vue'
 import NH_Notice from '@/views/NH_Notice.vue'
+import DesktopMain from '@/views/desktop/DesktopMain.vue'
+import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
+import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -87,6 +92,18 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1] } // 보호자(1) 전용
     },
     {
+      path: '/desktop/main',
+      name: 'desktop-main',
+      component: DesktopMain,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/schedule',
+      name: 'desktop-schedule',
+      component: DesktopSchedule,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
       path: '/NH',
       name: 'NH',
       component: NH_main,
@@ -103,6 +120,12 @@ const router = createRouter({
       name: 'login',
       component: Login,
       meta: { requiresGuest: true }
+    },
+    {
+      path: '/desktop/login',
+      name: 'desktop-login',
+      component: DesktopLogin,
+      meta: { requiresGuest: true, layout: 'desktop' }
     },
 
     // 병욱 게시판 시작
@@ -154,8 +177,31 @@ const router = createRouter({
       name: 'PostEdit',
       component: CommunityPostWrite // PostWrite 재활용 가능
     },
+    {
+      path: '/SightingReportBoard/:id',
+      name: 'SightingReportBoard',
+      component: SightingReportBoard,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },
+    {
+      path: '/SightingReportWrite/:id',
+      name: 'SightingReportWrite',
+      component: SightingReportWrite,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },
+    {
+      path: '/report-edit/:id',
+      name: 'ReportEdit',
+      component: SightingReportWrite,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },    
+    {
+      path: '/SightingReport/:id',
+      name: 'SightingReport',
+      component: SightingReport,
+      meta: { requiresAuth: true, roles: [1, 3, 4] }
+    },
     // 병욱 게시판 끝
-
     {
       path: '/geo-fencing',
       name: 'geo-fencing',
@@ -313,7 +359,6 @@ const router = createRouter({
       component: MapMain,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-
     // 지겸
     {
       path: '/nhCalender',
@@ -321,13 +366,13 @@ const router = createRouter({
       component: NH_Calender,
       meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
-        {
+    {
       path: '/nhAddSchedule',
       name: 'NH_AddSchedule',
-      component: NH_AddSchedule, 
+      component: NH_AddSchedule,
       meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
-        {
+    {
       path: '/nhNotice',
       name: 'NH_Notice',
       component: NH_Notice,

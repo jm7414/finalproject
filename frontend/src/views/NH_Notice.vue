@@ -127,6 +127,7 @@ function goToEvent() {
       <CommunityEvent v-if="activeTab === 'Event'" />
     </div>
   </div>
+
 </template>
 
 <style scoped>
@@ -172,7 +173,7 @@ function goToEvent() {
 .main-button.active,
 .missing-button.active,
 .main-div-9.active {
-  border-bottom-color: #8e97fd;
+  border-bottom-color: #a7cc10;
 }
 .main-button.active .post-button,
 .missing-button.active .event-button,

@@ -143,21 +143,21 @@ function handleOverlayClick() {
 
 .cancel-btn {
   background: #ffffff;
-  color: #6366f1;
-  border: 1px solid #6366f1;
+  color: #a7cc10;
+  border: 1px solid #a7cc10;
 }
 
 .cancel-btn:hover {
   background: #f9fafb;
-  border-color: #4f46e5;
+  border-color: #a0c60c;;
 }
 
 .confirm-btn {
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
 }
 
 .confirm-btn:hover {
-  background: #4f46e5;
+  background: #a0c60c;
 }
 </style>

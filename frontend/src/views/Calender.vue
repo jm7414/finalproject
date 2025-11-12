@@ -881,7 +881,7 @@ onMounted(() => {
 .fab {
   position: fixed;
   bottom: 100px;
-  right: 20px;
+  right: calc((100vw - 375px) / 2 + 20px);
   width: 56px;
   height: 56px;
   background: #6366f1;
@@ -894,7 +894,14 @@ onMounted(() => {
   justify-content: center;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   transition: all 0.2s;
-  z-index: 10;
+  z-index: 1001;
+}
+
+/* 작은 화면에서는 화면 오른쪽에 고정 */
+@media (max-width: 415px) {
+  .fab {
+    right: 20px;
+  }
 }
 
 .fab:hover {

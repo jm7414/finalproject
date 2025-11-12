@@ -1,19 +1,20 @@
 <template>
-  <div class="mobile-frame">
+  <DesktopLayout v-if="isDesktopLayout">
+    <RouterView />
+  </DesktopLayout>
+
+  <div v-else class="mobile-shell">
     <div class="app-layout">
-      <AppHeader
-        v-if="!(isAddSchedulePage || isDPMainPage || isMapMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isGame)" />
-      <main class="main-content"
-        :class="{ 'no-padding': isMapMainPage || isLoginPage || isSignUpPage || isAddSchedulePage || MissingReport || PredictLocation || CommunityPost || CommunityPostWrite, 'neighbor-page': isNeighborPage }">
+      <AppHeader v-if="showMobileHeader" />
+      <main class="main-content" :class="mobileMainContentClass">
         <RouterView />
       </main>
-      <AppFooter
-        v-if="!(isDPMainPage || isLoginPage || isSignUpPage || isDpMypage || isDpSchedule || isDpConnect || isNeighborPage || isGame)" />
+      <AppFooter v-if="showMobileFooter" />
+      <NeighborFooter v-if="isNeighborPage" />
     </div>
-
   </div>
 
-  <!-- 안심존 이탈 알림 모달 (mobile-frame 밖으로 이동) -->
+  <!-- 안심존 이탈 알림 모달 -->
   <SafeZoneAlertModal 
     :show="showSafeZoneAlert"
     :patient-name="alertPatientName"
@@ -36,10 +37,12 @@
 <script setup>
 import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
+import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
+import DesktopLayout from './layouts/DesktopLayout.vue'
 
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue-3/dist/bootstrap-vue-3.css'
@@ -68,6 +71,7 @@ const currentUser = ref(null);
 useMyCurrentLocation(computed(() => currentUser.value?.userNo));
 
 const route = useRoute()
+const isDesktopLayout = computed(() => route.meta.layout === 'desktop')
 
 // AddSchedule 페이지인지 확인하는 computed 속성
 const isAddSchedulePage = computed(() => {
@@ -132,9 +136,79 @@ const CommunityPostWrite = computed(() => {
   return route.name === 'CommunityPostWrite'
 })
 
+const PostEdit = computed(() => {
+  return route.name === 'PostEdit'
+})
+
+const SightingReportBoard = computed(() => {
+  return route.name === 'SightingReportBoard'
+})
+
+const SightingReport = computed(() => {
+  return route.name === 'SightingReport'
+})
+
+const SightingReportWrite = computed(() => {
+  return route.name === 'SightingReportWrite'
+})
+
+const ReportEdit = computed(() => {
+  return route.name === 'ReportEdit'
+})
+
 // 두뇌 게임
 const isGame = computed(() => {
   return route.name === 'game'
+})
+
+// GeoFencing 페이지인지 확인하는 computed 속성
+const isGeoFencingPage = computed(() => {
+  return route.name === 'geo-fencing'
+})
+
+const showMobileHeader = computed(() => {
+  if (isDesktopLayout.value) return false
+  return !(isAddSchedulePage.value ||
+    isDPMainPage.value ||
+    isMapMainPage.value ||
+    isLoginPage.value ||
+    isSignUpPage.value ||
+    isDpMypage.value ||
+    isDpSchedule.value ||
+    isDpConnect.value ||
+    isGame.value)
+})
+
+const showMobileFooter = computed(() => {
+  if (isDesktopLayout.value) return false
+  return !(isDPMainPage.value ||
+    isLoginPage.value ||
+    isSignUpPage.value ||
+    isDpMypage.value ||
+    isDpSchedule.value ||
+    isDpConnect.value ||
+    isNeighborPage.value ||
+    isGame.value)
+})
+
+const mobileMainContentClass = computed(() => {
+  return {
+    'no-padding': isMapMainPage.value ||
+      isLoginPage.value ||
+      isSignUpPage.value ||
+      isAddSchedulePage.value ||
+      MissingReport.value ||
+      PredictLocation.value ||
+      CommunityPost.value ||
+      CommunityPostWrite.value ||
+      PostEdit.value ||
+      SightingReportBoard.value ||
+      SightingReport.value ||
+      SightingReportWrite.value ||
+      ReportEdit.value ||
+      isGeoFencingPage.value,
+    'neighbor-page': isNeighborPage.value
+  }
 })
 
 /* ===== 안심존 이탈 알림 시스템 ===== */
@@ -591,6 +665,7 @@ onBeforeUnmount(() => {
 
   // 종료시 움직임센서도 죽어
   clearInterval(intervalId)
+  document.body.classList.remove('desktop-mode', 'mobile-mode')
 })
 
 // 라우트 변경 감지
@@ -623,6 +698,11 @@ watch(route, async (newRoute, oldRoute) => {
   prevRoute.value = newRoute
 }, { immediate: false })
 
+watch(isDesktopLayout, (isDesktop) => {
+  document.body.classList.toggle('desktop-mode', isDesktop)
+  document.body.classList.toggle('mobile-mode', !isDesktop)
+}, { immediate: true })
+
 // ==========================================================
 // [[주형]] 아두이노 움직임 센서 함수(일단 지금은 App.vue에서만 테스트중이고 추후 다른 파일로 옮길 수 있음)
 // onMounted, unOnMounted에 있는 setInterval, clearinterval 뽑아서 가면됨
@@ -645,38 +725,45 @@ const checkMovement = async () => {
 </script>
 
 <style>
-/* 모바일 프레임 외부 (회색 배경) */
 body {
   margin: 0;
   padding: 0;
+}
+
+body.mobile-mode {
   background-color: #808080;
   overflow: hidden;
 }
 
-/* 375px × 812px 고정 프레임 */
-.mobile-frame {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 375px;
-  height: 812px;
-  background-color: #FFFFFF;
-  overflow: hidden;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
-}
-
-.app-layout {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
+body.desktop-mode {
+  background-color: #f5f6f8;
+  overflow: auto;
 }
 </style>
 
 <style scoped>
+.mobile-shell {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #808080;
+  padding: 20px 0;
+}
+
+.app-layout {
+  width: 375px;
+  height: 812px;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
 .main-content {
   flex: 1;
   overflow-y: auto;

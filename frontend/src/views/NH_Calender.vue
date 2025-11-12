@@ -202,16 +202,12 @@
         </div>
       </div>
     </div>
-
-    <!-- 이웃 전용 푸터 -->
-    <NeighborFooter />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import NeighborFooter from '@/components/NeighborFooter.vue'
 
 const router = useRouter()
 
@@ -598,6 +594,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   padding-bottom: 80px; /* 하단 네비게이션 공간 확보 */
+  position: relative;
 }
 
 
@@ -704,7 +701,7 @@ onMounted(() => {
 }
 
 .calendar-day.today .day-number {
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
   border-radius: 50%;
   width: 28px;
@@ -807,10 +804,10 @@ onMounted(() => {
 .fab {
   position: fixed;
   bottom: 100px;
-  right: 20px;
+  right: calc((100vw - 375px) / 2 + 20px);
   width: 56px;
   height: 56px;
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
   border: none;
   border-radius: 50%;
@@ -820,11 +817,18 @@ onMounted(() => {
   justify-content: center;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   transition: all 0.2s;
-  z-index: 10;
+  z-index: 1001;
+}
+
+/* 작은 화면에서는 화면 오른쪽에 고정 */
+@media (max-width: 415px) {
+  .fab {
+    right: 20px;
+  }
 }
 
 .fab:hover {
-  background: #4f46e5;
+  background: #9bbe0f;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
 }
