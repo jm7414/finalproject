@@ -2489,7 +2489,7 @@ function setCenter(force = false) {
 .button-text {
     font-size: 15px;
     font-weight: 500;
-    color: #666666;
+    color: #666666; 
     transition: color 0.2s ease;
 }
 

@@ -165,7 +165,11 @@ CREATE TABLE post (
     user_no INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     content TEXT NOT NULL,
+<<<<<<< HEAD
    notice_check VARCHAR(20),
+=======
+	notice_check VARCHAR(20),
+>>>>>>> origin/develop
     view_count INT DEFAULT 0,
     image_path VARCHAR(255),
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
@@ -606,7 +610,10 @@ ON CONFLICT (user_no, record_date) DO NOTHING;
 
 insert into plaza(plaza_no, plaza_name, member_name, user_no) values
 (1, '경1', '방장', 7);
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/develop
 -- user_location 테이블에 CSV 데이터 삽입
 COPY user_location(user_no, latitude, longitude, record_time)
 FROM 'C:\final-project\gps_trajectory_1year.csv'
