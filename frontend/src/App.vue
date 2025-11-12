@@ -136,6 +136,26 @@ const CommunityPostWrite = computed(() => {
   return route.name === 'CommunityPostWrite'
 })
 
+const PostEdit = computed(() => {
+  return route.name === 'PostEdit'
+})
+
+const SightingReportBoard = computed(() => {
+  return route.name === 'SightingReportBoard'
+})
+
+const SightingReport = computed(() => {
+  return route.name === 'SightingReport'
+})
+
+const SightingReportWrite = computed(() => {
+  return route.name === 'SightingReportWrite'
+})
+
+const ReportEdit = computed(() => {
+  return route.name === 'ReportEdit'
+})
+
 // 두뇌 게임
 const isGame = computed(() => {
   return route.name === 'game'
@@ -181,6 +201,11 @@ const mobileMainContentClass = computed(() => {
       PredictLocation.value ||
       CommunityPost.value ||
       CommunityPostWrite.value ||
+      PostEdit.value ||
+      SightingReportBoard.value ||
+      SightingReport.value ||
+      SightingReportWrite.value ||
+      ReportEdit.value ||
       isGeoFencingPage.value,
     'neighbor-page': isNeighborPage.value
   }

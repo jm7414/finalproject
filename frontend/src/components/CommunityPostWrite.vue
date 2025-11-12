@@ -349,7 +349,7 @@ function cancel() {
 /* 하단 버튼 */
 .footer-buttons {
   background: #FFFFFF;
-  padding: 17px 16px;
+  padding: 0px 16px;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
