@@ -1,34 +1,5 @@
 <template>
   <div class="schedule-page">
-    <!-- 좌측 사이드바 (DesktopMain과 동일) -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="avatar">👤</div>
-        <div class="caretaker">
-          <span class="label">보호자</span>
-          <span class="name">{{ guardianName }}님</span>
-        </div>
-      </div>
-
-      <nav class="menu">
-        <button
-          v-for="(item, idx) in menuItems"
-          :key="idx"
-          type="button"
-          class="menu-item"
-          :class="{ active: activeMenu === item.route }"
-          @click="navigateToMenu(item.route)"
-        >
-          <span>{{ item.name }}</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <p class="support-text">궁금한 점이 있으신가요?</p>
-        <button type="button" class="support-btn">고객센터 연결</button>
-      </div>
-    </aside>
-
     <!-- 중앙 영역: 캘린더 + 오늘/내일 일정 -->
     <main class="center-area">
       <!-- 월별 캘린더 -->
@@ -441,32 +412,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
 import { lineString, buffer } from '@turf/turf'
-import { getCurrentUser } from '@/utils/auth'
-
-const router = useRouter()
-const route = useRoute()
-
-// 사이드바 메뉴
-const guardianName = ref('보호자')
-const activeMenu = ref('/desktop/schedule')
-const menuItems = [
-  { name: '안심존', route: '/desktop/main' },
-  { name: '예상위치', route: null },
-  { name: 'AI보고서', route: null },
-  { name: '환자 연결관리', route: null },
-  { name: '일정', route: '/desktop/schedule' },
-  { name: '커뮤니티', route: null },
-  { name: '종합 지원', route: null }
-]
-
-function navigateToMenu(menuRoute) {
-  if (menuRoute) {
-    activeMenu.value = menuRoute
-    router.push(menuRoute)
-  }
-}
 
 // 캘린더 관련
 const currentDate = ref(new Date())
@@ -1322,11 +1268,6 @@ async function loadAllData() {
 onMounted(async () => {
   ensureKakaoPlaces()
   await loadAllData()
-  
-  const user = await getCurrentUser()
-  if (user?.name) {
-    guardianName.value = user.name
-  }
 })
 </script>
 
@@ -1337,112 +1278,6 @@ onMounted(async () => {
   max-height: calc(100vh - 48px - 32px);
   background: #ffffff;
   overflow: hidden;
-}
-
-/* 좌측 사이드바 (DesktopMain과 동일) */
-.sidebar {
-  width: 280px;
-  background: #111827;
-  color: #f9fafb;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 14px;
-  border-radius: 12px;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #1f2937;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-}
-
-.caretaker {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.caretaker .label {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.caretaker .name {
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.menu {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: auto;
-}
-
-.menu-item {
-  width: 100%;
-  height: 36px;
-  border-radius: 8px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  padding: 0 12px;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.menu-item:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateX(3px);
-}
-
-.menu-item.active {
-  background: rgba(99, 102, 241, 0.2);
-  color: #ffffff;
-  font-weight: 700;
-  border-left: 3px solid #6366f1;
-}
-
-.sidebar-footer {
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  text-align: center;
-}
-
-.support-text {
-  font-size: 11px;
-  margin-bottom: 8px;
-}
-
-.support-btn {
-  width: 100%;
-  height: 32px;
-  border-radius: 8px;
-  border: 0;
-  background: #f59e0b;
-  color: #111827;
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
 }
 
 /* 중앙 영역 */
