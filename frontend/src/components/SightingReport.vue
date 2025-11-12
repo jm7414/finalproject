@@ -1,79 +1,135 @@
+<template>
+  <div v-if="loading" class="status-container">
+    <p>데이터를 불러오는 중입니다...</p>
+  </div>
+
+  <div v-else-if="error" class="status-container">
+    <p>{{ error }}</p>
+  </div>
+
+  <div v-else-if="report" class="page-container">
+    <!-- 1. 제보 본문 섹션 (이전과 동일) -->
+    <section class="post-section">
+      <div class="post-header">
+        <img :src="report.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img">
+        <div class="author-details">
+          <div class="author-name">{{ report.author }}</div>
+          <div class="post-time">{{ formatRelativeTime(report.createdAt) }}</div>
+        </div>
+        <div class="post-actions">
+          <button @click="sharePost" class="action-btn">🔗</button>
+          <div v-if="currentUser && (report.userNo === currentUser.userNo || currentUser.userNo === 1)"
+            class="more-options-group">
+            <button @click="toggleOptionsMenu" class="action-btn">⋮</button>
+            <div v-if="isOptionsMenuVisible" class="options-menu">
+              <div @click="editReport">수정</div>
+              <div @click="deleteReport" class="delete">삭제</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="post-content">{{ report.content }}</p>
+
+      <div v-if="report.imagePath" class="post-image-container">
+        <img :src="report.imagePath" alt="제보 이미지" class="post-image">
+      </div>
+
+      <div class="post-footer">
+        <div></div> <!-- '좋아요'/'조회수'가 있던 자리 (레이아웃 유지) -->
+        <span class="comment-count">댓글 {{ comments.length }}개</span>
+      </div>
+    </section>
+
+    <!-- ⭐ 2. [수정] 댓글 입력창 추가 -->
+    <section class="comment-input-section">
+      <input 
+        type="text" 
+        class="comment-input" 
+        placeholder="댓글을 입력하세요..." 
+        v-model="newCommentContent"
+        @keyup.enter="submitComment"
+      >
+      <button @click="submitComment" class="submit-btn">게시</button>
+    </section>
+
+    <!-- ⭐ 3. [수정] 댓글 목록 추가 -->
+    <section class="comment-list-section">
+      <div v-if="comments.length > 0">
+        <div v-for="comment in comments" :key="comment.commentId" class="comment-item">
+          <img :src="comment.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img-sm">
+          <div class="comment-body">
+            <div class="comment-header">
+              <span class="author-name-sm">{{ comment.author }}</span>
+              <span class="post-time-sm">{{ formatRelativeTime(comment.createdAt) }}</span>
+            </div>
+            <p class="comment-content">{{ comment.content }}</p>
+          </div>
+          <!-- (댓글 DTO에 userNo가 포함되어 있다고 가정) -->
+          <button 
+            v-if="currentUser && (comment.userNo === currentUser.userNo || currentUser.userNo === 1)"
+            @click="deleteComment(comment.commentId)"
+            class="comment-delete-btn">
+            X
+          </button>
+        </div>
+      </div>
+      <div v-else class="no-comments">
+        <p>첫 댓글을 남겨보세요.</p>
+      </div>
+    </section>
+  </div>
+</template>
+
 <script setup>
-// 제공해주신 스크립트 코드를 그대로 사용합니다.
 import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-
 import defaultProfileImage from '@/assets/default-profile.png';
 
 const route = useRoute();
 const router = useRouter();
-const postId = ref(route.params.id);
-const post = ref(null);
+
+// 'post' -> 'report'로 변수명 변경 (제보)
+const reportId = ref(route.params.id); 
+const report = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const isOptionsMenuVisible = ref(false);
 const currentUser = ref(null);
 
-// --- 댓글 관련 변수 ---
+// 댓글 관련 변수 (기존 CommunityPost.vue와 동일)
 const comments = ref([]);
 const newCommentContent = ref('');
 
-// --- 시간 포맷팅 유틸리티 함수 ---
+// --- 시간 포맷팅 (동일) ---
 function formatRelativeTime(dateString) {
   const now = new Date();
   const date = new Date(dateString);
   const diffInSeconds = Math.floor((now - date) / 1000);
-
   const minutes = Math.floor(diffInSeconds / 60);
   if (minutes < 60) return `${minutes}분 전`;
-
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}시간 전`;
-
   return new Intl.DateTimeFormat('ko-KR').format(date);
 }
 
-
-// --- 컴포넌트가 시작될 때 실행될 함수들 ---
+// --- onMounted (API 주소 수정) ---
 onMounted(() => {
-  // 3가지 요청을 동시에 보내서 로딩 시간을 단축합니다.
   Promise.all([
     fetchCurrentUser(),
-    fetchPost(),
-    fetchComments()
-
-  ]);
-  console.log("컴포넌트 마운트됨. 데이터 로딩 시작..."); // 시작 로그
-
-  // 3가지 요청을 동시에 보냅니다.
-  Promise.all([
-    fetchCurrentUser(),
-    fetchPost(),
-    fetchComments()
+    fetchReport(), // 제보 내용
+    fetchComments() // 제보의 댓글
   ])
-  .then(() => {
-    // 모든 요청이 성공적으로 완료된 후에 이 부분이 실행됩니다.
-    console.log("✅ 모든 초기 데이터 로딩 완료:");
-    console.log("   - 현재 사용자(currentUser):", currentUser.value);
-    console.log("   - 게시물(post):", post.value);
-    console.log("   - 댓글(comments):", comments.value);
-  })
-  .catch(error => {
-    // Promise.all 내의 요청 중 하나라도 실패하면 이 부분이 실행됩니다.
-    console.error("❌ 초기 데이터 로딩 중 오류 발생:", error);
-    // 각 fetch 함수 내부에서도 오류 로깅을 하고 있으므로,
-    // 여기서 추가적인 상세 로깅이 필요 없을 수 있습니다.
-    // 하지만 어떤 요청에서 문제가 발생했는지 확인하기 위해 남겨두는 것이 좋습니다.
-    console.log("   - 현재 사용자(currentUser) 상태:", currentUser.value);
-    console.log("   - 게시물(post) 상태:", post.value);
-    console.log("   - 댓글(comments) 상태:", comments.value);
-  });
-
-  console.log("onMounted 훅 실행 완료.");
+    .then(() => {
+      console.log("✅ 모든 제보 상세 데이터 로딩 완료");
+    })
+    .catch(error => {
+      console.error("❌ 제보 상세 데이터 로딩 중 오류 발생:", error);
+    });
 });
 
-// --- 데이터 로딩 함수들 ---
+// --- 데이터 로딩 함수 (API 주소 수정) ---
 async function fetchCurrentUser() {
   try {
     const response = await axios.get(`/api/user/me`, {
@@ -86,53 +142,59 @@ async function fetchCurrentUser() {
   }
 }
 
-async function fetchPost() {
+// [API 1] 제보 본문 1건 조회
+async function fetchReport() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`/api/posts/${postId.value}`, {
+    // API: /api/sighting-reports/{id}
+    const response = await axios.get(`/api/sighting-reports/${reportId.value}`, {
       withCredentials: true
     });
-    post.value = response.data;
+    report.value = response.data;
   } catch (err) {
-    console.error('게시물 데이터를 불러오는 데 실패했습니다:', err);
-    error.value = '데이터를 불러올 수 없습니다.';
+    console.error('제보 데이터를 불러오는 데 실패했습니다:', err);
+    error.value = '제보를 불러올 수 없습니다.';
   } finally {
     loading.value = false;
   }
 }
 
+// [API 2] 제보에 달린 '댓글 목록' 조회
 async function fetchComments() {
   try {
-    const response = await axios.get(`/api/posts/${postId.value}/comments`, {
+    // API: /api/sighting-reports/{id}/comments
+    const response = await axios.get(`/api/sighting-reports/${reportId.value}/comments`, {
       withCredentials: true
     });
     comments.value = response.data;
   } catch (error) {
-    console.error("댓글 목록을 불러오는 데 실패했습니다:", error);
+    console.error("제보 댓글 목록을 불러오는 데 실패했습니다:", error);
   }
 }
 
-// --- 게시물 관련 액션 함수들 ---
+// --- 제보 본문 액션 (API 주소 수정) ---
 function toggleOptionsMenu() {
   isOptionsMenuVisible.value = !isOptionsMenuVisible.value;
 }
 
-function editPost() {
-  router.push(`/post/edit/${postId.value}`);
+function editReport() {
+  // SightingReportWrite.vue (수정 모드)로 이동
+  router.push({ name: 'ReportEdit', params: { id: reportId.value } });
 }
 
-async function deletePost() {
-  if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+async function deleteReport() {
+  if (confirm('정말로 이 제보를 삭제하시겠습니까?')) {
     try {
-      await axios.delete(`/api/posts/${postId.value}`, {
+      // API: DELETE /api/sighting-reports/{id}
+      await axios.delete(`/api/sighting-reports/${reportId.value}`, {
         withCredentials: true
       });
-      alert('게시물이 삭제되었습니다.');
-      router.push('/CommunityView');
+      alert('제보가 삭제되었습니다.');
+      router.back(); // 목록 페이지로 돌아가기
     } catch (err) {
-      console.error('게시물 삭제 중 오류 발생:', err);
-      alert('게시물 삭제에 실패했습니다.');
+      console.error('제보 삭제 중 오류 발생:', err);
+      alert('제보 삭제에 실패했습니다.');
     }
   }
 }
@@ -148,54 +210,40 @@ function sharePost() {
   isOptionsMenuVisible.value = false;
 }
 
-async function toggleLike() {
-  if (!post.value) return;
-  try {
-    const response = await axios.post(
-      `/api/posts/${post.value.postId}/like`,
-      null,
-      { withCredentials: true }
-    );
-    post.value.likes = response.data;
-  } catch (error) {
-    console.error("좋아요 처리 중 오류가 발생했습니다:", error);
-    if (error.response && error.response.status === 401) {
-      alert("좋아요를 누르려면 로그인이 필요합니다.");
-    } else {
-      alert("좋아요 처리에 실패했습니다. 다시 시도해주세요.");
-    }
-  }
-}
+// --- ⭐ [신규] 댓글 액션 함수 (백엔드 연결) ---
 
-// --- 댓글 관련 액션 함수들 ---
+// [API 3] 제보에 '댓글 쓰기'
 async function submitComment() {
   if (!newCommentContent.value.trim()) {
     alert("댓글 내용을 입력해주세요.");
     return;
   }
   try {
+    // API: POST /api/sighting-reports/{id}/comments
     const response = await axios.post(
-      `/api/posts/${postId.value}/comments`,
+      `/api/sighting-reports/${reportId.value}/comments`,
       { content: newCommentContent.value },
       { withCredentials: true }
     );
-    comments.value.unshift(response.data);
+    // (백엔드가 새로 생성된 댓글 객체를 반환한다고 가정)
+    comments.value.unshift(response.data); 
     newCommentContent.value = '';
-    if (post.value) post.value.comments++;
   } catch (error) {
     console.error("댓글 작성 중 오류 발생:", error);
     alert("댓글 작성에 실패했습니다.");
   }
 }
 
+// [API 4] 제보 '댓글 삭제'
 async function deleteComment(commentId) {
   if (confirm("정말로 이 댓글을 삭제하시겠습니까?")) {
     try {
-      await axios.delete(`/api/comments/${commentId}`, {
+      // (이 API는 /api/sighting-report-comments/{commentId} 처럼
+      //  별도의 컨트롤러가 필요할 수 있습니다. 백엔드 설계에 맞춰 수정하세요.)
+      await axios.delete(`/api/sighting-report-comments/${commentId}`, {
         withCredentials: true
       });
       comments.value = comments.value.filter(comment => comment.commentId !== commentId);
-      if (post.value) post.value.comments--;
       alert("댓글이 삭제되었습니다.");
     } catch (error) {
       console.error("댓글 삭제 중 오류 발생:", error);
@@ -204,90 +252,6 @@ async function deleteComment(commentId) {
   }
 }
 </script>
-
-<template>
-  <div v-if="loading" class="status-container">
-    <p>데이터를 불러오는 중입니다...</p>
-  </div>
-
-  <div v-else-if="error" class="status-container">
-    <p>{{ error }}</p>
-  </div>
-
-  <div v-else-if="post" class="page-container">
-    <section class="post-section">
-      <div class="post-header">
-        <img :src="post.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img">
-        <div class="author-details">
-          <div class="author-name">{{ post.author }}</div>
-          <div class="post-time">{{ formatRelativeTime(post.createdAt) }}</div>
-        </div>
-        <div class="post-actions">
-          <button @click="sharePost" class="action-btn">🔗</button>
-          <div v-if="currentUser && (post.userId === currentUser.userNo || currentUser.userNo === 1)" class="more-options-group">
-            <button @click="toggleOptionsMenu" class="action-btn">⋮</button>
-            <div v-if="isOptionsMenuVisible" class="options-menu">
-              <div @click="editPost">수정</div>
-              <div @click="deletePost" class="delete">삭제</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <h1 class="post-title">{{ post.title }}</h1>
-      <p class="post-content">{{ post.content }}</p>
-      
-      <div v-if="post.image" class="post-image-container">
-        <img :src="post.image" alt="게시물 이미지" class="post-image">
-      </div>
-      
-      <div class="post-footer">
-        <div class="stats">
-          <span @click="toggleLike" class="like-btn">❤️ {{ post.likes }}</span>
-          <span>👁️‍🗨️ {{ post.views }}</span>
-        </div>
-        <span class="comment-count">댓글 {{ comments.length }}개</span>
-      </div>
-    </section>
-
-    <section class="comment-input-section">
-      <input 
-        type="text" 
-        class="comment-input" 
-        placeholder="댓글을 입력하세요..." 
-        v-model="newCommentContent"
-        @keyup.enter="submitComment"
-      >
-      <button @click="submitComment" class="submit-btn">게시</button>
-    </section>
-
-    <section class="comment-list-section">
-      <div v-if="comments.length > 0">
-        <div v-for="comment in comments" :key="comment.commentId" class="comment-item">
-          <img :src="comment.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img-sm">
-          <div class="comment-body">
-            <div class="comment-header">
-              <span class="author-name-sm">{{ comment.author }}</span>
-              <span class="post-time-sm">{{ formatRelativeTime(comment.createdAt) }}</span>
-            </div>
-            <p class="comment-content">{{ comment.content }}</p>
-          </div>
-           <button 
-             v-if="currentUser && (comment.userId === currentUser.userNo || currentUser.userNo === 1)"
-             @click="deleteComment(comment.commentId)"
-             class="comment-delete-btn">
-
-           </button>
-        </div>
-      </div>
-      <div v-else class="no-comments">
-        <p>첫 댓글을 남겨보세요.</p>
-      </div>
-    </section>
-  </div>
-
-  
-</template>
 
 <style scoped>
 /* 전체 페이지 컨테이너 */
