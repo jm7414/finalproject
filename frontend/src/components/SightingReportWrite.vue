@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="form-wrapper">
 
-      <!-- ⭐ [수정] '제목' 섹션은 제보에 필요 없으므로 삭제됨 -->
+      <!-- '제목' 섹션은 제보에 필요 없으므로 삭제됨 -->
 
       <section class="form-section">
         <label for="content-textarea">내용</label>
@@ -54,9 +54,8 @@ const route = useRoute();
 const router = useRouter();
 const { upload } = usePostImageUpload();
 
-// ⭐ [수정] '수정'과 '생성' 모드의 URL 파라미터를 명확히 분리합니다.
+// '수정'과 '생성' 모드의 URL 파라미터를 명확히 분리합니다.
 const isEditMode = computed(() => route.name === 'ReportEdit');
-
 // 수정 모드일 때만 '제보 ID'를 가져옵니다.
 const reportId = ref(isEditMode.value ? route.params.id : null);
 // 생성 모드일 때만 '실종 ID'를 가져옵니다.
@@ -75,7 +74,7 @@ onMounted(() => {
     // 수정 모드일 때만 기존 제보 내용을 불러옵니다.
     fetchReportForEdit();
   } else if (!missingPostId.value) {
-    // ⭐ [방어 코드] 생성 모드인데 missingPostId가 URL에 없는 경우
+    // 생성 모드인데 missingPostId가 URL에 없는 경우
     console.error("제보 생성 오류: missingPostId가 URL 파라미터에 없습니다.");
     alert("잘못된 접근입니다. 제보할 실종 게시물 페이지에서 다시 시도해주세요.");
     router.back();
@@ -108,7 +107,7 @@ async function fetchReportForEdit() {
   }
 }
 
-// --- 이미지 업로드 함수들 (수정 없음) ---
+// --- 이미지 업로드 함수들 ---
 function triggerFileInput() {
   fileInput.value.click();
 }
@@ -136,9 +135,8 @@ function removeImage() {
   uploadedImageUrl.value = null;
   if(fileInput.value) fileInput.value.value = '';
 }
-// --- --------------------------------- ---
 
-// ⭐ [수정] 함수 이름을 submitReport로 변경 (submitPost -> submitReport)
+// 제보를 작성하거나 수정하는 함수
 async function submitReport() {
   if (!content.value.trim()) {
     alert('내용을 입력해주세요.');
@@ -153,30 +151,24 @@ async function submitReport() {
 
     if (isEditMode.value) {
       // --- 1. 제보 수정 ---
-      // (수정 시에는 missingPostId를 보낼 필요가 없습니다)
       await axios.put(`/api/sighting-reports/${reportId.value}`, reportData, {
         withCredentials: true
       });
       alert('제보가 성공적으로 수정되었습니다!');
       router.push(`/SightingReport/${reportId.value}`); 
     } else {
-      // --- 2. 새 제보 작성 ---
-      
-      // ⭐ [수정] onMounted에서 설정된 missingPostId.value를 전송
+      // --- 2. 새 제보 작성 --
       reportData.missingPostId = missingPostId.value;
 
-      // ⭐ [방어 코드]
       if (!reportData.missingPostId) {
           alert("오류: 실종 게시물 ID가 없습니다. 다시 시도해주세요.");
           return;
       }
-
       const response = await axios.post(`/api/sighting-reports`, reportData, {
         withCredentials: true
       });
       const newReportId = response.data; 
       alert('제보가 성공적으로 작성되었습니다!');
-      // (목록 페이지로 이동)
       router.push(`/SightingReportBoard/${missingPostId.value}`); 
     }
   } catch (error) {

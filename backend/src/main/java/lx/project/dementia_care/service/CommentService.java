@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lx.project.dementia_care.dao.CommentDAO;
 import lx.project.dementia_care.dto.CommentDto;
 
-@Service // 이 클래스가 핵심 비즈니스 로직을 담당하는 서비스임을 알립니다.
+@Service
 public class CommentService {
 
     @Autowired

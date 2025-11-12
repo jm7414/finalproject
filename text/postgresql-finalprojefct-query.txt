@@ -606,3 +606,8 @@ ON CONFLICT (user_no, record_date) DO NOTHING;
 
 insert into plaza(plaza_no, plaza_name, member_name, user_no) values
 (1, '경1', '방장', 7);
+-- user_location 테이블에 CSV 데이터 삽입
+COPY user_location(user_no, latitude, longitude, record_time)
+FROM 'C:\final-project\gps_trajectory_1year.csv'
+DELIMITER ','
+CSV HEADER;
