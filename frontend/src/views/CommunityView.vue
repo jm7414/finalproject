@@ -1,18 +1,30 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router'; 
 
 // 3개의 '채널' 컴포넌트를 모두 불러옵니다. (경로는 실제 파일 위치에 맞게 조정하세요)
 import CommunityMissing from '@/components/CommunityMissing.vue';
 import CommunityBoard from '@/components/CommunityBoard.vue';
 import CommunityEvent from '@/components/CommunityEvent.vue';
 
-// 기본으로 보여줄 탭(채널)을 'Post'로 설정
-const activeTab = ref('Post'); 
+const route = useRoute();
+const router = useRouter();
 
-// 탭(채널)을 변경하는 함수
+// 기본으로 보여줄 탭(채널)을 요청이 있는지 살펴본 후 'Post'로 이동하게 설정
+const activeTab = ref(route.query.tab || 'Post'); 
+
+// URL도 /communityView?tab=Missing 처럼 변경해서, 새로고침해도 탭이 유지되도록 함
 function changeTab(tabName) {
-  activeTab.value = tabName;
+  activeTab.value = tabName;
+  router.push({ query: { tab: tabName } });
 }
+
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && newTab !== activeTab.value) {
+    activeTab.value = newTab;
+  }
+});
+
 </script>
 
 <template>

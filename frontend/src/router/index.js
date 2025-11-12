@@ -50,6 +50,7 @@ import NH_Notice from '@/views/NH_Notice.vue'
 import DesktopMain from '@/views/desktop/DesktopMain.vue'
 import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
+import DesktopCommunityBoard from '@/components/desktop/DesktopCommunityBoard.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -181,25 +182,31 @@ const router = createRouter({
       path: '/SightingReportBoard/:id',
       name: 'SightingReportBoard',
       component: SightingReportBoard,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },
     {
       path: '/SightingReportWrite/:id',
       name: 'SightingReportWrite',
       component: SightingReportWrite,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },
     {
       path: '/report-edit/:id',
       name: 'ReportEdit',
       component: SightingReportWrite,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },    
     {
       path: '/SightingReport/:id',
       name: 'SightingReport',
       component: SightingReport,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
+    },
+    {
+        path: '/desktop/communityBoard',
+        name: 'desktop-communityBoard',
+        component: DesktopCommunityBoard, // 1단계에서 만든 파일
+        meta: { requiresAuth: true, layout: 'desktop' }
     },
     // 병욱 게시판 끝
     {

@@ -51,15 +51,13 @@ import 'bootstrap-vue-3/dist/bootstrap-vue-3.css'
 // 실종자 알림 추가 시작
 // ====================
 
-import { useAlertPolling, showMissingAlert, alertMessage, handleConfirmAlert, handleCloseAlert } from './composables/useAlertPolling';
+import { showMissingAlert, alertMessage, handleConfirmAlert, handleCloseAlert, startAlertPolling } from './composables/useAlertPolling';
 import ConfirmModal from './components/ConfirmModal.vue';
 import { useRouter } from 'vue-router'
 
 const router = useRouter();
-useAlertPolling();
 
 function handleConfirmAndNavigate() {
-
   handleConfirmAlert(); 
   router.push({ path: '/communityView', query: { tab: 'Missing' } });
 }
@@ -651,6 +649,7 @@ onMounted(async () => {
       // ⭐ 4. (중요) 안심존 모니터링 전에 사용자 정보부터 가져와서 ref에 채웁니다.
       currentUser.value = await getCurrentUser();
       await startSafeZoneMonitoring()
+      startAlertPolling(currentUser.value?.role); // 실종알림
     }, 500)
   }
 
@@ -682,6 +681,10 @@ watch(route, async (newRoute, oldRoute) => {
   if (oldRoute && (oldRoute.name === 'login' || oldRoute.name === 'SignUp')) {
     setTimeout(async () => {
       await startSafeZoneMonitoring()
+
+      currentUser.value = await getCurrentUser();
+      startAlertPolling(currentUser.value?.role);
+      
     }, 500)
     prevRoute.value = newRoute
     return

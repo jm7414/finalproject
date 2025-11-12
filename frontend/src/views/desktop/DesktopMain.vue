@@ -135,6 +135,30 @@
             오늘 예정된 일정이 없습니다.
           </div>
         </section>
+
+        <section class="panel community-panel">
+          <header class="panel-header">
+            <h2>최신 게시글</h2>
+            <button type="button" class="panel-action more-btn" @click="goToCommunityBoard">
+              더보기
+            </button>
+          </header>
+          
+          <!-- <div v-if="recentPosts.length > 0" class="recent-post-list">
+            <div v-for="post in recentPosts":key="post.id" class="recent-post-item">
+              <div class="recent-post-header">
+                <span class="post-category">{{ post.category }}</span> 
+                <span class="post-time">{{ post.time }}</span>
+              </div>
+              <strong class="recent-post-title">{{ post.title }}</strong>
+              <div class="recent-post-author">{{ post.author }}</div>
+            </div>
+          </div>
+          
+          <div v-else class="recent-post-empty">
+            최신 게시글이 없습니다.
+          </div> -->
+        </section>
       </aside>
     </section>
   </div>
@@ -161,7 +185,7 @@ const menuItems = [
   { name: 'AI보고서', route: null },
   { name: '환자 연결관리', route: null },
   { name: '일정', route: '/desktop/schedule' },
-  { name: '커뮤니티', route: null },
+  { name: '커뮤니티', route: '/desktop/communityBoard' },
   { name: '종합 지원', route: null }
 ]
 
@@ -974,6 +998,10 @@ function scheduleStatusMeta(schedule) {
 
 function goToSchedule() {
   router.push('/desktop/schedule')
+}
+
+function goToCommunityBoard() {
+  router.push('/desktop/communityBoard')
 }
 
 /* ===== 초기화 ===== */
