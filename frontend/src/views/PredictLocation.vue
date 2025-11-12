@@ -24,7 +24,7 @@
         </div>
 
         <!-- 지도 영역 -->
-        <div class="page-container">
+        <div class="page-containera">
             <div ref="mapContainer" class="map-area"></div>
         </div>
 
@@ -41,7 +41,7 @@
                     <span class="button-text">예상위치</span>
                 </button>
             </div>
-            <div v-if="!lessData" class="">
+            <div v-if="less_data.value" class="">
                 <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
                 <span>예측 위치들이 부정확할 수 있습니다.</span>
                 <!-- 추후에 수정할 예정 + 이 부분 predictLocationBackup파일에 적어놨어요!
@@ -184,7 +184,7 @@
                                 <span class="badge-label">착의사항</span>
                             </div>
                             <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'
-                            }}</span>
+                                }}</span>
                         </div>
 
                         <div>
@@ -259,10 +259,10 @@
                             </div>
                             <div class="location-text-wrapper">
                                 <h4 class="location-name">
-                                    {{ loc.address1 || '주소 정보 없음' }}에 있는
+                                    {{ loc.sgg_nm + ' ' + loc.emd_nm + ' ' + loc.ri_nm || '주소 정보 없음' }}에 있는
                                 </h4>
                                 <p class="location-detail">
-                                    {{ loc.address2 }}
+                                    {{ loc.name + ' ' +loc.address2 }}
                                 </p>
                             </div>
 
@@ -296,7 +296,7 @@
                 </div>
 
                 <!-- 통계 대시보드 -->
-                <div class="stats-dashboard-modern glass-card" v-if="predictionData.metadata && !isLoading">
+                <div class="stats-dashboard-modern glass-card" v-if="!isLoading">
                     <h3 class="stats-title-modern">
                         <i class="bi bi-bar-chart"></i>
                         예측 분석 정보
@@ -309,11 +309,7 @@
                             </div>
                             <div class="stat-content-modern">
                                 <p class="stat-label-modern">분석 지점</p>
-                                <p class="stat-value-modern">{{ predictionData.metadata.dbscan_clusters }}<span
-                                        class="stat-unit">개의 위치 분석 결과</span>
-                                </p>
-                                <p class="stat-sublabel-modern">랜덤 클러스터 {{ predictionData.metadata.random_candidate }}개
-                                    포함
+                                <p class="stat-value-modern"><span class="stat-unit">개의 위치 분석 결과</span>
                                 </p>
                                 <p class="stat-sublabel-modern-1">각 시간 별 확률이 높은 상위 10개 지역을 보여줍니다</p>
                             </div>
@@ -332,312 +328,38 @@ import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
 import { useSearchStore } from '@/stores/useSearchStore';
 
-const route = useRoute();
-const router = useRouter();
-const searchStore = useSearchStore(); // 함께찾는 사람들
-
-// ========================================================================================
-// jjamTong 데이터 정의
-// ========================================================================================
-const jjamTong = {
-    "metadata": {
-        "total_points": 30,
-        "dbscan_clusters": 193,
-        "random_candidates": 0,
-        "range_50_700_count": 10,
-        "range_700_1500_count": 10,
-        "range_1500_plus_count": 10,
-        "max_prob": 0.78,
-        "mean_prob": 0.5980000000000001,
-        "confidence_score": 0.7176000000000001,
-        "prediction_quality": "medium",
-        "missing_center_lat": 37.236521788023126,
-        "missing_center_lon": 126.68079566651024,
-        "total_waypoints_generated": 918
-    },
-    "zone_level_1": [
-        {
-            "lat": 37.23386744768245,
-            "lon": 126.68298938931824,
-            "value": 0.78,
-            "address1": "화성시 송산면 마산리",
-            "address2": "도로에 있을 것 같아요!",
-            "jimok": "도로",
-            "dist_m": 234
-        },
-        {
-            "lat": 37.23473450571951,
-            "lon": 126.68172589255347,
-            "value": 0.77,
-            "address1": "화성시 송산면 고포리",
-            "address2": "밭에 있을 것 같아요!",
-            "jimok": "전",
-            "dist_m": 198
-        },
-        {
-            "lat": 37.236064384993135,
-            "lon": 126.68040911649587,
-            "value": 0.77,
-            "address1": "화성시 송산면 고포리",
-            "address2": "도로에 있을 것 같아요!",
-            "jimok": "도로",
-            "dist_m": 56
-        },
-        {
-            "lat": 37.233594795673866,
-            "lon": 126.68180504411481,
-            "value": 0.72,
-            "address1": "화성시 송산면 고포리",
-            "address2": "도로에 있을 것 같아요!",
-            "jimok": "공장용지",
-            "dist_m": 345
-        },
-        {
-            "lat": 37.234242769263574,
-            "lon": 126.68155074945578,
-            "value": 0.72,
-            "address1": "화성시 송산면 고포리",
-            "address2": "밭에 있을 것 같아요!",
-            "jimok": "전",
-            "dist_m": 278
-        },
-        {
-            "lat": 37.23364779713962,
-            "lon": 126.68204967212515,
-            "value": 0.71,
-            "address1": "화성시 송산면 마산리",
-            "address2": "산에 있을 것 같아요!",
-            "jimok": "임야",
-            "dist_m": 345
-        },
-        {
-            "lat": 37.2337011948454,
-            "lon": 126.68230532951101,
-            "value": 0.71,
-            "address1": "화성시 송산면 마산리",
-            "address2": "산에 있을 것 같아요!",
-            "jimok": "임야",
-            "dist_m": 367
-        },
-        {
-            "lat": 37.23373907697495,
-            "lon": 126.68246972357231,
-            "value": 0.71,
-            "address1": "화성시 송산면 마산리",
-            "address2": "산에 있을 것 같아요!",
-            "jimok": "임야",
-            "dist_m": 389
-        },
-        {
-            "lat": 37.23324212017859,
-            "lon": 126.68498401738543,
-            "value": 0.71,
-            "address1": "화성시 송산면 마산리",
-            "address2": "산에 있을 것 같아요!",
-            "jimok": "임야",
-            "dist_m": 445
-        },
-        {
-            "lat": 37.23471852524021,
-            "lon": 126.68222587430238,
-            "value": 0.69,
-            "address1": "화성시 송산면 고포리",
-            "address2": "밭에 있을 것 같아요!",
-            "jimok": "전",
-            "dist_m": 234
-        }
-    ],
-    "zone_level_2": [
-        {
-            "lat": 37.23323930399239,
-            "lon": 126.68628356544302,
-            "value": 0.71,
-            "address1": "화성시 송산면 마산리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 567
-        },
-        {
-            "lat": 37.23773664004988,
-            "lon": 126.68838875066,
-            "value": 0.66,
-            "address1": "화성시 송산면 마산리",
-            "address2": "논에 있을 것 같아요!",
-            "dist_m": 890
-        },
-        {
-            "lat": 37.24098809803297,
-            "lon": 126.67411064074422,
-            "value": 0.64,
-            "address1": "화성시 송산면 고포리",
-            "address2": "산에 있을 것 같아요!",
-            "dist_m": 1023
-        },
-        {
-            "lat": 37.24021068811336,
-            "lon": 126.67280502449263,
-            "value": 0.62,
-            "address1": "화성시 송산면 고포리",
-            "address2": "산에 있을 것 같아요!",
-            "dist_m": 1156
-        },
-        {
-            "lat": 37.23263755259063,
-            "lon": 126.68723125441413,
-            "value": 0.56,
-            "address1": "화성시 송산면 마산리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 723
-        },
-        {
-            "lat": 37.240100908879924,
-            "lon": 126.67342624798773,
-            "value": 0.54,
-            "address1": "화성시 송산면 고포리",
-            "address2": "산에 있을 것 같아요!",
-            "dist_m": 1089
-        },
-        {
-            "lat": 37.23936035519318,
-            "lon": 126.6683902692904,
-            "value": 0.54,
-            "address1": "화성시 송산면 고포리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 956
-        },
-        {
-            "lat": 37.23893929194048,
-            "lon": 126.6676173348053,
-            "value": 0.54,
-            "address1": "화성시 송산면 고포리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 845
-        },
-        {
-            "lat": 37.23929383920692,
-            "lon": 126.66818825581989,
-            "value": 0.53,
-            "address1": "화성시 송산면 고포리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 923
-        },
-        {
-            "lat": 37.23914128334645,
-            "lon": 126.6679221012685,
-            "value": 0.53,
-            "address1": "화성시 송산면 고포리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 901
-        }
-    ],
-    "zone_level_3": [
-        {
-            "lat": 37.22543734319893,
-            "lon": 126.69016326145689,
-            "value": 0.54,
-            "address1": "화성시 송산면 마산리",
-            "address2": "산에 있을 것 같아요!",
-            "dist_m": 1456
-        },
-        {
-            "lat": 37.24192953961568,
-            "lon": 126.69410939372973,
-            "value": 0.52,
-            "address1": "화성시 송산면 마산리",
-            "address2": "논에 있을 것 같아요!",
-            "dist_m": 1678
-        },
-        {
-            "lat": 37.23750297607449,
-            "lon": 126.66486868128675,
-            "value": 0.49,
-            "address1": "화성시 송산면 고포리",
-            "address2": "밭에 있을 것 같아요!",
-            "dist_m": 1289
-        },
-        {
-            "lat": 37.24999046886826,
-            "lon": 126.67868641144558,
-            "value": 0.49,
-            "address1": "화성시 송산면 독지리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 1534
-        },
-        {
-            "lat": 37.22972060832949,
-            "lon": 126.6936845850643,
-            "value": 0.48,
-            "address1": "화성시 송산면 마산리",
-            "address2": "논에 있을 것 같아요!",
-            "dist_m": 1445
-        },
-        {
-            "lat": 37.25001328961985,
-            "lon": 126.67899324477477,
-            "value": 0.48,
-            "address1": "화성시 송산면 독지리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 1556
-        },
-        {
-            "lat": 37.22586225328711,
-            "lon": 126.69257662930521,
-            "value": 0.45,
-            "address1": "화성시 송산면 마산리",
-            "address2": "밭에 있을 것 같아요!",
-            "dist_m": 1623
-        },
-        {
-            "lat": 37.23075491608878,
-            "lon": 126.69429967424405,
-            "value": 0.45,
-            "address1": "화성시 송산면 마산리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 1467
-        },
-        {
-            "lat": 37.226376899999835,
-            "lon": 126.69353680840648,
-            "value": 0.44,
-            "address1": "화성시 송산면 마산리",
-            "address2": "밭에 있을 것 같아요!",
-            "dist_m": 1578
-        },
-        {
-            "lat": 37.22722326107302,
-            "lon": 126.69367199250485,
-            "value": 0.44,
-            "address1": "화성시 송산면 마산리",
-            "address2": "도로에 있을 것 같아요!",
-            "dist_m": 1489
-        }
-    ]
-}
-
 // ========================================================================================
 // 카카오지도 및 API 키 설정
 // ========================================================================================
 const mapContainer = ref(null)
-
-// 카카오맵 API 키
 const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
-
-// VWorld API Key
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
-
-// Tmap API Key
 const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
+const route = useRoute();
+const router = useRouter();
+const searchStore = useSearchStore();
+
 // ========================================================================================
-// 데이터 상태 관리
+// 데이터 상태 관리 - API 응답 구조에 맞게 수정
 // ========================================================================================
 
-// ⭐ jjamTong 데이터를 predictionData에 할당
-const predictionData = ref(jjamTong)
+// ⭐ Zone Level별 목적지 데이터 (최대 5개씩)
+const zone_level_1 = ref([])  // 500m 이내
+const zone_level_2 = ref([])  // 1000m 이내
+const zone_level_3 = ref([])  // 1500m 이내
 
-// 실종위치 중심으로 바꾸기위한 반응형변수
+// 실종위치
 const missingLocation = ref({
-    lat: jjamTong.metadata.missing_center_lat,
-    lon: jjamTong.metadata.missing_center_lon
+    lat: null,
+    lon: null
+})
+
+// 마지막 알려진 위치
+const lastKnownLocation = ref({
+    latitude: null,
+    longitude: null,
+    time: null
 })
 
 // ⭐ 표시할 Zone Level 선택 (1, 2, 3)
@@ -655,61 +377,19 @@ const selectedLocation = ref(null)
 // 경과 시간 (분 단위)
 const elapsedMinutes = ref(0)
 
-// 실종 시간 (예시)
-const missingTime = '2025-10-20 09:30'
-
 // ⭐ 드래그 가능한 타임라인 관련 상태
 const selectedMinutes = ref(30) // 0~90 사이의 분 단위 값
 const isDragging = ref(false)
 const timelineWrapper = ref(null)
 
-// ⭐ 더보기 관련 상태 추가
+// ⭐ 더보기 관련 상태
 const showAllLocations = ref(false)
 
-// ============================================================================
-// ID 관리 변수 - 환자 번호와 실종 신고 ID를 명확히 구분
-// ============================================================================
+// ID 관리
 const patientUserNo = ref(null)
 const missingPostId = ref(null)
 
-// 병욱 작업공간 확보 시작 
-
-// 제보 게시판으로 이동
-function goToReportPage() {
-    console.log('제보하기 페이지로 이동합니다...');
-
-    // 'ReportCreate'는 라우터에 등록된 페이지의 이름(name)입니다.
-    // 또는 router.push('/report/create'); 처럼 직접 경로를 쓸 수도 있습니다.
-    router.push({ name: 'ReportCreate' });
-}
-
-// 함께하는 사람들 조회하는 함수
-async function fetchParticipants() {
-    if (!missingPostId.value) {
-        console.warn('⚠️ missingPostId가 없어서 참여자 조회를 건너뜁니다.')
-        return
-    }
-
-    console.log(`참여자 목록 조회 시도: missingPostId=${missingPostId.value}`)
-    try {
-        const response = await axios.get(`/api/missing-persons/${missingPostId.value}/participants`, {
-            withCredentials: true
-        });
-
-        console.log('✅ 함께 찾는 사람들:', response.data);
-        if (Array.isArray(response.data)) {
-            participantsCount.value = response.data.length
-        } else if (response.data && typeof response.data === 'object') {
-            participantsCount.value = (response.data.count ?? response.data.total ?? 0)
-        } else {
-            participantsCount.value = 0
-        }
-
-    } catch (error) {
-        console.error("❌ 참여자 목록 조회 실패:", error);
-    }
-}
-
+// 실종자 정보
 const personDetail = ref(null)
 const personLoading = ref(true)
 const personError = ref(null)
@@ -718,6 +398,944 @@ const participantsCount = ref(0)
 
 // 시간 변수
 const missingTimeDB = ref(null)
+
+// 주소
+const missingAddress = ref(null)
+let fullAddress = ''
+
+// 유효 데이터 수
+let less_data = ref(false)
+
+// ========================================================================================
+// API 호출 함수 - 예측 데이터 가져오기
+// ========================================================================================
+
+async function fetchPredictionData() {
+    const missingTime = formatSimpleDateTime(missingTimeDB.value).toString()
+
+    try {
+        const params = new URLSearchParams({
+            user_no: patientUserNo.value,
+            missing_time: missingTime,
+            analysis_days: 60,
+            session_gap: 30,
+            min_cluster_size: 10,
+            max_destinations_per_range: 5,  // ⭐ 최대 5개로 설정
+            csv_path: 'all_locations.csv'
+        })
+
+        const response = await axios.post(
+            `http://localhost:8000/api/predict-destinations?${params.toString()}`,
+            null,
+            { withCredentials: true }
+        )
+
+        const data = response.data
+
+        if(data.less_data === 'yes') {
+            less_data.value = true
+        }
+
+        // ⭐ API 응답 데이터 처리
+        processDestinationsToZones(data)
+
+        return true
+
+    } catch (error) {
+        console.error('❌ 예측 데이터 로드 실패:', error)
+        personError.value = '예측 데이터를 불러올 수 없습니다.'
+        return false
+    } finally {
+        isLoading.value = false
+    }
+}
+
+// ========================================================================================
+// ⭐ API 응답을 Zone 배열로 변환하는 함수 + 경로 생성
+// ========================================================================================
+
+
+async function processDestinationsToZones(apiResponse) {
+    console.log('🔄 API 응답 처리 시작...')
+
+    if (apiResponse.last_known_location) {
+        lastKnownLocation.value = apiResponse.last_known_location
+        missingLocation.value.lat = apiResponse.last_known_location.latitude
+        missingLocation.value.lon = apiResponse.last_known_location.longitude
+    }
+
+    const destinationsByDistance = apiResponse.destinations_by_distance || {}
+
+    // ⭐ address1, address2를 초기 구조에 포함
+    zone_level_1.value = (destinationsByDistance['500m'] || []).map((dest, index) => ({
+        id: dest.destination_id,
+        lat: dest.latitude,
+        lon: dest.longitude,
+        name: dest.name || `목적지 ${index + 1}`,
+        visitCount: dest.visit_count,
+        distance: dest.distance_meters,
+        waypoints: dest.waypoints || [],
+        preferenceScore: dest.preference_score,
+        totalGpsRecords: dest.total_gps_records,
+        clusterStability: dest.cluster_stability,
+        routeMethod: dest.route_method,
+        value: dest.preference_score,
+        address1: '',
+        address2: '',
+        sido_nm: '',
+        sgg_nm: '',
+        emd_nm: '',
+        ri_nm: '',
+        jimok: '',
+        dist_m: 0
+    }))
+
+    zone_level_2.value = (destinationsByDistance['1000m'] || []).map((dest, index) => ({
+        id: dest.destination_id,
+        lat: dest.latitude,
+        lon: dest.longitude,
+        name: dest.name || `목적지 ${index + 1}`,
+        visitCount: dest.visit_count,
+        distance: dest.distance_meters,
+        waypoints: dest.waypoints || [],
+        preferenceScore: dest.preference_score,
+        totalGpsRecords: dest.total_gps_records,
+        clusterStability: dest.cluster_stability,
+        routeMethod: dest.route_method,
+        value: dest.preference_score,
+        address1: '',
+        address2: '',
+        sido_nm: '',
+        sgg_nm: '',
+        emd_nm: '',
+        ri_nm: '',
+        jimok: '',
+        dist_m: 0
+    }))
+
+    zone_level_3.value = (destinationsByDistance['1500m'] || []).map((dest, index) => ({
+        id: dest.destination_id,
+        lat: dest.latitude,
+        lon: dest.longitude,
+        name: dest.name || `목적지 ${index + 1}`,
+        visitCount: dest.visit_count,
+        distance: dest.distance_meters,
+        waypoints: dest.waypoints || [],
+        preferenceScore: dest.preference_score,
+        totalGpsRecords: dest.total_gps_records,
+        clusterStability: dest.cluster_stability,
+        routeMethod: dest.route_method,
+        value: dest.preference_score,
+        address1: '',
+        address2: '',
+        sido_nm: '',
+        sgg_nm: '',
+        emd_nm: '',
+        ri_nm: '',
+        jimok: '',
+        dist_m: 0
+    }))
+
+    console.log('✅ Zone Level 1 (500m):', zone_level_1.value.length, '개')
+    console.log('✅ Zone Level 2 (1000m):', zone_level_2.value.length, '개')
+    console.log('✅ Zone Level 3 (1500m):', zone_level_3.value.length, '개')
+
+    // ⭐ VWorld API 호출 (주소와 지목정보 설정)
+    await getAddressAndJimok()
+
+    // ⭐ VWorld API 호출 후 배열 재할당으로 Vue 반응성 강제 트리거
+    zone_level_1.value = [...zone_level_1.value]
+    zone_level_2.value = [...zone_level_2.value]
+    zone_level_3.value = [...zone_level_3.value]
+
+    console.log('✅ 최종 Zone 1 샘플:', JSON.stringify(zone_level_1.value[0]))
+    console.log('✅ 최종 Zone 2 샘플:', JSON.stringify(zone_level_2.value[0]))
+    console.log('✅ 최종 Zone 3 샘플:', JSON.stringify(zone_level_3.value[0]))
+
+    // ⭐ 경로 생성 (TMap API)
+    await requestAllRoutes()
+
+    if (map) {
+        setCenter()
+        makeMarker()
+        showCirclesByZoneLevel(displayZoneLevel.value)
+    }
+}
+
+//
+// VWorld에서 주소와 지목정보를 가져와서 화면에 표시
+//
+async function getAddressAndJimok() {
+    console.log('🗺️ VWorld API 호출 시작...')
+
+    const columns = [
+        'pnu', 'sido_nm', 'sgg_nm', 'emd_nm', 'ri_nm',
+        'jibun', 'jimok', 'parea', 'rn_nm', 'bld_mnnm',
+        'bld_slno', 'ag_geom'
+    ].join(',')
+
+    const allZones = [
+        { level: 1, data: zone_level_1.value },
+        { level: 2, data: zone_level_2.value },
+        { level: 3, data: zone_level_3.value }
+    ]
+
+    // 모든 존의 모든 location을 순회하며 처리
+    for (const zone of allZones) {
+        if (!zone.data || zone.data.length === 0) continue
+
+        console.log(`⏳ Zone ${zone.level} 처리 시작 (${zone.data.length}개)`)
+
+        // ⭐ 각 존의 모든 location을 병렬 처리
+        await Promise.all(
+            zone.data.map(async (location, index) => {
+                try {
+                    await processLocation(location, zone.level, index, columns)
+                } catch (e) {
+                    console.error(`❌ Zone ${zone.level}-${index + 1} 예상치 못한 에러:`, e)
+                }
+            })
+        )
+
+        console.log(`✅ Zone ${zone.level} 완료`)
+    }
+
+    console.log('🗺️ 모든 API 호출 완료')
+}
+
+/**
+ * 개별 location에 대한 주소 및 지목 정보 처리
+ */
+async function processLocation(location, zoneLevel, locationIndex, columns) {
+    // 1. 거리 계산
+    location.dist_m = calculateDistance(
+        missingLocation.value.lat,
+        missingLocation.value.lon,
+        location.lat,
+        location.lon
+    )
+
+    try {
+        // 2. VWorld API 호출
+        const vworldData = await fetchVWorldData(location, columns)
+
+        console.log(`Zone ${zoneLevel}-${locationIndex + 1} VWorld 응답:`, vworldData)
+
+        // 3. 응답 상태에 따른 분기 처리
+        if (vworldData.status === 'NOT_FOUND' || !vworldData.properties) {
+            console.warn(`Zone ${zoneLevel}-${locationIndex + 1}: VWorld 데이터 없음 - Kakao 폴백`)
+            await handleKakaoFallback(location)
+            return
+        }
+
+        if (vworldData.status === 'ERROR') {
+            console.error(`Zone ${zoneLevel}-${locationIndex + 1}: ERROR - ${vworldData.errorText || '알수없는에러'}`)
+            setLocationError(location)
+            return
+        }
+
+        // 4. VWorld properties 데이터로 location 정보 설정
+        await setLocationFromVWorld(location, vworldData.properties)
+
+        // 5. API 호출 지연 (rate limit 방지)
+        await delay(150)
+
+    } catch (e) {
+        console.error(`Zone ${zoneLevel}-${locationIndex + 1} 예상치 못한 에러:`, e)
+        setLocationError(location)
+    }
+}
+
+/**
+ * VWorld Data API 호출
+ */
+async function fetchVWorldData(location, columns) {
+    const dataParams = new URLSearchParams({
+        service: 'data',
+        version: '2.0',
+        request: 'GetFeature',
+        format: 'json',
+        errorformat: 'json',
+        size: '10',
+        page: '1',
+        data: 'LT_C_LANDINFOBASEMAP',
+        geomfilter: `POINT(${location.lon} ${location.lat})`,
+        columns: columns,
+        geometry: 'true',
+        attribute: 'true',
+        buffer: '10',
+        crs: 'EPSG:4326',
+        key: VWORLD_API_KEY,
+        domain: 'api.vworld.kr'
+    })
+
+    const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
+    const dataProxyUrl = `https://www.vworld.kr/proxy.do?url=${encodeURIComponent(dataUrl)}`
+
+    const dataRes = await fetch(dataProxyUrl)
+
+    if (!dataRes.ok) {
+        throw new Error(`VWorld Data API HTTP error! status: ${dataRes.status}`)
+    }
+
+    const dataText = await dataRes.text()
+
+    let dataResp = JSON.parse(dataText)
+    const properties = dataResp?.response?.result?.featureCollection?.features?.[0]?.properties
+
+    // 응답 구조 정규화하여 반환
+    return {
+        status: dataResp?.response?.status || dataResp?.status || 'ERROR',
+        errorText: dataResp?.response?.error?.text || dataResp?.error?.text,
+        properties: properties
+    }
+}
+
+/**
+ * VWorld 데이터로 location 정보 설정
+ */
+async function setLocationFromVWorld(location, props) {
+    // 1. properties에서 필요한 정보 추출
+    const sido = props.sido_nm || ''
+    const sgg = props.sgg_nm || ''
+    const emd = props.emd_nm || ''
+    const ri = props.ri_nm || ''
+    const jimok = props.jimok || '토지'
+
+    // 2. location 객체에 기본 정보 저장
+    location.sido_nm = sido
+    location.sgg_nm = sgg
+    location.emd_nm = emd
+    location.ri_nm = ri
+    location.jimok = jimok
+
+    console.log(`✅ VWorld 기본정보 설정: sido=${sido}, sgg=${sgg}, emd=${emd}`)
+
+    // 3. address1: 행정구역 조합 (시/군 + 읍면동 + 리)
+    const addressParts = [sgg, emd, ri].filter(part => part)
+    location.address1 = addressParts.join(' ')
+    console.log(`✅ address1 설정: ${location.address1}`)
+
+    // 4. address2: 자연어 설명 생성
+    location.address2 = await generateAddress2(jimok, location.address1)
+    console.log(`✅ address2 설정: ${location.address2}`)
+}
+
+/**
+ * address2 자연어 설명 생성
+ */
+async function generateAddress2(jimok, address1) {
+    // 1. 지목을 자연어로 변환
+    const jimokNaturalText = convertJimokToNaturalLanguage(jimok)
+
+    // 2. 특정 지목은 POI 검색 없이 바로 반환
+    const excludeJimok = ['전', '답', '임야', '도로']
+
+    console.log(`🔍 generateAddress2 호출: jimok=${jimok}, address1=${address1}`)
+
+    if (!excludeJimok.includes(jimok)) {
+        // 3. 기타 지목의 경우 POI 검색 수행
+        console.log(`📍 POI 검색 시작 (jimok=${jimok})`)
+
+        try {
+            const poiResult = await searchVWorldPOI(address1)
+            console.log(`✅ POI 검색 완료:`, poiResult)
+
+            if (poiResult && poiResult.poiName) {
+                const result = `'${poiResult.poiName}'에 있을 것 같아요!`
+                console.log(`✅ address2 생성 (POI): ${result}`)
+                return result
+            } else {
+                const result = `도로에 있을 것 같아요!`
+                console.log(`✅ address2 생성 (기본): ${result}`)
+                return result
+            }
+        } catch (e) {
+            console.error(`❌ POI 검색 에러:`, e)
+            const result = `도로에 있을 것 같아요!`
+            console.log(`✅ address2 생성 (에러폴백): ${result}`)
+            return result
+        }
+    } else {
+        // 4. 전/답/임야/도로는 지목 그대로 사용
+        const result = `${jimokNaturalText}에 있을 것 같아요!`
+        console.log(`✅ address2 생성 (지목): ${result}`)
+        return result
+    }
+}
+
+/**
+ * Kakao Geocoder 폴백 처리
+ */
+async function handleKakaoFallback(location) {
+    const kakaoAddress = await getKakaoAddressFromCoord(location.lat, location.lon)
+
+    if (kakaoAddress && kakaoAddress.sido) {
+        const addressParts = [kakaoAddress.sido, kakaoAddress.gungu, kakaoAddress.eup].filter(part => part)
+        location.address1 = addressParts.join(' ')
+        location.address2 = '에 있을 것 같아요!'
+        location.sido_nm = kakaoAddress.sido
+        location.sgg_nm = kakaoAddress.gungu
+        location.emd_nm = kakaoAddress.eup
+
+        console.log(`✅ Kakao 폴백 완료: address1=${location.address1}`)
+    } else {
+        setLocationError(location)
+        console.warn('❌ Kakao Geocoder 폴백 실패')
+    }
+}
+
+/**
+ * location에 에러 정보 설정
+ */
+function setLocationError(location) {
+    location.address1 = '위치 정보 없음'
+    location.address2 = ''
+    console.warn(`⚠️ 위치 정보 에러 처리`)
+}
+
+/**
+ * 지목을 자연어로 변환하는 함수
+ */
+function convertJimokToNaturalLanguage(jimok) {
+    const jimokMap = {
+        '전': '밭',
+        '답': '논',
+        '임야': '산',
+        '도로': '도로',
+        '공원': '공원',
+        '건물': '건물',
+        '주택': '주택'
+    }
+
+    // 정확한 일치
+    if (jimokMap[jimok]) {
+        return jimokMap[jimok]
+    }
+
+    // 부분 일치
+    for (const [key, value] of Object.entries(jimokMap)) {
+        if (jimok.includes(key)) {
+            return value
+        }
+    }
+
+    // 기본값
+    return jimok
+}
+
+/**
+ * VWorld 검색 API로 POI 검색
+ */
+async function searchVWorldPOI(address) {
+    if (!address || address.trim() === '') {
+        console.warn(`⚠️ POI 검색: address 값이 없음`)
+        return null
+    }
+
+    try {
+        const searchData = new URLSearchParams({
+            service: 'search',
+            version: '2.0',
+            request: 'search',
+            query: address,
+            type: 'place',
+            format: 'json',
+            errorformat: 'json',
+            crs: 'EPSG:4326',
+            page: '1',
+            size: '5',
+            key: VWORLD_API_KEY,
+            domain: 'api.vworld.kr'
+        })
+
+        const searchUrl = `https://api.vworld.kr/req/search?${searchData.toString()}`
+        console.log(`📡 POI 검색 URL: ${searchUrl}`)
+
+        const response = await fetch(searchUrl)
+        console.log(`📡 POI 응답 상태: ${response.status}`)
+
+        if (!response.ok) {
+            console.warn(`⚠️ POI API 응답 실패: ${response.status}`)
+            return null
+        }
+
+        const data = await response.json()
+        console.log(`📡 POI 응답 데이터:`, data)
+
+        // VWorld Search API 응답 구조 확인
+        if (data?.response?.result?.items && data.response.result.items.length > 0) {
+            const firstItem = data.response.result.items[0]
+
+            const result = {
+                poiName: firstItem.title || firstItem.name || 'POI',
+                poiType: firstItem.category || '',
+                address: firstItem.address || '',
+                point: firstItem.point ? {
+                    x: firstItem.point.x,
+                    y: firstItem.point.y
+                } : null
+            }
+
+            console.log(`✅ POI 검색 성공:`, result)
+            return result
+        }
+
+        console.log(`⚠️ POI 검색 결과 없음 (address=${address})`)
+        return null
+
+    } catch (e) {
+        console.error('❌ VWorld POI 검색 에러:', e)
+        return null
+    }
+}
+
+// ========================================================================================
+// Tmap 경로 관련 함수 - waypoints 포함 수정
+// ========================================================================================
+
+// ⭐ zone_level_1~3의 모든 경로를 저장하는 배열
+const zone1Routes = ref([])
+const zone2Routes = ref([])
+const zone3Routes = ref([])
+
+/**
+ * 모든 zone의 경로를 자동으로 요청하는 함수
+ * ⭐ 수정: waypoints를 제대로 passList로 변환
+ */
+async function requestAllRoutes() {
+    console.log('🚶 모든 경로 요청 시작...')
+
+    const s = missingLocation.value
+
+    if (!s || !s.lat || !s.lon) {
+        console.error('❌ 출발지 위치 정보가 없습니다.')
+        return
+    }
+
+    // ⭐ zone_level_1~3 모두 처리
+    const allZones = [
+        { level: 1, data: zone_level_1.value, storage: zone1Routes },
+        { level: 2, data: zone_level_2.value, storage: zone2Routes },
+        { level: 3, data: zone_level_3.value, storage: zone3Routes }
+    ]
+
+    for (const zone of allZones) {
+        if (!zone.data || zone.data.length === 0) {
+            console.log(`⏭️  Zone ${zone.level} 데이터가 없습니다.`)
+            continue
+        }
+
+        console.log(`⏳ Zone ${zone.level} 경로 요청 시작 (${zone.data.length}개)`)
+
+        zone.storage.value = []
+
+        for (let i = 0; i < zone.data.length; i++) {
+            const d = zone.data[i]
+
+            try {
+                console.log(`📍 위치 ${i + 1}: ${d.address1} (경유지: ${d.waypoints?.length || 0}개)`)
+
+                // ⭐ waypoints 변환
+                let waypointsStr = ''
+                if (d.waypoints && Array.isArray(d.waypoints) && d.waypoints.length > 0) {
+                    const waypointsCoords = d.waypoints.map(wp => {
+                        if (!wp.lon || !wp.lat) {
+                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp)
+                            return null
+                        }
+                        return `${wp.lon},${wp.lat}`
+                    }).filter(coord => coord !== null)
+
+                    if (waypointsCoords.length > 0) {
+                        waypointsStr = waypointsCoords.join('_')
+                        console.log(`✅ 경유지 설정 (${waypointsCoords.length}개): ${waypointsStr.substring(0, 50)}...`)
+                    }
+                } else {
+                    console.log(`ℹ️  경유지 없음`)
+                }
+
+                // ⭐ 요청 본문 구성`
+                let body = {
+                    startName: 'start',
+                    startX: Number(s.lon),
+                    startY: Number(s.lat),
+                    endName: `${d.address1 || 'end'}`,
+                    endX: Number(d.lon),
+                    endY: Number(d.lat),
+                    reqCoordType: 'WGS84GEO',
+                    resCoordType: 'WGS84GEO',
+                    searchOption: '0',  // 최단거리
+                    trafficInfo: 'Y'     // 교통 정보 포함
+                }
+
+                // ⭐ 경유지 추가 (waypointsStr이 존재할 때만)
+                if (waypointsStr && waypointsStr.length > 0) {
+                    body.passList = waypointsStr
+                    console.log(`🔗 passList 설정됨: ${waypointsStr}`)
+                }
+
+                console.log(`📡 TMap 요청 본문:`, {
+                    start: `${s.lon},${s.lat}`,
+                    end: `${d.lon},${d.lat}`,
+                    waypoints: waypointsStr || '없음',
+                    address: d.address1
+                })
+
+                // ⭐ TMap API 호출
+                const resp = await fetch(
+                    `https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1&format=json`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'appKey': TMAP_API_KEY
+                        },
+                        body: JSON.stringify(body),
+                    }
+                )
+
+                if (!resp.ok) {
+                    console.error(`❌ Zone ${zone.level}-${i + 1} 경로 요청 실패: ${resp.status}`)
+                    zone.storage.value.push(null)
+                    continue
+                }
+
+                const data = await resp.json()
+                console.log(`📡 Zone ${zone.level}-${i + 1} 응답:`, data)
+
+                // ⭐ features 존재 여부 확인
+                if (data && data.features && Array.isArray(data.features) && data.features.length > 0) {
+                    zone.storage.value.push(data.features)
+                    console.log(`✅ Zone ${zone.level}-${i + 1} 경로 저장 (${data.features.length}개 feature)`)
+                    
+                    // ⭐ 응답 데이터 디버깅
+                    if (data.features[0]) {
+                        const firstFeature = data.features[0]
+                        console.log(`   - Geometry type: ${firstFeature.geometry?.type}`)
+                        console.log(`   - Coordinates 개수: ${firstFeature.geometry?.coordinates?.length}`)
+                    }
+                } else {
+                    zone.storage.value.push(null)
+                    console.warn(`⚠️  Zone ${zone.level}-${i + 1} 유효한 경로 데이터 없음`)
+                    console.log(`   Response:`, data)
+                }
+
+                // ⭐ API 요청 지연 (rate limit 방지)
+                await delay(200)
+
+            } catch (e) {
+                console.error(`❌ Zone ${zone.level}-${i + 1} 경로 요청 에러:`, e)
+                zone.storage.value.push(null)
+            }
+        }
+
+        console.log(`✅ Zone ${zone.level} 경로 요청 완료 (저장된 경로: ${zone.storage.value.filter(r => r !== null).length}개 / 전체: ${zone.storage.value.length}개)`)
+    }
+
+    console.log('🚶 모든 경로 요청 완료')
+    console.log(`최종 결과:`)
+    console.log(`  - Zone1: ${zone1Routes.value.length}개 (유효: ${zone1Routes.value.filter(r => r !== null).length}개)`)
+    console.log(`  - Zone2: ${zone2Routes.value.length}개 (유효: ${zone2Routes.value.filter(r => r !== null).length}개)`)
+    console.log(`  - Zone3: ${zone3Routes.value.length}개 (유효: ${zone3Routes.value.filter(r => r !== null).length}개)`)
+}
+
+/**
+ * polyline 제거 함수
+ */
+function clearPolylines() {
+    for (let polyline of polylines) {
+        if (polyline && polyline.setMap) {
+            polyline.setMap(null)
+        }
+    }
+
+    polylines.length = 0
+    console.log('✅ 모든 폴리라인 제거')
+}
+
+/**
+ * 모든 경로 제거
+ */
+function clearAllRoutes() {
+    clearPolylines()
+}
+
+/**
+ * 경로 그리기 함수
+ */
+function drawRoute(index, zoneLevel = 1) {
+    if (!map) {
+        console.error('❌ 지도가 초기화되지 않았습니다.')
+        return
+    }
+
+    let routeStorage
+    if (zoneLevel === 1) {
+        routeStorage = zone1Routes.value
+    } else if (zoneLevel === 2) {
+        routeStorage = zone2Routes.value
+    } else if (zoneLevel === 3) {
+        routeStorage = zone3Routes.value
+    } else {
+        console.error('❌ 유효하지 않은 zone level:', zoneLevel)
+        return
+    }
+
+    if (index < 0 || index >= routeStorage.length) {
+        console.error('❌ 유효하지 않은 인덱스:', index)
+        return
+    }
+
+    const routeFeatures = routeStorage[index]
+
+    if (!routeFeatures || routeFeatures.length === 0) {
+        console.error(`❌ Zone ${zoneLevel}-${index}의 경로 데이터가 없습니다.`)
+        return
+    }
+
+    console.log(`🗺️ Zone ${zoneLevel}-${index} 경로 그리기 시작... (${routeFeatures.length}개 feature)`)
+
+    // ⭐ 이전 폴리라인 제거
+    clearPolylines()
+
+    let totalPolylines = 0
+
+    // ⭐ 새로운 경로 그리기
+    routeFeatures.forEach((feature, featureIndex) => {
+        try {
+            if (feature.geometry && feature.geometry.type === 'LineString') {
+                const coordinates = feature.geometry.coordinates
+
+                if (!coordinates || coordinates.length === 0) {
+                    console.warn(`⚠️  Feature ${featureIndex}: coordinates가 없음`)
+                    return
+                }
+
+                const linePath = coordinates.map(([lng, lat]) => {
+                    return new window.kakao.maps.LatLng(lat, lng)
+                })
+
+                const polyline = new window.kakao.maps.Polyline({
+                    map: map,
+                    path: linePath,
+                    strokeColor: '#2563EB',
+                    strokeWeight: 5,
+                    strokeOpacity: 0.8,
+                    strokeStyle: 'solid'
+                })
+
+                polylines.push(polyline)
+                totalPolylines++
+
+                // 첫 번째 feature의 중간 지점으로 이동
+                if (featureIndex === 0 && linePath.length > 0) {
+                    const midIndex = Math.floor(linePath.length / 2)
+                    map.panTo(linePath[midIndex])
+                    console.log(`📍 지도 중심 이동 (좌표 개수: ${linePath.length})`)
+                }
+            } else {
+                console.warn(`⚠️  Feature ${featureIndex}: geometry type이 LineString이 아님 (${feature.geometry?.type})`)
+            }
+        } catch (e) {
+            console.error(`❌ Feature ${featureIndex} 그리기 실패:`, e)
+        }
+    })
+
+    console.log(`✅ Zone ${zoneLevel}-${index} 경로 그리기 완료 (총 ${totalPolylines}개 폴리라인)`)
+}
+
+/**
+ * 딜레이 함수
+ */
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Watch - 시간대 변경 시
+ */
+watch(selectedMinutes, (newMinutes) => {
+    let newLevel = 1
+
+    if (newMinutes <= 30) {
+        newLevel = 1
+    } else if (newMinutes <= 60) {
+        newLevel = 2
+    } else {
+        newLevel = 3
+    }
+
+    showAllLocations.value = false
+    selectedLocation.value = null
+    clearAllRoutes()
+    displayZoneLevel.value = newLevel
+
+    if (!map) {
+        console.warn('지도가 초기화되지 않았습니다.')
+        return
+    }
+
+    try {
+        updateMapForTime(newMinutes)
+    } catch (error) {
+        console.error('지도 업데이트 실패:', error)
+    }
+})
+
+/**
+ * Watch - Zone Level 변경 시
+ */
+watch(displayZoneLevel, (newLevel, oldLevel) => {
+    console.log(`🗺️ Zone Level 변경: ${oldLevel} → ${newLevel}`)
+
+    showAllLocations.value = false
+    clearAllRoutes()
+    selectedLocation.value = null
+
+    if (!map) {
+        console.warn('지도가 초기화되지 않았습니다.')
+        return
+    }
+
+    try {
+        makeMarker()
+        showCirclesByZoneLevel(newLevel)
+    } catch (error) {
+        console.error('Zone Level 변경 실패:', error)
+    }
+})
+
+/**
+ * Watch - 모든 위치 보기 토글 시
+ */
+watch(showAllLocations, (newValue) => {
+    console.log(`📍 모든 위치 보기: ${newValue}`)
+    selectedLocation.value = null
+
+    if (!map) {
+        console.warn('지도가 초기화되지 않았습니다.')
+        return
+    }
+
+    try {
+        makeMarker()
+    } catch (error) {
+        console.error('마커 업데이트 실패:', error)
+    }
+})
+
+/**
+ * Haversine 공식을 사용하여 두 좌표 간의 거리를 미터 단위로 계산
+ * @param {number} lat1 - 시작점 위도
+ * @param {number} lon1 - 시작점 경도
+ * @param {number} lat2 - 도착점 위도
+ * @param {number} lon2 - 도착점 경도
+ * @returns {number} 거리 (미터)
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const toRadian = angle => (Math.PI / 180) * angle
+    const R = 6371000 // 지구 반경 (미터)
+
+    const dLat = toRadian(lat2 - lat1)
+    const dLon = toRadian(lon2 - lon1)
+
+    const lat1Rad = toRadian(lat1)
+    const lat2Rad = toRadian(lat2)
+
+    // Haversine 공식
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    const distance = R * c
+
+    return Math.round(distance) // 미터 단위, 반올림
+}
+
+// ========================================================================================
+// Computed Properties - Zone별 표시 데이터
+// ========================================================================================
+
+const displayedZone1 = computed(() => {
+    const data = zone_level_1.value || []
+    return showAllLocations.value ? data : data.slice(0, 3)
+})
+
+const displayedZone2 = computed(() => {
+    const data = zone_level_2.value || []
+    return showAllLocations.value ? data : data.slice(0, 3)
+})
+
+const displayedZone3 = computed(() => {
+    const data = zone_level_3.value || []
+    return showAllLocations.value ? data : data.slice(0, 3)
+})
+
+const displayedZoneToShow = computed(() => {
+    if (displayZoneLevel.value === 1) {
+        return displayedZone1.value
+    } else if (displayZoneLevel.value === 2) {
+        return displayedZone2.value
+    } else if (displayZoneLevel.value === 3) {
+        return displayedZone3.value
+    }
+    return []
+})
+
+const hasMoreData = computed(() => {
+    let totalCount = 0
+    if (displayZoneLevel.value === 1) {
+        totalCount = zone_level_1.value?.length || 0
+    } else if (displayZoneLevel.value === 2) {
+        totalCount = zone_level_2.value?.length || 0
+    } else if (displayZoneLevel.value === 3) {
+        totalCount = zone_level_3.value?.length || 0
+    }
+    return totalCount > 3
+})
+
+const markerDataToDisplay = computed(() => {
+    if (showAllLocations.value) {
+        return displayedZoneToShow.value.map(item => ({
+            ...item,
+            zoneLevel: displayZoneLevel.value
+        }))
+    }
+
+    let result = []
+
+    if (displayZoneLevel.value >= 1) {
+        result = result.concat(displayedZone1.value.map(item => ({ ...item, zoneLevel: 1 })))
+    }
+    if (displayZoneLevel.value >= 2) {
+        result = result.concat(displayedZone2.value.map(item => ({ ...item, zoneLevel: 2 })))
+    }
+    if (displayZoneLevel.value >= 3) {
+        result = result.concat(displayedZone3.value.map(item => ({ ...item, zoneLevel: 3 })))
+    }
+
+    return result
+})
+
+const progressWidth = computed(() => {
+    return (selectedMinutes.value / 90) * 100
+})
+
+// ========================================================================================
+// 지도 및 마커 관련 변수
+// ========================================================================================
+
+let map = null;
+let markers = []
+let polylines = []
+let centerMarker = null
+
+// ========================================================================================
+// 실종자 정보 조회
+// ========================================================================================
 
 async function fetchMissingPersonDetail() {
     if (!missingPostId.value) {
@@ -751,9 +1369,34 @@ async function fetchMissingPersonDetail() {
     }
 }
 
-const missingAddress = ref(null)
-let fullAddress = ''
+// 참여자 조회
+async function fetchParticipants() {
+    if (!missingPostId.value) {
+        console.warn('⚠️ missingPostId가 없어서 참여자 조회를 건너뜁니다.')
+        return
+    }
 
+    console.log(`참여자 목록 조회 시도: missingPostId=${missingPostId.value}`)
+    try {
+        const response = await axios.get(`/api/missing-persons/${missingPostId.value}/participants`, {
+            withCredentials: true
+        });
+
+        console.log('✅ 함께 찾는 사람들:', response.data);
+        if (Array.isArray(response.data)) {
+            participantsCount.value = response.data.length
+        } else if (response.data && typeof response.data === 'object') {
+            participantsCount.value = (response.data.count ?? response.data.total ?? 0)
+        } else {
+            participantsCount.value = 0
+        }
+
+    } catch (error) {
+        console.error("❌ 참여자 목록 조회 실패:", error);
+    }
+}
+
+// 주소 조회
 async function getMissingAddress() {
     try {
         console.log(`missingLocation으로 조회 시작 lat : ${missingLocation.value.lat}, lon : ${missingLocation.value.lon}`)
@@ -786,12 +1429,7 @@ async function getMissingAddress() {
 
         if (!dataRes.ok) {
             console.error(`VWorld Data API HTTP error! status: ${dataRes.status}`)
-            return {
-                sgg: '',
-                emd: '',
-                ri: '',
-                roadAddress: ''
-            }
+            return { sgg: '', emd: '', ri: '', roadAddress: '' }
         }
 
         const data = await dataRes.json()
@@ -826,90 +1464,43 @@ async function getMissingAddress() {
 
         } else {
             console.warn('VWorld API에서 주소 정보를 찾을 수 없음')
-            return {
-                sgg: '',
-                emd: '',
-                ri: '',
-                roadAddress: ''
-            }
+            return { sgg: '', emd: '', ri: '', roadAddress: '' }
         }
 
     } catch (error) {
         console.error(`실종자 정보에서 위경도값으로 주소 조회중 오류 -> ${error}`)
-        return {
-            sgg: '',
-            emd: '',
-            ri: '',
-            roadAddress: ''
-        }
+        return { sgg: '', emd: '', ri: '', roadAddress: '' }
     }
 }
 
-const elapsedTimeText = ref('')
-
-function calcElapsedTime() {
-    try {
-        const missingTime = new Date(missingTimeDB.value)
-
-        if (isNaN(missingTime.getTime())) {
-            console.error('❌ 실종 시간이 유효하지 않습니다:', missingTimeDB.value)
-            elapsedTimeText.value = '시간 불명'
-            return
-        }
-
-        const now = new Date()
-        const diffInMs = now.getTime() - missingTime.getTime()
-        const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
-        const minutes = Math.max(0, diffInMinutes)
-
-        if (minutes < 60) {
-            elapsedTimeText.value = `${minutes}분 전`
-        } else {
-            const hours = Math.floor(minutes / 60)
-            elapsedTimeText.value = `약 ${hours}시간 전`
-        }
-
-        console.log(`⏱️ 경과 시간: ${minutes}분 → 표시: ${elapsedTimeText.value}`)
-        setTime(minutes)
-
-    } catch (error) {
-        console.error('❌ 경과 시간 계산 중 오류:', error)
-        elapsedTimeText.value = '시간 불명'
-    }
-}
-
-// 홈에서 왔을때 연결된 환자의 ID를 확인하는 함수
+// ID 찾기
 async function findMissingReportId() {
     const idFromParam = route.params.id;
 
     if (idFromParam) {
-        // 경로 - 게시판
         console.log("ID가 있습니다 (게시판 경로):", idFromParam);
         return parseInt(idFromParam, 10);
     }
 
-    // 경로 - 홈
     console.log("ID가 없습니다 (홈 경로). '내 환자'의 최신 신고 ID를 찾습니다.");
     try {
-        // 내 환자 정보 조회
         console.log("[ID 찾기] '내 환자' 정보를 /api/user/my-patient 에서 조회합니다.");
         const myPatientResponse = await axios.get('/api/user/my-patient', {
             withCredentials: true
         });
 
+        patientUserNo.value = myPatientResponse.data.userNo
         const myPatientId = myPatientResponse.data.userNo;
         if (!myPatientId) {
             throw new Error("연결된 환자 정보를 찾을 수 없습니다.");
         }
 
-        // 환자 ID로 최신 실종 신고 조회
         console.log(`[ID 찾기] 환자 ID(${myPatientId})로 '최신 실종 신고'를 조회합니다.`);
         const reportResponse = await axios.get(
             `/api/missing-persons/patient/${myPatientId}/latest`,
             { withCredentials: true }
         );
 
-        // 실종 신고 ID 반환
         return reportResponse.data.missingPostId;
 
     } catch (err) {
@@ -924,12 +1515,10 @@ async function findMissingReportId() {
     }
 }
 
-// 실종자의 정보를 조회하는 함수
+// 데이터 로드
 async function fetchPatientAndMissingReport() {
-    // (이 함수는 missingPostId.value가 있다는 것이 보장될 때 호출됨)
-
     personLoading.value = true;
-    personError.value = null; // (오류 메시지 초기화 - ID 찾기 오류를 덮어쓰기 위함)
+    personError.value = null;
 
     try {
         console.log(`[데이터 로드] ID(${missingPostId.value})로 실종자 정보를 조회합니다.`);
@@ -944,50 +1533,16 @@ async function fetchPatientAndMissingReport() {
             missingTimeDB.value = new Date(response.data.reportedAt).getTime();
         }
 
-        fetchParticipants(); // 참가자 조회
-        return true; // 성공
+        fetchParticipants();
+        return true;
 
     } catch (err) {
         console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err);
         personError.value = "실종 신고 정보를 불러오는 데 실패했습니다.";
-        return false; // 실패
+        return false;
     } finally {
         personLoading.value = false;
     }
-}
-
-function formatSimpleDateTime(dateString) {
-    if (!dateString) return '시간 정보 없음';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date)) return '날짜 형식 오류';
-
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${year}-${month}-${day} ${hours}:${minutes}`;
-    } catch (e) {
-        console.error("날짜 포맷 오류:", e, dateString);
-        return '날짜 형식 오류';
-    }
-}
-
-function calculateAge(birthDateString) {
-    if (!birthDateString) return '?';
-    try {
-        const birthDate = new Date(birthDateString);
-        if (isNaN(birthDate)) return '?';
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        return age >= 0 ? age : '?';
-    } catch (e) { return '?'; }
 }
 
 function formatDescription(desc) {
@@ -1026,88 +1581,396 @@ function formatDescription(desc) {
 }
 
 // ========================================================================================
-// Computed Properties
+// 카카오맵 초기화
 // ========================================================================================
 
-const displayedZone1 = computed(() => {
-    const data = predictionData.value.zone_level_1 || []
-    return showAllLocations.value ? data.slice(0, 10) : data.slice(0, 3)
-})
+onMounted(async () => {
+    isLoading.value = true;
+    selectedType.value = 'info';
 
-const displayedZone2 = computed(() => {
-    const data = predictionData.value.zone_level_2 || []
-    return showAllLocations.value ? data.slice(0, 10) : data.slice(0, 3)
-})
+    const idToLoad = await findMissingReportId();
 
-const displayedZone3 = computed(() => {
-    const data = predictionData.value.zone_level_3 || []
-    return showAllLocations.value ? data.slice(0, 10) : data.slice(0, 3)
-})
+    if (idToLoad) {
+        console.log("최종 로드할 ID:", idToLoad);
+        missingPostId.value = idToLoad;
 
-const displayedZoneToShow = computed(() => {
-    if (displayZoneLevel.value === 1) {
-        return displayedZone1.value
-    } else if (displayZoneLevel.value === 2) {
-        return displayedZone2.value
-    } else if (displayZoneLevel.value === 3) {
-        return displayedZone3.value
+        const fetchSuccess = await fetchPatientAndMissingReport();
+        await fetchPredictionData();
+
+        if (fetchSuccess) {
+            try {
+                loadKakaoMap(mapContainer.value);
+                setTimeout(() => {
+                    getMissingAddress()
+                    calcElapsedTime()
+
+                    if (map) {
+                        // ⭐ 초기화 시에만 force=true로 중심 설정
+                        setCenter(true)
+                        makeMarker()
+                        initCircles()
+                        showCirclesByZoneLevel(displayZoneLevel.value)
+                    }
+                }, 1000);
+            } catch (e) {
+                console.error("지도 초기화 중 오류:", e);
+                personError.value = "지도 로딩 중 오류가 발생했습니다.";
+                isLoading.value = false;
+            }
+        } else {
+            isLoading.value = false;
+        }
+    } else {
+        console.log("로드할 ID가 없습니다.");
+        isLoading.value = false;
     }
-    return []
-})
+});
 
-const hasMoreData = computed(() => {
-    let totalCount = 0
-    if (displayZoneLevel.value === 1) {
-        totalCount = predictionData.value.zone_level_1?.length || 0
-    } else if (displayZoneLevel.value === 2) {
-        totalCount = predictionData.value.zone_level_2?.length || 0
-    } else if (displayZoneLevel.value === 3) {
-        totalCount = predictionData.value.zone_level_3?.length || 0
+
+onUnmounted(() => {
+    if (isParticipantsLayerVisible.value) {
+        searchStore.stopSearch();
+        console.log("[PredictLocation] 페이지 이탈. '함께 찾기' 스위치를 끕니다.");
     }
-    return totalCount > 3
-})
+});
 
-const markerDataToDisplay = computed(() => {
-    if (showAllLocations.value) {
-        return displayedZoneToShow.value.map(item => ({
-            ...item,
-            zoneLevel: displayZoneLevel.value
-        }))
+const loadKakaoMap = (container) => {
+    const script = document.createElement('script')
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false&libraries=services`
+    document.head.appendChild(script)
+
+    script.onload = () => {
+        window.kakao.maps.load(() => {
+            const options = {
+                center: new window.kakao.maps.LatLng(
+                    missingLocation.value.lat || 37.5666805,
+                    missingLocation.value.lon || 126.9784147
+                ),
+                level: 5,
+            }
+
+            map = new window.kakao.maps.Map(container, options)
+            console.log('지도 초기화 완료')
+
+            if (missingLocation.value.lat && missingLocation.value.lon) {
+                centerMarker = new window.kakao.maps.Marker({
+                    position: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
+                    map: map,
+                    image: createCenterMarkerImage()
+                })
+            }
+        })
     }
+}
 
-    let result = []
+function createCenterMarkerImage() {
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 20 20">
+  <circle cx="10" cy="10" r="9.5" 
+          fill="none" 
+          stroke="#FF6B35" 
+          stroke-width="1"/>
+  <g transform="translate(2, 2)">
+    <path fill="#E63946" d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/>
+    <path fill="#E63946" d="M16 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1.5a.5.5 0 0 0 1 0V11a.5.5 0 0 0-.5-.5m0 4a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
+  </g>
+</svg>
+    `
 
-    if (displayZoneLevel.value >= 1) {
-        result = result.concat(displayedZone1.value.map(item => ({ ...item, zoneLevel: 1 })))
-    }
-    if (displayZoneLevel.value >= 2) {
-        result = result.concat(displayedZone2.value.map(item => ({ ...item, zoneLevel: 2 })))
-    }
-    if (displayZoneLevel.value >= 3) {
-        result = result.concat(displayedZone3.value.map(item => ({ ...item, zoneLevel: 3 })))
-    }
-
-    return result
-})
-
-const progressWidth = computed(() => {
-    return (selectedMinutes.value / 90) * 100
-})
+    return new window.kakao.maps.MarkerImage(
+        'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+        new window.kakao.maps.Size(50, 60),
+        { offset: new window.kakao.maps.Point(25, 58) }
+    )
+}
 
 // ========================================================================================
-// 더보기 버튼 클릭 함수
+// 마커 관련 함수
 // ========================================================================================
-function toggleShowMore() {
-    showAllLocations.value = !showAllLocations.value
-    console.log(`더보기 토글: ${showAllLocations.value ? '전체 보기' : '3개만 보기'}`)
 
-    if (map.value) {
-        makeMarker()
+function hideMarkers() {
+    for (let marker of markers) {
+        if (marker && marker.setVisible) {
+            marker.setVisible(false)
+        }
+    }
+}
+
+function showMarkers() {
+    for (let marker of markers) {
+        if (marker && marker.setVisible) {
+            marker.setVisible(true)
+        }
+    }
+}
+
+function makeMarker() {
+    // ⭐ 지도가 초기화되지 않았으면 중단
+    if (!map) {
+        console.warn('⚠️ 지도가 초기화되지 않아 마커를 생성할 수 없습니다.')
+        return
+    }
+
+    // ⭐ 현재 지도 상태 저장 (중심 좌표와 줌 레벨)
+    const currentCenter = map.getCenter()
+    const currentLevel = map.getLevel()
+
+    // 기존 마커 안전하게 제거
+    try {
+        markers.forEach(marker => {
+            if (marker && marker.setMap && typeof marker.setMap === 'function') {
+                marker.setMap(null)
+            }
+        })
+    } catch (error) {
+        console.warn('마커 제거 중 오류:', error)
+    }
+
+    markers = []
+
+    // 새 마커 생성
+    markerDataToDisplay.value.forEach((item, index) => {
+        try {
+            const markerPosition = new window.kakao.maps.LatLng(item.lat, item.lon)
+            const markerColor = getMarkerColor(item.zoneLevel)
+
+            const marker = new window.kakao.maps.Marker({
+                position: markerPosition,
+                map: map,
+                title: `${item.name} - ${Math.round(item.distance)}m`,
+                image: createColoredMarkerImage(markerColor)
+            })
+
+            // 마커 클릭 이벤트
+            window.kakao.maps.event.addListener(marker, 'click', function () {
+                selectLocation(item, index)
+            })
+
+            markers.push(marker)
+        } catch (error) {
+            console.error(`마커 ${index} 생성 중 오류:`, error)
+        }
+    })
+
+    // ⭐ 지도 상태 복원 (중심과 줌 레벨 유지)
+    // 단, 선택된 위치가 있을 때는 제외
+    if (!selectedLocation.value) {
+        map.setCenter(currentCenter)
+        map.setLevel(currentLevel)
+    }
+
+    console.log(`✅ 마커 ${markers.length}개 생성 완료 (줌 레벨: ${currentLevel} 유지)`)
+}
+
+
+function getMarkerColor(zoneLevel) {
+    const colors = {
+        1: '#66bb6a',
+        2: '#ff9e7e',
+        3: '#ff6b9d'
+    }
+    return colors[zoneLevel] || '#4ECDC4'
+}
+
+function createColoredMarkerImage(color) {
+    const svg = `
+        <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24c0-8.84-7.16-16-16-16z" 
+                  fill="${color}"/>
+            <circle cx="16" cy="16" r="6" fill="white"/>
+        </svg>
+    `
+
+    return new window.kakao.maps.MarkerImage(
+        `data:image/svg+xml;base64,${btoa(svg)}`,
+        new window.kakao.maps.Size(32, 40),
+        { offset: new window.kakao.maps.Point(16, 40) }
+    )
+}
+
+// ========================================================================================
+// UI 관련 함수
+// ========================================================================================
+
+function mapOrInfo(type) {
+    selectedType.value = type
+    console.log(`\n🔀 mapOrInfo 호출: ${type}`)
+}
+
+/**
+ * 위치 선택 (마커/카드 클릭)
+ * ⭐ 모든 경로는 미리 로드됨. 클릭 시에만 해당 경로를 표시
+ */
+function selectLocation(loc, index) {
+    // 같은 위치를 다시 클릭하면 선택 해제
+    if (selectedLocation.value && 
+        selectedLocation.value.lat === loc.lat && 
+        selectedLocation.value.lon === loc.lon) {
+        selectedLocation.value = null
+        clearAllRoutes()  // 경로 제거
+        return
+    }
+
+    // 다른 위치를 클릭했을 때
+    selectedLocation.value = loc
+
+    if (map) {
+        const position = new window.kakao.maps.LatLng(loc.lat, loc.lon)
+        map.panTo(position)
+
+        // ⭐ 지도 레벨 조정
+        const currentLevel = map.getLevel()
+        if (currentLevel > 6) {
+            map.setLevel(6, { animate: true })
+        }
+
+        // ⭐ 저장된 경로 그리기 (이미 requestAllRoutes()에서 요청됨)
+        drawRoute(index, displayZoneLevel.value)
+
+        console.log(`✅ 위치 선택: ${loc.address1}, 경로 표시 (Zone ${displayZoneLevel.value})`)
+    }
+}
+
+
+
+// 제보 페이지 이동
+function goToReportPage() {
+    console.log('제보하기 페이지로 이동합니다...');
+    router.push({ name: 'ReportCreate' });
+}
+
+const { startParticipantTracking, stopParticipantTracking } = useParticipantLocations({
+    map: map,
+    missingPostId: missingPostId
+});
+const isParticipantsLayerVisible = ref(false);
+
+function wherePeople() {
+    isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
+
+    if (isParticipantsLayerVisible.value) {
+        startParticipantTracking();
+
+        if (missingPostId.value) {
+            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value}`);
+            searchStore.startSearch(missingPostId.value);
+        }
+
+    } else {
+        stopParticipantTracking();
+        console.log("[PredictLocation] '함께 찾기' 스위치를 끕니다.");
+        searchStore.stopSearch();
     }
 }
 
 // ========================================================================================
-// 타임라인 관련 함수
+// 색상 관련 헬퍼 함수
+// ========================================================================================
+
+function getProbabilityColor(probability) {
+    if (probability >= 0.7) return '#4CAF50'
+    if (probability >= 0.4) return '#FF9800'
+    return '#F44336'
+}
+
+function getZoneLevelColor(level) {
+    const colors = {
+        1: '#4CAF50',
+        2: '#FF6B35',
+        3: '#E91E63'
+    }
+    return colors[level] || '#4CAF50'
+}
+
+function getZoneLevelGradient(level) {
+    const gradients = {
+        1: 'linear-gradient(135deg, #66bb6a 0%, #4caf50 100%)',
+        2: 'linear-gradient(135deg, #ff9e7e 0%, #ff6b35 100%)',
+        3: 'linear-gradient(135deg, #ff6b9d 0%, #e91e63 100%)'
+    }
+    return gradients[level] || gradients[1]
+}
+
+function getTimeRangeText(minutes) {
+    const min = parseInt(minutes)
+    if (min < 30) return '0-30분'
+    if (min < 60) return '30-60분'
+    return '60-90분'
+}
+
+// ========================================================================================
+// 유틸 함수
+// ========================================================================================
+
+const elapsedTimeText = ref('')
+
+function calcElapsedTime() {
+    try {
+        const missingTime = new Date(missingTimeDB.value)
+
+        if (isNaN(missingTime.getTime())) {
+            console.error('❌ 실종 시간이 유효하지 않습니다:', missingTimeDB.value)
+            elapsedTimeText.value = '시간 불명'
+            return
+        }
+
+        const now = new Date()
+        const diffInMs = now.getTime() - missingTime.getTime()
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+        const minutes = Math.max(0, diffInMinutes)
+
+        if (minutes < 60) {
+            elapsedTimeText.value = `${minutes}분 전`
+        } else {
+            const hours = Math.floor(minutes / 60)
+            elapsedTimeText.value = `약 ${hours}시간 전`
+        }
+
+        console.log(`⏱️ 경과 시간: ${minutes}분 → 표시: ${elapsedTimeText.value}`)
+        setTime(minutes)
+
+    } catch (error) {
+        console.error('❌ 경과 시간 계산 중 오류:', error)
+        elapsedTimeText.value = '시간 불명'
+    }
+}
+
+function formatSimpleDateTime(dateString) {
+    if (!dateString) return '시간 정보 없음';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date)) return '날짜 형식 오류';
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    } catch (e) {
+        console.error("날짜 포맷 오류:", e, dateString);
+        return '날짜 형식 오류';
+    }
+}
+
+function calculateAge(birthDateString) {
+    if (!birthDateString) return '?';
+    try {
+        const birthDate = new Date(birthDateString);
+        if (isNaN(birthDate)) return '?';
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age >= 0 ? age : '?';
+    } catch (e) { return '?'; }
+}
+
+// ========================================================================================
+// 타임라인 관련
 // ========================================================================================
 
 function setTime(minutes) {
@@ -1166,23 +2029,32 @@ function updateTimeFromEvent(event) {
 }
 
 // ========================================================================================
-// 시간 체크 및 Zone Level 변경
+// Watchers
 // ========================================================================================
 
+// displayZoneLevel watch - 지도 상태 유지
 watch(displayZoneLevel, (newLevel, oldLevel) => {
-    showAllLocations.value = false
+    console.log(`Zone Level 변경: ${oldLevel} → ${newLevel}`)
 
+    showAllLocations.value = false
     clearAllRoutes()
     selectedLocation.value = null
 
-    if (map.value) {
+    if (!map) {
+        console.warn('⚠️ 지도가 초기화되지 않음')
+        return
+    }
+
+    try {
         makeMarker()
         showCirclesByZoneLevel(newLevel)
+    } catch (error) {
+        console.error('Zone Level 업데이트 중 오류:', error)
     }
 })
 
+// selectedMinutes watch - 지도 상태 유지
 watch(selectedMinutes, (newMinutes) => {
-
     let newLevel = 1
     if (newMinutes <= 30) {
         newLevel = 1
@@ -1198,25 +2070,48 @@ watch(selectedMinutes, (newMinutes) => {
 
     displayZoneLevel.value = newLevel
 
-    if (map.value && selectedType.value === 'map' || 'info') {
+    // ✅ null 체크만 추가 (debounce 제거)
+    if (!map) {
+        console.warn('⚠️ 지도가 초기화되지 않음')
+        return
+    }
+
+    try {
         updateMapForTime(newMinutes)
+    } catch (error) {
+        console.error('시간 업데이트 중 오류:', error)
     }
 })
 
+// ⭐ showAllLocations watch 추가 - 더보기 토글 시에도 지도 유지
+watch(showAllLocations, (newValue) => {
+    console.log(`더보기 상태 변경: ${newValue}`)
+
+    // ✅ null 체크만 추가
+    if (!map) {
+        console.warn('⚠️ 지도가 초기화되지 않음')
+        return
+    }
+
+    try {
+        makeMarker()
+    } catch (error) {
+        console.error('마커 업데이트 중 오류:', error)
+    }
+})
+
+
 // ========================================================================================
-// 지도 및 마커 관련 변수
+// 더보기 버튼
 // ========================================================================================
 
-const map = ref(null)
-let markers = []
-let polylines = []
-let centerMarker = null
-
-// Test용 사용자 정보
-const user_no = 3
+function toggleShowMore() {
+    showAllLocations.value = !showAllLocations.value
+    console.log(`더보기 토글: ${showAllLocations.value ? '전체 보기' : '3개만 보기'}`)
+}
 
 // ========================================================================================
-// Circle 관련 변수 및 함수
+// Circle 관련
 // ========================================================================================
 
 const circles = ref({
@@ -1226,7 +2121,7 @@ const circles = ref({
 })
 
 function initCircles() {
-    if (!map.value || !missingLocation.value.lat || !missingLocation.value.lon) {
+    if (!map || !missingLocation.value.lat || !missingLocation.value.lon) {
         console.error('지도 또는 실종 위치가 초기화되지 않았습니다.')
         return
     }
@@ -1276,195 +2171,94 @@ function hideCircles() {
 }
 
 function showCirclesByZoneLevel(level) {
-
-    if (!map.value) {
+    if (!map) {
         console.error('지도가 초기화되지 않았습니다.')
         return
     }
 
+    // ⭐ 현재 지도 상태 저장
+    const currentCenter = map.getCenter()
+    const currentLevel = map.getLevel()
+
     hideCircles()
 
     if (level >= 1 && circles.value.circle700) {
-        circles.value.circle700.setMap(map.value)
+        circles.value.circle700.setMap(map)
     }
 
     if (level >= 2 && circles.value.circle1500) {
-        circles.value.circle1500.setMap(map.value)
+        circles.value.circle1500.setMap(map)
     }
 
     if (level >= 3 && circles.value.circle2100) {
-        circles.value.circle2100.setMap(map.value)
+        circles.value.circle2100.setMap(map)
     }
 
     updateMapForTime(selectedMinutes.value)
+
+    // ⭐ 지도 상태 복원
+    if (!selectedLocation.value) {
+        map.setCenter(currentCenter)
+        map.setLevel(currentLevel)
+    }
 }
 
+
 function updateMapForTime(minutes) {
-    if (!map.value || !circles.value.circle700) {
-        console.log('⚠️ updateMapForTime: 지도 또는 Circle이 초기화되지 않음')
+    // ⭐ null 체크
+    if (!map) {
+        console.log('⚠️ updateMapForTime: 지도가 초기화되지 않음')
         return
     }
 
-    if (minutes <= 30) {
-        const radius = (minutes / 30) * 600
-        circles.value.circle700.setRadius(radius)
-
-        if (circles.value.circle1500) circles.value.circle1500.setRadius(0)
-        if (circles.value.circle2100) circles.value.circle2100.setRadius(0)
+    if (!circles.value.circle700 || !circles.value.circle1500 || !circles.value.circle2100) {
+        console.log('⚠️ Circle이 초기화되지 않음')
+        return
     }
-    else if (minutes <= 60) {
-        circles.value.circle700.setRadius(600)
-
-        const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
-        if (circles.value.circle1500) {
-            circles.value.circle1500.setRadius(radius)
-        }
-
-        if (circles.value.circle2100) circles.value.circle2100.setRadius(0)
-    }
-    else if (minutes <= 90) {
-        circles.value.circle700.setRadius(600)
-
-        if (circles.value.circle1500) {
-            circles.value.circle1500.setRadius(1300)
-        }
-
-        const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
-        if (circles.value.circle2100) {
-            circles.value.circle2100.setRadius(radius)
-        }
-    }
-    else {
-        circles.value.circle700.setRadius(600)
-
-        if (circles.value.circle1500) {
-            circles.value.circle1500.setRadius(1300)
-        }
-
-        if (circles.value.circle2100) {
-            circles.value.circle2100.setRadius(2000)
-        }
-    }
-}
-
-// ========================================================================================
-// 초기화 함수 (jjamTong 데이터 사용)
-// ========================================================================================
-
-async function initializeWithJjamTong() {
-    console.log('🎯 jjamTong 데이터로 초기화 시작...')
-
-    isLoading.value = true
 
     try {
-        // 실종 위치 설정
-        missingLocation.value.lat = jjamTong.metadata.missing_center_lat
-        missingLocation.value.lon = jjamTong.metadata.missing_center_lon
-
-        // 주소 조회
-        await getMissingAddress()
-
-        // 경과 시간 계산
-        calcElapsedTime()
-
-        // 지도 중심 설정
-        setCenter()
-
-        // 마커 생성
-        makeMarker()
-
-        // Circle 초기화 및 표시
-        initCircles()
-        if (selectedType.value === 'map' || selectedType.value === 'info') {
-            showCirclesByZoneLevel(displayZoneLevel.value)
+        // ⭐ Circle 반경만 업데이트 (중심이나 줌은 변경하지 않음)
+        if (minutes <= 30) {
+            const radius = (minutes / 30) * 600
+            circles.value.circle700.setRadius(radius)
+            circles.value.circle1500.setRadius(0)
+            circles.value.circle2100.setRadius(0)
+        }
+        else if (minutes <= 60) {
+            circles.value.circle700.setRadius(600)
+            const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
+            circles.value.circle1500.setRadius(radius)
+            circles.value.circle2100.setRadius(0)
+        }
+        else if (minutes <= 90) {
+            circles.value.circle700.setRadius(600)
+            circles.value.circle1500.setRadius(1300)
+            const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
+            circles.value.circle2100.setRadius(radius)
+        }
+        else {
+            circles.value.circle700.setRadius(600)
+            circles.value.circle1500.setRadius(1300)
+            circles.value.circle2100.setRadius(2000)
         }
 
-        console.log('✅ jjamTong 데이터 초기화 완료')
-
+        // ⭐ 지도 중심과 줌은 변경하지 않음!
+        console.log(`Circle 반경 업데이트 완료 (${minutes}분)`)
     } catch (error) {
-        console.error('❌ 초기화 중 오류 발생:', error)
-    } finally {
-        isLoading.value = false
+        console.error('Circle 업데이트 중 오류:', error)
     }
 }
 
-// ========================================================================================
-// 카카오맵 초기화
-// ========================================================================================
 
-onMounted(async () => {
-    isLoading.value = true;
-    selectedType.value = 'info';
-
-    // 불러올 ID 찾기 
-    const idToLoad = await findMissingReportId();
-
-    // ID 찾기 결과에 따라서 갈라짐
-    if (idToLoad) {
-        // ID를 찾았음
-        console.log("최종 로드할 ID:", idToLoad);
-        missingPostId.value = idToLoad; // ⭐ 핵심: 찾은 ID를 state에 저장
-
-        // 4 찾은 ID로 실제 데이터 불러오기
-        const fetchSuccess = await fetchPatientAndMissingReport();
-
-        if (fetchSuccess) {
-            // 데이터 로드 성공 -> 지도 그리기
-            try {
-                loadKakaoMap(mapContainer.value);
-                setTimeout(() => initializeWithJjamTong(), 1000);
-            } catch (e) {
-                console.error("지도 초기화 중 오류:", e);
-                personError.value = "지도 로딩 중 오류가 발생했습니다.";
-                isLoading.value = false;
-            }
-        } else {
-            // 데이터 로드 실패 (ID는 맞았는데 API가 실패)
-            isLoading.value = false; // 로딩 끄기
-        }
-    } else {
-        // ID를 못 찾았음 (신고가 없거나(404), 환자 연결이 없거나)
-        console.log("로드할 ID가 없습니다. (신고 없음 또는 오류)");
-        isLoading.value = false; // 로딩 끄기
-    }
-});
-
-onUnmounted(() => {
-    if (isParticipantsLayerVisible.value) {
-        searchStore.stopSearch();
-        console.log("[PredictLocation] 페이지 이탈. '함께 찾기' 스위치를 끕니다.");
-    }
-});
-
-const loadKakaoMap = (container) => {
-    const script = document.createElement('script')
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false&libraries=services`
-    document.head.appendChild(script)
-
-    script.onload = () => {
-        window.kakao.maps.load(() => {
-            const options = {
-                center: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
-                level: 5,
-            }
-
-            map.value = new window.kakao.maps.Map(container, options)
-            console.log('지도 초기화 완료')
-
-            if (missingLocation.value.lat && missingLocation.value.lon) {
-                centerMarker = new window.kakao.maps.Marker({
-                    position: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
-                    map: map.value,
-                    image: createCenterMarkerImage()
-                })
-            }
-        })
-    }
-}
-
-function setCenter() {
-    if (!map.value) {
+function setCenter(force = false) {
+    if (!map) {
         console.error('지도가 아직 초기화되지 않았습니다.')
+        return
+    }
+
+    // ⭐ force가 true일 때만 중심 이동 (초기화 시에만)
+    if (!force && selectedLocation.value) {
+        console.log('선택된 위치가 있어 중심 이동을 건너뜁니다.')
         return
     }
 
@@ -1473,233 +2267,23 @@ function setCenter() {
         missingLocation.value.lon
     )
 
-    map.value.setCenter(moveLatLon)
+    map.setCenter(moveLatLon)
 
     if (centerMarker) {
         centerMarker.setPosition(moveLatLon)
     } else {
         centerMarker = new window.kakao.maps.Marker({
             position: moveLatLon,
-            map: map.value,
+            map: map,
             image: createCenterMarkerImage()
         })
     }
+
+    console.log('✅ 지도 중심 설정 완료')
 }
 
-function createCenterMarkerImage() {
-    const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 20 20">
-  <circle cx="10" cy="10" r="9.5" 
-          fill="none" 
-          stroke="#FF6B35" 
-          stroke-width="1"/>
-  <g transform="translate(2, 2)">
-    <path fill="#E63946" d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/>
-    <path fill="#E63946" d="M16 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1.5a.5.5 0 0 0 1 0V11a.5.5 0 0 0-.5-.5m0 4a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
-  </g>
-</svg>
-  `
-
-    return new window.kakao.maps.MarkerImage(
-        'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
-        new window.kakao.maps.Size(50, 60),
-        {
-            offset: new window.kakao.maps.Point(25, 58)
-        }
-    )
-}
-
-// ========================================================================================
-// 마커 관련 함수
-// ========================================================================================
-
-function hideMarkers() {
-    for (let marker of markers) {
-        if (marker && marker.setVisible) {
-            marker.setVisible(false)
-        }
-    }
-}
-
-function showMarkers() {
-    for (let marker of markers) {
-        if (marker && marker.setVisible) {
-            marker.setVisible(true)
-        }
-    }
-}
-
-function makeMarker() {
-    hideMarkers()
-
-    markerDataToDisplay.value.forEach((item, index) => {
-        const markerPosition = new window.kakao.maps.LatLng(item.lat, item.lon)
-
-        const markerColor = getMarkerColor(item.zoneLevel)
-
-        const marker = new window.kakao.maps.Marker({
-            position: markerPosition,
-            map: map.value,
-            title: `Zone ${item.zoneLevel} - 위치 ${index + 1} (확률: ${(item.value * 100).toFixed(1)}%)`,
-            image: createColoredMarkerImage(markerColor)
-        })
-
-        markers.push(marker)
-    })
-}
-
-function getMarkerColor(zoneLevel) {
-    const colors = {
-        1: '#66bb6a',
-        2: '#ff9e7e',
-        3: '#ff6b9d'
-    }
-    return colors[zoneLevel] || '#4ECDC4'
-}
-
-function createColoredMarkerImage(color) {
-    const svg = `
-        <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24c0-8.84-7.16-16-16-16z" 
-                  fill="${color}"/>
-            <circle cx="16" cy="16" r="6" fill="white"/>
-        </svg>
-    `
-
-    return new window.kakao.maps.MarkerImage(
-        `data:image/svg+xml;base64,${btoa(svg)}`,
-        new window.kakao.maps.Size(32, 40),
-        { offset: new window.kakao.maps.Point(16, 40) }
-    )
-}
-
-// ========================================================================================
-// 경로 관련 함수 (경로는 생략 - 필요시 Tmap API 호출 구현)
-// ========================================================================================
-
-const zone1Routes = ref([])
-const zone2Routes = ref([])
-const zone3Routes = ref([])
-
-function clearPolylines() {
-    for (let polyline of polylines) {
-        if (polyline && polyline.setMap) {
-            polyline.setMap(null)
-        }
-    }
-    polylines.length = 0
-}
-
-function clearAllRoutes() {
-    clearPolylines()
-}
-
-function drawRoute(index, zoneLevel = 1) {
-    console.log(`경로 그리기: Zone ${zoneLevel}-${index}`)
-    // ⭐ 경로 그리기는 Tmap API를 사용하거나 별도 구현 필요
-    // 여기서는 생략
-}
-
-// ========================================================================================
-// UI 관련 함수
-// ========================================================================================
-
-function mapOrInfo(type) {
-    selectedType.value = type
-    console.log(`\n🔀 mapOrInfo 호출: ${type}`)
-}
-
-function selectLocation(loc, index) {
-    if (selectedLocation.value &&
-        selectedLocation.value.lat === loc.lat &&
-        selectedLocation.value.lon === loc.lon) {
-        clearAllRoutes()
-        selectedLocation.value = null
-        return
-    }
-
-    clearAllRoutes()
-    selectedLocation.value = loc
-
-    if (map.value) {
-        const position = new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon)
-        map.value.panTo(position)
-        map.value.setLevel(6)
-    }
-
-    drawRoute(index, displayZoneLevel.value)
-}
-
-const { startParticipantTracking, stopParticipantTracking } = useParticipantLocations({
-    map: map, // (map.value 아님)
-    missingPostId: missingPostId
-});
-const isParticipantsLayerVisible = ref(false);  // 함께하는 사람 마커용
-
-
-function wherePeople() { // ParticipantsLayer.vue 컴포넌트로 이동
-    isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
-
-    if (isParticipantsLayerVisible.value) {
-        // --- [ON] 버튼을 켰을 때 ---
-
-        // 1. (기존) 다른 사람들 위치 *조회* 시작
-        startParticipantTracking();
-
-        // 2. (신규) '나의' 위치 *전송* 시작
-        // (App.vue의 useMyCurrentLocation 엔진을 켬)
-        if (missingPostId.value) {
-            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value}`);
-            searchStore.startSearch(missingPostId.value);
-        }
-
-    } else {
-        // --- [OFF] 버튼을 껐을 때 ---
-
-        // 1. (기존) 다른 사람들 위치 *조회* 중지
-        stopParticipantTracking();
-
-        // 2. (신규) '나의' 위치 *전송* 중지
-        console.log("[PredictLocation] '함께 찾기' 스위치를 끕니다.");
-        searchStore.stopSearch();
-    }
-}
-
-// ========================================================================================
-// 색상 관련 헬퍼 함수
-// ========================================================================================
-
-function getProbabilityColor(probability) {
-    if (probability >= 0.7) return '#4CAF50'
-    if (probability >= 0.4) return '#FF9800'
-    return '#F44336'
-}
-
-function getZoneLevelColor(level) {
-    const colors = {
-        1: '#4CAF50',
-        2: '#FF6B35',
-        3: '#E91E63'
-    }
-    return colors[level] || '#4CAF50'
-}
-
-function getZoneLevelGradient(level) {
-    const gradients = {
-        1: 'linear-gradient(135deg, #66bb6a 0%, #4caf50 100%)',
-        2: 'linear-gradient(135deg, #ff9e7e 0%, #ff6b35 100%)',
-        3: 'linear-gradient(135deg, #ff6b9d 0%, #e91e63 100%)'
-    }
-    return gradients[level] || gradients[1]
-}
-
-function getTimeRangeText(minutes) {
-    const min = parseInt(minutes)
-    if (min < 30) return '0-30분'
-    if (min < 60) return '30-60분'
-    return '60-90분'
-}
 </script>
+
 
 <style scoped>
 /* 기존 CSS 동일하게 유지 */
@@ -2934,7 +3518,8 @@ function getTimeRangeText(minutes) {
 .button-group {
     display: flex;
     justify-content: center;
-    gap: 10px; /* 버튼 사이의 간격 */
+    gap: 10px;
+    /* 버튼 사이의 간격 */
     width: 100%;
 }
 
@@ -2950,5 +3535,4 @@ function getTimeRangeText(minutes) {
 .modern-btn {
     flex-grow: 1;
 }
-
 </style>
