@@ -549,10 +549,6 @@ async function processDestinationsToZones(apiResponse) {
         dist_m: 0
     }))
 
-    console.log('✅ Zone Level 1 (500m):', zone_level_1.value.length, '개')
-    console.log('✅ Zone Level 2 (1000m):', zone_level_2.value.length, '개')
-    console.log('✅ Zone Level 3 (1500m):', zone_level_3.value.length, '개')
-
     // ⭐ VWorld API 호출 (주소와 지목정보 설정)
     await getAddressAndJimok()
 
@@ -560,11 +556,7 @@ async function processDestinationsToZones(apiResponse) {
     zone_level_1.value = [...zone_level_1.value]
     zone_level_2.value = [...zone_level_2.value]
     zone_level_3.value = [...zone_level_3.value]
-
-    console.log('✅ 최종 Zone 1 샘플:', JSON.stringify(zone_level_1.value[0]))
-    console.log('✅ 최종 Zone 2 샘플:', JSON.stringify(zone_level_2.value[0]))
-    console.log('✅ 최종 Zone 3 샘플:', JSON.stringify(zone_level_3.value[0]))
-
+    
     // ⭐ 경로 생성 (TMap API)
     await requestAllRoutes()
 
@@ -631,8 +623,6 @@ async function processLocation(location, zoneLevel, locationIndex, columns) {
     try {
         // 2. VWorld API 호출
         const vworldData = await fetchVWorldData(location, columns)
-
-        console.log(`Zone ${zoneLevel}-${locationIndex + 1} VWorld 응답:`, vworldData)
 
         // 3. 응답 상태에 따른 분기 처리
         if (vworldData.status === 'NOT_FOUND' || !vworldData.properties) {
@@ -722,16 +712,13 @@ async function setLocationFromVWorld(location, props) {
     location.ri_nm = ri
     location.jimok = jimok
 
-    console.log(`✅ VWorld 기본정보 설정: sido=${sido}, sgg=${sgg}, emd=${emd}`)
 
     // 3. address1: 행정구역 조합 (시/군 + 읍면동 + 리)
     const addressParts = [sgg, emd, ri].filter(part => part)
     location.address1 = addressParts.join(' ')
-    console.log(`✅ address1 설정: ${location.address1}`)
 
     // 4. address2: 자연어 설명 생성
     location.address2 = await generateAddress2(jimok, location.address1)
-    console.log(`✅ address2 설정: ${location.address2}`)
 }
 
 /**
@@ -744,35 +731,27 @@ async function generateAddress2(jimok, address1) {
     // 2. 특정 지목은 POI 검색 없이 바로 반환
     const excludeJimok = ['전', '답', '임야', '도로']
 
-    console.log(`🔍 generateAddress2 호출: jimok=${jimok}, address1=${address1}`)
-
     if (!excludeJimok.includes(jimok)) {
         // 3. 기타 지목의 경우 POI 검색 수행
-        console.log(`📍 POI 검색 시작 (jimok=${jimok})`)
 
         try {
             const poiResult = await searchVWorldPOI(address1)
-            console.log(`✅ POI 검색 완료:`, poiResult)
 
             if (poiResult && poiResult.poiName) {
                 const result = `'${poiResult.poiName}'에 있을 것 같아요!`
-                console.log(`✅ address2 생성 (POI): ${result}`)
                 return result
             } else {
                 const result = `도로에 있을 것 같아요!`
-                console.log(`✅ address2 생성 (기본): ${result}`)
                 return result
             }
         } catch (e) {
             console.error(`❌ POI 검색 에러:`, e)
             const result = `도로에 있을 것 같아요!`
-            console.log(`✅ address2 생성 (에러폴백): ${result}`)
             return result
         }
     } else {
         // 4. 전/답/임야/도로는 지목 그대로 사용
         const result = `${jimokNaturalText}에 있을 것 같아요!`
-        console.log(`✅ address2 생성 (지목): ${result}`)
         return result
     }
 }
@@ -842,7 +821,6 @@ function convertJimokToNaturalLanguage(jimok) {
  */
 async function searchVWorldPOI(address) {
     if (!address || address.trim() === '') {
-        console.warn(`⚠️ POI 검색: address 값이 없음`)
         return null
     }
 
@@ -863,10 +841,8 @@ async function searchVWorldPOI(address) {
         })
 
         const searchUrl = `https://api.vworld.kr/req/search?${searchData.toString()}`
-        console.log(`📡 POI 검색 URL: ${searchUrl}`)
 
         const response = await fetch(searchUrl)
-        console.log(`📡 POI 응답 상태: ${response.status}`)
 
         if (!response.ok) {
             console.warn(`⚠️ POI API 응답 실패: ${response.status}`)
@@ -874,7 +850,6 @@ async function searchVWorldPOI(address) {
         }
 
         const data = await response.json()
-        console.log(`📡 POI 응답 데이터:`, data)
 
         // VWorld Search API 응답 구조 확인
         if (data?.response?.result?.items && data.response.result.items.length > 0) {
@@ -890,11 +865,9 @@ async function searchVWorldPOI(address) {
                 } : null
             }
 
-            console.log(`✅ POI 검색 성공:`, result)
             return result
         }
 
-        console.log(`⚠️ POI 검색 결과 없음 (address=${address})`)
         return null
 
     } catch (e) {
@@ -917,7 +890,6 @@ const zone3Routes = ref([])
  * ⭐ 수정: waypoints를 제대로 passList로 변환
  */
 async function requestAllRoutes() {
-    console.log('🚶 모든 경로 요청 시작...')
 
     const s = missingLocation.value
 
@@ -939,15 +911,12 @@ async function requestAllRoutes() {
             continue
         }
 
-        console.log(`⏳ Zone ${zone.level} 경로 요청 시작 (${zone.data.length}개)`)
-
         zone.storage.value = []
 
-        for (let i = 0; i < zone.data.length; i++) {
-            const d = zone.data[i]
+        for (let i = 0; i < zone.data.length; i++) {    
+        const d = zone.data[i]
 
             try {
-                console.log(`📍 위치 ${i + 1}: ${d.address1} (경유지: ${d.waypoints?.length || 0}개)`)
 
                 // ⭐ waypoints 변환
                 let waypointsStr = ''
@@ -962,7 +931,6 @@ async function requestAllRoutes() {
 
                     if (waypointsCoords.length > 0) {
                         waypointsStr = waypointsCoords.join('_')
-                        console.log(`✅ 경유지 설정 (${waypointsCoords.length}개): ${waypointsStr.substring(0, 50)}...`)
                     }
                 } else {
                     console.log(`ℹ️  경유지 없음`)
@@ -978,22 +946,13 @@ async function requestAllRoutes() {
                     endY: Number(d.lat),
                     reqCoordType: 'WGS84GEO',
                     resCoordType: 'WGS84GEO',
-                    searchOption: '0',  // 최단거리
-                    trafficInfo: 'Y'     // 교통 정보 포함
+                    searchOption: '0', 
                 }
 
                 // ⭐ 경유지 추가 (waypointsStr이 존재할 때만)
                 if (waypointsStr && waypointsStr.length > 0) {
                     body.passList = waypointsStr
-                    console.log(`🔗 passList 설정됨: ${waypointsStr}`)
                 }
-
-                console.log(`📡 TMap 요청 본문:`, {
-                    start: `${s.lon},${s.lat}`,
-                    end: `${d.lon},${d.lat}`,
-                    waypoints: waypointsStr || '없음',
-                    address: d.address1
-                })
 
                 // ⭐ TMap API 호출
                 const resp = await fetch(
@@ -1015,24 +974,12 @@ async function requestAllRoutes() {
                 }
 
                 const data = await resp.json()
-                console.log(`📡 Zone ${zone.level}-${i + 1} 응답:`, data)
 
                 // ⭐ features 존재 여부 확인
                 if (data && data.features && Array.isArray(data.features) && data.features.length > 0) {
                     zone.storage.value.push(data.features)
                     console.log(`✅ Zone ${zone.level}-${i + 1} 경로 저장 (${data.features.length}개 feature)`)
-
-                    // ⭐ 응답 데이터 디버깅
-                    if (data.features[0]) {
-                        const firstFeature = data.features[0]
-                        console.log(`   - Geometry type: ${firstFeature.geometry?.type}`)
-                        console.log(`   - Coordinates 개수: ${firstFeature.geometry?.coordinates?.length}`)
-                    }
-                } else {
-                    zone.storage.value.push(null)
-                    console.warn(`⚠️  Zone ${zone.level}-${i + 1} 유효한 경로 데이터 없음`)
-                    console.log(`   Response:`, data)
-                }
+                } 
 
                 // ⭐ API 요청 지연 (rate limit 방지)
                 await delay(200)
