@@ -1,8 +1,10 @@
 package lx.project.dementia_care.controller;
 
+import lx.project.dementia_care.dto.SightingReportCommentDto;
 import lx.project.dementia_care.dto.SightingReportListDto;
 import lx.project.dementia_care.dto.SightingReportRequestDto;
 import lx.project.dementia_care.dto.SightingReportResponseDto;
+import lx.project.dementia_care.service.SightingReportCommentService;
 import lx.project.dementia_care.service.SightingReportService;
 import lx.project.dementia_care.vo.UserVO;
 import lombok.Data;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.nio.file.AccessDeniedException;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sighting-reports") // API 기본 경로 (PostController와 다름)
@@ -22,6 +25,7 @@ import java.util.List;
 public class SightingReportController {
 
     private final SightingReportService sightingReportService;
+    private final SightingReportCommentService commentService;
 
     /**
      * (제보 목록) 특정 실종 건(missingPostId)에 대한 모든 제보 조회
@@ -103,5 +107,37 @@ public class SightingReportController {
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+    /**
+     * 특정 제보(ID)에 달린 모든 댓글 목록을 조회합니다.
+     * (SightingReport.vue가 onMounted될 때 이 API를 호출합니다)
+     */
+    @GetMapping("/{reportId}/comments")
+    public ResponseEntity<List<SightingReportCommentDto>> getCommentsByReportId(
+            @PathVariable Integer reportId) {
+        
+        List<SightingReportCommentDto> comments = commentService.findCommentsByReportId(reportId);
+        return ResponseEntity.ok(comments);
+    }
+
+    /**
+     * 특정 제보(ID)에 새로운 댓글을 생성합니다.
+     * (SightingReport.vue가 '게시' 버튼을 누를 때 이 API를 호출합니다)
+     */
+    @PostMapping("/{reportId}/comments")
+    public ResponseEntity<SightingReportCommentDto> createComment(
+            @PathVariable Integer reportId,
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) {
+        
+        if (authentication == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        UserVO userVO = (UserVO) authentication.getPrincipal();
+        String content = payload.get("content"); // JSON에서 "content" 값 추출
+
+        // 5. 'SightingReportCommentService'의 'createComment' 함수를 호출
+        SightingReportCommentDto newComment = commentService.createComment(reportId, content, userVO.getUserNo());
+        return new ResponseEntity<>(newComment, HttpStatus.CREATED);
     }
 }

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- SightingReportCommentDAO 인터페이스와 연결 -->
+<mapper namespace="lx.project.dementia_care.dao.SightingReportCommentDAO">
+
+    <!-- DTO와 DB 컬럼을 매핑합니다 -->
+    <resultMap id="CommentResultMap" type="lx.project.dementia_care.dto.SightingReportCommentDto">
+        <id property="commentId" column="comment_id"/>
+        <result property="sightingReportId" column="sighting_report_id"/>
+        <result property="userNo" column="user_no"/>
+        <result property="content" column="content"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="author" column="author_name"/>
+        <result property="authorProfileImage" column="profile_photo"/>
+    </resultMap>
+
+    <!-- [API 2] 특정 제보(ID)에 달린 모든 댓글 조회 -->
+    <select id="findCommentsByReportId" parameterType="int" resultMap="CommentResultMap">
+        SELECT
+            src.comment_id,
+            src.sighting_report_id,
+            src.user_no,
+            src.content,
+            src.created_at,
+            u.name AS author_name,
+            u.profile_photo
+        FROM
+            sighting_report_comments src
+        JOIN
+            users u ON src.user_no = u.user_no
+        WHERE
+            src.sighting_report_id = #{sightingReportId}
+        ORDER BY
+            src.created_at ASC
+    </select>
+
+    <!-- [API 3] 댓글 1건 생성 -->
+    <insert id="createComment" parameterType="lx.project.dementia_care.dto.SightingReportCommentDto"
+            useGeneratedKeys="true" keyProperty="commentId" keyColumn="comment_id">
+        INSERT INTO sighting_report_comments (sighting_report_id, user_no, content)
+        VALUES (
+            #{sightingReportId}, 
+            #{userNo}, 
+            #{content}
+        )
+    </insert>
+
+    <!-- 'createComment' 직후, 프론트에 반환할 댓글 상세 정보를 다시 조회 -->
+    <select id="findCommentById" parameterType="int" resultMap="CommentResultMap">
+        SELECT
+            src.comment_id,
+            src.sighting_report_id,
+            src.user_no,
+            src.content,
+            src.created_at,
+            u.name AS author_name,
+            u.profile_photo
+        FROM
+            sighting_report_comments src
+        JOIN
+            users u ON src.user_no = u.user_no
+        WHERE
+            src.comment_id = #{commentId}
+    </select>
+
+    <!-- [API 4] 댓글 1건 삭제 -->
+    <delete id="deleteComment" parameterType="map">
+        DELETE FROM sighting_report_comments 
+        WHERE comment_id = #{commentId} AND user_no = #{userNo}
+    </delete>
+
+    <!-- (본인 확인용) 댓글 작성자 user_no 조회 -->
+    <select id="findUserNoByCommentId" parameterType="int" resultType="int">
+        SELECT user_no FROM sighting_report_comments WHERE comment_id = #{commentId}
+    </select>
+
+</mapper>
