@@ -440,10 +440,10 @@ INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_
 ('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 0, 4);
 
 -- 예상위치 테스트용
--- ID : pt
--- PW : pt 
-('pred', '$2a$10$LFe7u5Fq9kqLyiS.Yjo6jeA0hHR4df0gPj0m19Usl4Rix.yOWwqsO', '예상위치테스트', '2025-11-04', '123123', '5E9C6949', 2); 
-('pt', '$2a$10$KnhPpzkAPWfRY7KZhR3cVuZwD/CHK3Q3jkNobfp7wzeG8lZp90EAK', 'PredTest', '2025-10-28', 'predtest', NULL, 0, 1);
+-- ID : 9
+-- PW : 9
+('8', '$2a$10$/eFcCLXDgA9mqOFYBCIOcOOMNaHKmpSgD/zXA2B0cx7ddoubkbP6K', '8', '1888-08-08','010-8888-8888', '7C8DF726', 0, 2);
+('9', '$2a$10$NjWvALaxR/W7kx6jnkLSPuQwsGnJGzPQAN1RkrB7Xa3e8KecJOwYm', '9', '1999-09-09', '010-9999-9999', NULL, 0, 1);
 
 -- [수정] post 테이블 INSERT - user_no로 변경
 INSERT INTO post (title, user_no, content, view_count, image_path) VALUES
@@ -623,6 +623,6 @@ insert into plaza(plaza_no, plaza_name, member_name, user_no) values
 (1, '경1', '방장', 7);
 -- user_location 테이블에 CSV 데이터 삽입
 COPY user_location(user_no, latitude, longitude, record_time)
-FROM 'C:\final-project\gps_trajectory_1year.csv'
+FROM 'C:\final-project\python\gps_trajectory_1year.csv'
 DELIMITER ','
 CSV HEADER;

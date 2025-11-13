@@ -14,8 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
-import os
-import sys
 import numpy as np
 import pandas as pd
 import hdbscan
@@ -29,21 +27,6 @@ from sklearn.neighbors import BallTree
 # =============================================================================
 # Configuration
 # =============================================================================
-
-os.environ['LC_ALL'] = 'C.UTF-8'
-os.environ['LANG'] = 'C.UTF-8'
-os.environ['PYTHONIOENCODING'] = 'utf-8'
-
-# Windows 전용: 임시 폴더를 영문 경로로 지정
-import tempfile
-if sys.platform == 'win32':
-    temp_dir = 'C:/temp'
-    if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
-    os.environ['TEMP'] = temp_dir
-    os.environ['TMP'] = temp_dir
-    tempfile.tempdir = temp_dir
-    print(f"✅ 임시 폴더 설정: {temp_dir}")
 
 executor = ThreadPoolExecutor(max_workers=4)
 

@@ -416,34 +416,8 @@ let total_cluster = ref(null)
 // API 호출 함수 - 예측 데이터 가져오기
 // ========================================================================================
 let userNo = ref('')
-async function getPatientGPS() {
-    if (patientUserNo.value && !notMyPatientNo) {
-        userNo = patientUserNo.value
-    } else {
-        userNo = notMyPatientNo
-    }
-    console.log(`유저넘버 :::: ${userNo}`)
-    console.log(`파싱시간 :::: ${missingTimeDB.value}`)
-
-    try {
-        const date = new Date(missingTimeDB.value);
-
-        const response = await axios.get(`/api/pred/${patientUserNo.value}`, {
-            params: {
-                datetime: date.getTime()
-            },
-            withCredentials: true
-        })
-
-        console.log(`지피에스 응답 :::: ${JSON.stringify(response.data)}`)
-    } catch (error) {
-        console.log(`환자 GPS 데이터 불러오는 중 에러 발생 -> ${error}`)
-    }
-}
-
 
 async function fetchPredictionData() {
-    await getPatientGPS();
 
     const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
 
@@ -480,9 +454,6 @@ async function fetchPredictionData() {
             };
         });
 
-        console.log(`📤 전송할 GPS 데이터: ${gpsRecords.length}개`);
-        console.log(`📤 샘플:`, gpsRecords.slice(0, 2));
-
         // Request Body 생성
         const requestBody = {
             user_no: userNo,
@@ -498,7 +469,6 @@ async function fetchPredictionData() {
             csv_path: 'all_locations.csv'
         };
 
-        console.log(`📤 요청 Body:`, JSON.stringify(requestBody, null, 2));
 
         // POST 요청
         const response = await axios.post(
@@ -677,8 +647,6 @@ async function getAddressAndJimok() {
                 }
             })
         )
-
-        console.log(`✅ Zone ${zone.level} 완료`)
     }
 
     console.log('🗺️ 모든 API 호출 완료')
