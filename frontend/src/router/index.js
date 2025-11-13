@@ -50,6 +50,7 @@ import NH_Notice from '@/views/NH_Notice.vue'
 import DesktopMain from '@/views/desktop/DesktopMain.vue'
 import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
+import DesktopCommunityView from '@/views/desktop/DesktopCommunityView.vue'
 import DesktopCommunityBoard from '@/components/desktop/DesktopCommunityBoard.vue'
 
 const router = createRouter({
@@ -203,9 +204,15 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1, 4] }
     },
     {
+        path: '/desktop/communityView',
+        name: 'desktop-communityView',
+        component: DesktopCommunityView,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },    
+    {
         path: '/desktop/communityBoard',
         name: 'desktop-communityBoard',
-        component: DesktopCommunityBoard, // 1단계에서 만든 파일
+        component: DesktopCommunityBoard,
         meta: { requiresAuth: true, layout: 'desktop' }
     },
     // 병욱 게시판 끝

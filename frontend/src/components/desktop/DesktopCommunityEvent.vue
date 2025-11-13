@@ -8,7 +8,7 @@ function changeFilter(filter) {
   activeFilter.value = filter;
 }
 
-
+// --- 더미 데이터 ---
 const events = ref([
     {
     id: 1,

@@ -1080,8 +1080,9 @@ function goToSchedule() {
 }
 
 function goToCommunityBoard() {
-  router.push('/desktop/communityBoard')
-  
+  router.push('/desktop/communityBoard') 
+}
+
 /* ===== 기본 안심존 변경 모달 ===== */
 const showBasicSafeZoneModal = ref(false)
 const modalMapEl = ref(null)
