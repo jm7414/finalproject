@@ -18,8 +18,8 @@
       </div>
     </header>
 
-    <div class="desktop-body">
-      <aside class="sidebar">
+    <div class="desktop-body" :class="{ 'no-sidebar': !showSidebar }">
+      <aside v-if="showSidebar" class="sidebar">
         <div class="sidebar-header">
           <div class="avatar">👤</div>
           <div class="caretaker">
@@ -66,7 +66,7 @@ const guardianName = ref('보호자')
 
 const menuItems = [
   { name: '안심존', route: '/desktop/main' },
-  { name: '예상위치', route: null },
+  { name: '예상 위치', route: '/desktop/predict' },
   { name: 'AI보고서', route: null },
   { name: '일정', route: '/desktop/schedule' },
   { name: '커뮤니티', route: null },
@@ -80,6 +80,7 @@ const activeMenu = computed(() => {
 })
 
 const showHeaderActions = computed(() => route.meta.requiresAuth)
+const showSidebar = computed(() => route.meta.requiresAuth)
 
 function navigateToMenu(targetRoute) {
   if (!targetRoute || targetRoute === route.path) return
@@ -201,6 +202,16 @@ onMounted(async () => {
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+}
+
+.desktop-body.no-sidebar {
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+.desktop-body.no-sidebar .desktop-main {
+  max-width: 560px;
+  width: 100%;
 }
 
 .sidebar {

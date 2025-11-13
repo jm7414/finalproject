@@ -50,6 +50,7 @@ import NH_Notice from '@/views/NH_Notice.vue'
 import DesktopMain from '@/views/desktop/DesktopMain.vue'
 import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
+import DesktopPredict from '@/views/desktop/DesktopPredict.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -101,6 +102,12 @@ const router = createRouter({
       path: '/desktop/schedule',
       name: 'desktop-schedule',
       component: DesktopSchedule,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/predict',
+      name: 'desktop-predict',
+      component: DesktopPredict,
       meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
     },
     {
