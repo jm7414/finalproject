@@ -9,22 +9,25 @@ venv까지 올렸기 때문에 사진에서 두번째줄 명령어만 실행시�
 차근차근 불러와봅시다
 
 1. 간단한 numpy, pandas 불러오기
-pip install numpy pandas
+pip install numpy pandas pydantic
 
 2. 오픈스트리트 라이브러리 불러오기
-pip install osmnx 
+pip install osmnx networkx 
 
-3. sqlalchemy, asyncio, asyncpg
-pip install sqlalchemy asyncio asyncpg
+3. asyncio
+pip install asyncio==4.0.0 
 
-4. fastapi
-pip install fastapi
+4. fastapi uvicorn
+pip install fastapi uvicorn 
 
-5. uvicorn
-pip install uvicorn
+5. Mesa (에이전트 생성 및 진행에 필요)
+pip install scikit-learn==1.3.2 Mesa==2.1.5 Mesa-Geo==0.6.0
 
 6. hdbscan
 pip install hdbscan
+
+7. shapely
+pip install shapely==2.0.7
 ---
 
 이렇게 다 했으면 이제 FastAPI.py파일을 열어봤을 때 아무런 노란색 밑줄이 없을거에요
@@ -59,3 +62,29 @@ DELIMITER ','
 CSV HEADER;
 
 
+
+# Core Web Framework
+fastapi==0.120.1
+pydantic==2.10.6
+
+# Data Processing
+numpy==1.24.4
+pandas==2.0.3
+
+# Clustering
+hdbscan==0.8.40
+
+# Async
+asyncio==4.0.0
+
+# Machine Learning
+scikit-learn==1.3.2
+
+# Geospatial & Network
+osmnx==1.9.4
+networkx==3.1
+shapely==2.0.7
+
+# Agent-Based Modeling
+Mesa==2.1.5
+Mesa-Geo==0.6.0

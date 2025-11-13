@@ -312,18 +312,32 @@
                                 <p class="stat-sublabel-modern-1">최대 5개의 위치를 보여줍니다</p>
                             </div>
                         </div>
-                        <div class="stat-card-modern">
+                        <!-- ★★★ 수정된 stat-card: 클릭 시 모달 오픈 ★★★ -->
+                        <div class="stat-card-modern clickable" @click="openAgentSimulation">
                             <div class="stat-icon-modern" style="--stat-color: #667eea;">
-                                <i class="bi bi-geo-alt"></i>
+                                <i class="bi bi-diagram-3"></i>
                             </div>
                             <div class="stat-content-modern">
-                                <p class="stat-sublabel-modern-1">여기 모달로 띄울겁니다</p>
+                                <p class="stat-label-modern">에이전트 시뮬레이션</p>
+                                <p class="stat-sublabel-modern-1">AI 에이전트 기반 경로 예측</p>
+                                <p class="stat-sublabel-modern-1">10개 주요 위치의 이동 패턴</p>
+                                <div class="click-hint">
+                                    <i class="bi bi-cursor-fill"></i>
+                                    <span>클릭하여 보기</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
+        <AgentSimulationModal 
+        :isVisible="showAgentSimulation" 
+        :userNo="patientUserNo"
+        :missingLocation="missingLocation" 
+        :missingTime="missingTimeDB" 
+        @close="closeAgentSimulation" />
     </div>
 </template>
 
@@ -333,6 +347,7 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
 import { useSearchStore } from '@/stores/useSearchStore';
+import AgentSimulationModal from '@/components/AgentSimulationModal.vue'
 
 // ========================================================================================
 // 카카오지도 및 API 키 설정
@@ -345,6 +360,21 @@ const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 const route = useRoute();
 const router = useRouter();
 const searchStore = useSearchStore();
+
+// 모달
+// ★★★ 에이전트 시뮬레이션 모달 상태 추가 ★★★
+const showAgentSimulation = ref(false)
+
+// 모달 열기 함수
+const openAgentSimulation = () => {
+    showAgentSimulation.value = true
+}
+
+// 모달 닫기 함수
+const closeAgentSimulation = () => {
+    showAgentSimulation.value = false
+}
+
 
 // ========================================================================================
 // 데이터 상태 관리 - API 응답 구조에 맞게 수정
@@ -422,7 +452,7 @@ async function fetchPredictionData() {
     const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
 
     if (patientUserNo.value && !notMyPatientNo) {
-       userNo = patientUserNo.value
+        userNo = patientUserNo.value
     } else {
         userNo = notMyPatientNo
     }
