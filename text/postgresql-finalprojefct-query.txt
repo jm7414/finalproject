@@ -439,6 +439,12 @@ INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_
 ('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 0, 2),
 ('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 0, 4);
 
+-- 예상위치 테스트용
+-- ID : pt
+-- PW : pt 
+('pred', '$2a$10$LFe7u5Fq9kqLyiS.Yjo6jeA0hHR4df0gPj0m19Usl4Rix.yOWwqsO', '예상위치테스트', '2025-11-04', '123123', '5E9C6949', 2); 
+('pt', '$2a$10$KnhPpzkAPWfRY7KZhR3cVuZwD/CHK3Q3jkNobfp7wzeG8lZp90EAK', 'PredTest', '2025-10-28', 'predtest', NULL, 0, 1);
+
 -- [수정] post 테이블 INSERT - user_no로 변경
 INSERT INTO post (title, user_no, content, view_count, image_path) VALUES
 (
@@ -457,6 +463,14 @@ INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, descrip
     '성함: 서지현 (78세)\n실종일시: 2025년 10월 9일 오전 9시경\n실종장소: 안산시 단원구 중앙동 인근\n인상착의: 연한 회색 가디건, 검정색 바지, 흰색 운동화 착용.'
 );
 
+INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, description) VALUES
+(
+    9,
+    8,
+    '/images/missing_grandma.jpg',
+    '성함: 예상위치테스트 (78세)\n실종일시: 2025년 11월 13일 오전 2시경\n실종장소: 경기도 화성시 고포리 인근\n인상착의: 연한 회색 가디건, 검정색 바지, 흰색 운동화 착용.'
+);
+
 -- [수정] search_Together INSERT - user_no로 변경
 INSERT INTO search_Together (missing_post_id, user_no) VALUES
 (1, 2);
@@ -466,6 +480,7 @@ INSERT INTO search_Together (missing_post_id, user_no) VALUES
 INSERT INTO guardian_patient_connection (patient_no, guardian1_no, guardian2_no, guardian3_no) VALUES
 (4, 1, 2, 3),
 (6, 5, NULL, NULL);
+(8, 9, NULL, NULL); -- 예상위치 테스트 추가 (현재 더미파일 8번 환자로 바꿔놓음)
 
 
 
