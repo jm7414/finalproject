@@ -7,6 +7,7 @@ Features:
 - 시간대별 패턴 분석
 - 선호 경로 반영
 - 지리적 분산 고려
+- ⭐⭐⭐ 도로 네트워크를 따라가는 waypoints (수정됨)
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +24,7 @@ import osmnx as ox
 import networkx as nx
 from sklearn.neighbors import BallTree
 from mesa import Model
+from mesa.time import RandomActivation
 from mesa_geo import GeoSpace, GeoAgent
 from shapely.geometry import Point
 import random
@@ -44,7 +46,7 @@ BALLTREE_CACHE = {}
 app = FastAPI(
     title="실종자 목적지 예측 API",
     description="Spring Boot 연동 실종자 경로 예측 시스템",
-    version="12.0.0"
+    version="12.0.2"
 )
 
 app.add_middleware(
@@ -273,8 +275,15 @@ def sample_gps_data(gps_data, max_samples=500):
     return sampled
 
 
+# ⭐⭐⭐ 핵심 수정 함수 1: 도로 네트워크를 따라가는 waypoints 생성 ⭐⭐⭐
 def generate_road_snapped_waypoints_sync(G, tree_data, gps_data, start_lat, start_lon, end_lat, end_lon):
-    """최적화된 도로 노드 기반 waypoint 생성"""
+    """
+    ⭐ 수정된 함수: 도로 네트워크의 모든 노드를 waypoint로 반환
+    
+    변경사항:
+    - 이전: 중요한 2-3개 노드만 선택 → 직선 연결
+    - 수정: 경로상의 모든 노드를 반환 → 도로를 따라감
+    """
     if G is None or tree_data is None:
         waypoints = [
             {"lat": float(round(start_lat, 6)), "lon": float(round(start_lon, 6)), "node_id": None},
@@ -296,6 +305,7 @@ def generate_road_snapped_waypoints_sync(G, tree_data, gps_data, start_lat, star
     end_node_id, end_node_lat, end_node_lon = end_node_data
     
     try:
+        # 최단 경로 계산
         route = nx.shortest_path(G, start_node_id, end_node_id, weight='length')
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         waypoints = [
@@ -304,6 +314,19 @@ def generate_road_snapped_waypoints_sync(G, tree_data, gps_data, start_lat, star
         ]
         return waypoints, 0.0, "straight_line"
     
+    # ⭐⭐⭐ 핵심 변경: 경로상의 모든 노드를 waypoint로 추가 ⭐⭐⭐
+    waypoints = []
+    
+    # 경로상의 모든 노드를 순서대로 waypoint로 변환
+    for node_id in route:
+        node_data = G.nodes[node_id]
+        waypoints.append({
+            "lat": float(round(node_data['y'], 6)),
+            "lon": float(round(node_data['x'], 6)),
+            "node_id": int(node_id)
+        })
+    
+    # GPS 데이터를 기반으로 선호도 계산 (기존 로직 유지)
     sampled_gps = sample_gps_data(gps_data, max_samples=500)
     
     node_visit_count = Counter()
@@ -311,48 +334,13 @@ def generate_road_snapped_waypoints_sync(G, tree_data, gps_data, start_lat, star
         node_data = snap_to_nearest_node_fast(G, tree_data, gps_lat, gps_lon)
         if node_data:
             node_id = node_data[0]
-            node_visit_count[node_id] += 1
+            if node_id in route:  # 경로상의 노드만 카운트
+                node_visit_count[node_id] += 1
     
-    frequent_nodes = []
-    for node_id in route:
-        if node_id == start_node_id or node_id == end_node_id:
-            continue
-        
-        visit_count = node_visit_count.get(node_id, 0)
-        if visit_count > 0:
-            node_data = G.nodes[node_id]
-            frequent_nodes.append((node_id, node_data['y'], node_data['x'], visit_count))
+    total_visits = sum(node_visit_count.values())
+    preference_score = min(1.0, total_visits / 30) if total_visits > 0 else 0.0
     
-    frequent_nodes.sort(key=lambda x: x[3], reverse=True)
-    selected_nodes = frequent_nodes[:3]
-    
-    if selected_nodes:
-        node_order = {node_id: idx for idx, node_id in enumerate(route)}
-        selected_nodes.sort(key=lambda x: node_order.get(x[0], 0))
-    
-    waypoints = []
-    
-    waypoints.append({
-        "lat": float(round(start_node_lat, 6)),
-        "lon": float(round(start_node_lon, 6)),
-        "node_id": start_node_id
-    })
-    
-    for node_id, lat, lon, visit_count in selected_nodes:
-        waypoints.append({
-            "lat": float(round(lat, 6)),
-            "lon": float(round(lon, 6)),
-            "node_id": int(node_id)
-        })
-    
-    waypoints.append({
-        "lat": float(round(end_node_lat, 6)),
-        "lon": float(round(end_node_lon, 6)),
-        "node_id": end_node_id
-    })
-    
-    total_visits = sum([x[3] for x in selected_nodes])
-    preference_score = min(1.0, total_visits / 30)
+    print(f"    ✅ 경로 생성: {len(waypoints)}개 waypoints (선호도: {preference_score:.2f})")
     
     return waypoints, preference_score, "road_network"
 
@@ -550,16 +538,17 @@ class RealisticPatientAgent(GeoAgent):
         self.elapsed_time_seconds = 0.0
         self.total_distance_m = 0.0
         self.stopped = False
-        self.walking_speed_ms = random.uniform(0.3, 0.6)
+        self.walking_speed_ms = random.uniform(0.5, 1.0)
         self.edge_progress = 0.0
         self.current_edge_data = None
         self.turn_preference = turn_preference
         
+        # ⭐ 수정: 더 현실적인 이동을 위해 방향 유지 비중 증가
         self.behavior_weights = {
-            'random_walk': 0.317,
-            'direction_persist': 0.253,
-            'backtrack': 0.05,
-            'stay_put': 0.298
+            'random_walk': 0.20,      # 랜덤 이동 감소
+            'direction_persist': 0.50, # 방향 유지 증가 (직진 선호)
+            'backtrack': 0.05,         # 되돌아가기
+            'stay_put': 0.25           # 멈춤
         }
         self.last_direction = None
         self.stay_duration = 0
@@ -645,7 +634,29 @@ class RealisticPatientAgent(GeoAgent):
         )[0]
         
         if behavior == 'random_walk':
-            selected_node = self.choose_with_turn_preference(neighbors)
+            # ⭐ 수정: 가까운 노드를 우선적으로 선택
+            if len(neighbors) > 1:
+                # 각 이웃 노드까지의 거리 계산
+                neighbor_distances = []
+                for neighbor in neighbors:
+                    dist = self.calculate_distance(self.current_node, neighbor)
+                    neighbor_distances.append((neighbor, dist))
+                
+                # 거리 기반 가중치 (가까울수록 높은 가중치)
+                total_weight = sum(1.0 / (d + 1.0) for _, d in neighbor_distances)
+                weights = [(1.0 / (d + 1.0)) / total_weight for _, d in neighbor_distances]
+                
+                # 가중치 기반 선택 (80%), 회전 선호도 고려 (20%)
+                if random.random() < 0.8:
+                    selected_node = random.choices(
+                        [n for n, _ in neighbor_distances],
+                        weights=weights
+                    )[0]
+                else:
+                    selected_node = self.choose_with_turn_preference(neighbors)
+            else:
+                selected_node = neighbors[0]
+                
         elif behavior == 'direction_persist':
             best_node, best_similarity = None, -1
             current_pos = self.model.graph.nodes[self.current_node]
@@ -718,7 +729,14 @@ class RealisticPatientAgent(GeoAgent):
         else:
             self.edge_progress = 1.0
         
-        if self.edge_progress >= 1.0:
+        # ⭐ 수정: 엣지를 따라 이동하는 중간 위치도 기록
+        if self.edge_progress < 1.0:
+            # 중간 지점에서의 위치 기록
+            self.geometry = self.interpolate_position(
+                self.current_node, self.next_node, self.edge_progress
+            )
+        else:
+            # 다음 노드 도착
             self.geometry = Point(
                 self.model.graph.nodes[self.next_node]['x'],
                 self.model.graph.nodes[self.next_node]['y']
@@ -735,10 +753,6 @@ class RealisticPatientAgent(GeoAgent):
             self.current_edge_data = None
             self.edge_progress = 0.0
             self.total_distance_m += edge_length_m
-        else:
-            self.geometry = self.interpolate_position(
-                self.current_node, self.next_node, self.edge_progress
-            )
         
         self.elapsed_time_seconds += time_step
         self._record_position()
@@ -790,7 +804,7 @@ def run_simulation_for_scenario(latitude, longitude, time_minutes, distance_m, t
         start_node=start_node,
         max_time_minutes=time_minutes,
         turn_preference=turn_preference,
-        n_agents=200
+        n_agents=100
     )
     
     max_steps = time_minutes * 6
@@ -897,7 +911,7 @@ async def root():
     return {
         "status": "running",
         "service": "Missing Person Destination Prediction API",
-        "version": "12.0.0",
+        "version": "12.0.2",
         "endpoints": {
             "/api/predict-destinations": "실시간 목적지 예측",
             "/api/health": "헬스 체크",
@@ -908,7 +922,8 @@ async def root():
             "시간대별 패턴 분석",
             "선호 경로 반영",
             "지리적 분산 고려",
-            "Spring Boot 연동"
+            "Spring Boot 연동",
+            "⭐ 도로 네트워크를 따라가는 waypoints"
         ]
     }
 
@@ -1062,7 +1077,7 @@ async def predict_destinations(request: PredictionRequest):
                 cluster_lat, cluster_lon
             )
             
-            print(f"  - {distance:.0f}m, 방문 {visit_sessions}회, {route_method}")
+            print(f"  - {distance:.0f}m, 방문 {visit_sessions}회, {route_method}, waypoints: {len(waypoints)}개")
             
             poi_name = None
             if not pois_df.empty:
@@ -1214,12 +1229,13 @@ async def health_check():
     """헬스 체크"""
     return {
         "status": "healthy",
-        "version": "12.0.0",
+        "version": "12.0.2",
         "features": [
             "BallTree optimization",
             "Time-based filtering",
             "Road network snapping",
-            "Spring Boot integration"
+            "Spring Boot integration",
+            "⭐ Realistic road-following paths"
         ]
     }
 
@@ -1231,10 +1247,11 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     print("="*60)
-    print("🚀 실종자 목적지 예측 API 시작")
+    print("🚀 실종자 목적지 예측 API 시작 (도로 경로 버전)")
     print("="*60)
     print("📖 문서: http://0.0.0.0:8000/docs")
     print("🔍 예측: POST /api/predict-destinations")
     print("💚 헬스: GET /api/health")
+    print("⭐ 특징: 도로 네트워크를 따라가는 경로")
     print("="*60)
     uvicorn.run(app, host="0.0.0.0", port=8000)
