@@ -201,7 +201,8 @@
                                 <i class="bi bi-people"></i>
                                 <span class="badge-label">함께하는 이웃</span>
                             </div>
-                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount != null) ?
+                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount !=
+                                null) ?
                                 personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
                                 <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
@@ -304,9 +305,10 @@
                             </div>
                             <div class="stat-content-modern">
                                 <p class="stat-label-modern">분석 지점</p>
-                                <p class="stat-value-modern"><span class="stat-unit"> {{total_cluster}}개의 위치 분석 결과</span>
+                                <p class="stat-value-modern"><span class="stat-unit"> {{ total_cluster }}개의 위치 분석
+                                        결과</span>
                                 </p>
-                                <p class="stat-sublabel-modern-1">{{personDetail.patientName}}님의 실종위치로부터 각 시간대별</p>
+                                <p class="stat-sublabel-modern-1">{{ personDetail.patientName }}님의 실종위치로부터 각 시간대별</p>
                                 <p class="stat-sublabel-modern-1">최대 5개의 위치를 보여줍니다</p>
                             </div>
                         </div>
@@ -413,53 +415,97 @@ let total_cluster = ref(null)
 // ========================================================================================
 // API 호출 함수 - 예측 데이터 가져오기
 // ========================================================================================
+let userNo = ref('')
 
 async function fetchPredictionData() {
-    const missingTime = formatSimpleDateTime(missingTimeDB.value).toString()
+
+    const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
+
+    if (patientUserNo.value && !notMyPatientNo) {
+       userNo = patientUserNo.value
+    } else {
+        userNo = notMyPatientNo
+    }
 
     try {
-        const params = new URLSearchParams({
-            user_no: patientUserNo.value,
+        // GPS 데이터 가져오기
+        const gpsResponse = await axios.get(`/api/pred/${userNo}`, {
+            params: {
+                datetime: new Date(missingTimeDB.value).getTime()
+            },
+            withCredentials: true
+        });
+
+        const gpsData = gpsResponse.data;
+
+        // ⭐ 카멜케이스 → 스네이크케이스 변환 + 초 추가
+        const gpsRecords = gpsData.map(record => {
+            let recordTime = record.recordTime;  // ⭐ camelCase
+
+            // 초가 없으면 추가
+            if (recordTime && recordTime.split(':').length === 2) {
+                recordTime = `${recordTime}:00`;
+            }
+
+            return {
+                latitude: record.latitude,
+                longitude: record.longitude,
+                record_time: recordTime  // ⭐ snake_case로 변환
+            };
+        });
+
+        // Request Body 생성
+        const requestBody = {
+            user_no: userNo,
             missing_time: missingTime,
+            gps_data: gpsRecords,
             analysis_days: 60,
+            time_window_hours: 3,
             session_gap: 30,
             min_cluster_size: 10,
-            max_destinations_per_range: 5,  // ⭐ 최대 5개로 설정
+            max_search_radius: 2000,
+            min_cluster_separation: 200,
+            road_network_radius: 2500,
             csv_path: 'all_locations.csv'
-        })
+        };
 
+
+        // POST 요청
         const response = await axios.post(
-            `http://localhost:8000/api/predict-destinations?${params.toString()}`,
-            null,
-            { withCredentials: true }
-        )
+            `http://localhost:8000/api/predict-destinations`,
+            requestBody,
+            {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
 
-        const data = response.data
+        const data = response.data;
 
-        // 여기가 데이터가 일주일이면 아예 돌려보내고 1주일~한달 애매띠하게 들어오면 부정확하다고 알려줄거임
+        // 데이터 충분성 체크
         if (data.data_sufficiency === 'nono') {
-            alert(`데이터가 충분하지않아 예상위치가 제공되지 않습니다. 홈으로 돌아갑니다.`)
-            router.push(`/GD_main`)
+            alert(`데이터가 충분하지않아 예상위치가 제공되지 않습니다. 홈으로 돌아갑니다.`);
+            router.push(`/GD_main`);
         } else if (data.data_sufficiency === 'no') {
-            less_data.value = true
+            less_data.value = true;
         }
 
-        console.log(`총 클러스터 수 : ${data.total_clusters_found}`)
+        console.log(`총 클러스터 수 : ${data.total_clusters_found}`);
 
-        // 전체 클러스터 분석 수
-        total_cluster.value = data.total_clusters_found
+        total_cluster.value = data.total_clusters_found;
 
-        // ⭐ API 응답 데이터 처리
-        processDestinationsToZones(data)
+        processDestinationsToZones(data);
 
-        return true
+        return true;
 
     } catch (error) {
-        console.error('❌ 예측 데이터 로드 실패:', error)
-        personError.value = '예측 데이터를 불러올 수 없습니다.'
-        return false
+        console.error('❌ 예측 데이터 로드 실패:', error);
+        personError.value = '예측 데이터를 불러올 수 없습니다.';
+        return false;
     } finally {
-        isLoading.value = false
+        isLoading.value = false;
     }
 }
 
@@ -556,7 +602,7 @@ async function processDestinationsToZones(apiResponse) {
     zone_level_1.value = [...zone_level_1.value]
     zone_level_2.value = [...zone_level_2.value]
     zone_level_3.value = [...zone_level_3.value]
-    
+
     // ⭐ 경로 생성 (TMap API)
     await requestAllRoutes()
 
@@ -601,8 +647,6 @@ async function getAddressAndJimok() {
                 }
             })
         )
-
-        console.log(`✅ Zone ${zone.level} 완료`)
     }
 
     console.log('🗺️ 모든 API 호출 완료')
@@ -841,8 +885,9 @@ async function searchVWorldPOI(address) {
         })
 
         const searchUrl = `https://api.vworld.kr/req/search?${searchData.toString()}`
+        const dataProxyUrl = `https://www.vworld.kr/proxy.do?url=${encodeURIComponent(searchUrl)}`
 
-        const response = await fetch(searchUrl)
+        const response = await fetch(dataProxyUrl)
 
         if (!response.ok) {
             console.warn(`⚠️ POI API 응답 실패: ${response.status}`)
@@ -913,8 +958,8 @@ async function requestAllRoutes() {
 
         zone.storage.value = []
 
-        for (let i = 0; i < zone.data.length; i++) {    
-        const d = zone.data[i]
+        for (let i = 0; i < zone.data.length; i++) {
+            const d = zone.data[i]
 
             try {
 
@@ -946,7 +991,7 @@ async function requestAllRoutes() {
                     endY: Number(d.lat),
                     reqCoordType: 'WGS84GEO',
                     resCoordType: 'WGS84GEO',
-                    searchOption: '0', 
+                    searchOption: '0',
                 }
 
                 // ⭐ 경유지 추가 (waypointsStr이 존재할 때만)
@@ -979,7 +1024,7 @@ async function requestAllRoutes() {
                 if (data && data.features && Array.isArray(data.features) && data.features.length > 0) {
                     zone.storage.value.push(data.features)
                     console.log(`✅ Zone ${zone.level}-${i + 1} 경로 저장 (${data.features.length}개 feature)`)
-                } 
+                }
 
                 // ⭐ API 요청 지연 (rate limit 방지)
                 await delay(200)
@@ -1475,6 +1520,9 @@ async function findMissingReportId() {
     }
 }
 
+
+let notMyPatientNo
+
 // 데이터 로드
 async function fetchPatientAndMissingReport() {
     personLoading.value = true;
@@ -1488,6 +1536,9 @@ async function fetchPatientAndMissingReport() {
 
         personDetail.value = response.data;
         console.log('✅ 실종자 상세 정보:', personDetail.value);
+
+        notMyPatientNo = personDetail.value.patientUserNo
+        console.log(`내 환자가 아닐 경우의 값 : : : : : : ${notMyPatientNo}`)
 
         if (response.data && response.data.reportedAt) {
             missingTimeDB.value = new Date(response.data.reportedAt).getTime();

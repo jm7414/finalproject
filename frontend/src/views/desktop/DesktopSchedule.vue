@@ -1445,10 +1445,11 @@ onMounted(async () => {
 
 .quick-schedules {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex: 1 1 auto;
-  align-content: start;
+  flex: 1 1 0;
+  min-height: 0;
+  align-items: stretch;
 }
 
 .quick-schedule-section {
@@ -1458,6 +1459,7 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .quick-title {
@@ -1504,6 +1506,10 @@ onMounted(async () => {
 }
 
 .no-schedule {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #9ca3af;
   font-size: 12px;

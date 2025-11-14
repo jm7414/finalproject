@@ -1,24 +1,19 @@
 """
-Missing Person Destination Prediction API - Complete Version
-실종자 목적지 예측 시스템 (검증 기능 포함)
+Missing Person Destination Prediction API - Simplified Version
+실종자 목적지 예측 시스템 (Spring Boot 연동)
 
 Features:
 - BallTree 기반 빠른 도로 노드 스냅
 - 시간대별 패턴 분석
 - 선호 경로 반영
 - 지리적 분산 고려
-- 모델 검증 API
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy import Table, Column, Integer, Float, DateTime, MetaData, select, and_
-from sqlalchemy.orm import declarative_base
 from datetime import datetime, timedelta
-import os
 import numpy as np
 import pandas as pd
 import hdbscan
@@ -33,21 +28,6 @@ from sklearn.neighbors import BallTree
 # Configuration
 # =============================================================================
 
-os.environ['LC_ALL'] = 'C.UTF-8'
-os.environ['LANG'] = 'en_US.UTF-8'
-
-DATABASE_URL = "postgresql+asyncpg://postgres:rootroot@localhost:5432/finalproject"
-
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True,
-    connect_args={"ssl": False}
-)
-
-SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
-Base = declarative_base()
-
 executor = ThreadPoolExecutor(max_workers=4)
 
 # Caches
@@ -59,9 +39,9 @@ BALLTREE_CACHE = {}
 # =============================================================================
 
 app = FastAPI(
-    title="실종자 목적지 예측 API (완전판)",
-    description="검증 기능 포함 실종자 경로 예측 시스템",
-    version="11.0.0"
+    title="실종자 목적지 예측 API",
+    description="Spring Boot 연동 실종자 경로 예측 시스템",
+    version="12.0.0"
 )
 
 app.add_middleware(
@@ -75,6 +55,26 @@ app.add_middleware(
 # =============================================================================
 # Pydantic Models
 # =============================================================================
+
+class GPSRecord(BaseModel):
+    latitude: float
+    longitude: float
+    record_time: str  # "YYYY-MM-DD HH:MM:SS"
+
+
+class PredictionRequest(BaseModel):
+    user_no: int
+    missing_time: str  # "YYYY-MM-DD HH:MM"
+    gps_data: List[GPSRecord]
+    analysis_days: Optional[int] = 120
+    time_window_hours: Optional[int] = 3
+    session_gap: Optional[int] = 30
+    min_cluster_size: Optional[int] = 10
+    max_search_radius: Optional[int] = 2000
+    min_cluster_separation: Optional[int] = 200
+    road_network_radius: Optional[int] = 2500
+    csv_path: Optional[str] = "all_locations.csv"
+
 
 class Waypoint(BaseModel):
     lat: float
@@ -111,35 +111,8 @@ class PredictionResponse(BaseModel):
     time_filtered_records: int
     total_clusters_found: int
     destinations_by_distance: Dict[str, List[Destination]]
-    data_sufficiency: str = Field(description="데이터 충분성 (yes/no) - 28일 이상 데이터 기준")
+    data_sufficiency: str = Field(description="데이터 충분성 (yes/no/nono)")
     total_gps_records: int = Field(description="전체 GPS 레코드 수")
-
-
-class ValidationMetrics(BaseModel):
-    total_test_cases: int
-    hit_rate_500m: float = Field(description="500m 이내 적중률")
-    hit_rate_1000m: float = Field(description="1000m 이내 적중률")
-    hit_rate_1500m: float = Field(description="1500m 이내 적중률")
-    average_distance_error: float = Field(description="평균 거리 오차 (미터)")
-    median_distance_error: float = Field(description="중간값 거리 오차 (미터)")
-    route_similarity_score: float = Field(description="경로 유사도 (0~1)")
-
-
-class TestCase(BaseModel):
-    test_time: str
-    predicted_location: Dict[str, float]
-    actual_location: Dict[str, float]
-    distance_error: float
-    hit_500m: bool
-    hit_1000m: bool
-    hit_1500m: bool
-
-
-class ValidationResponse(BaseModel):
-    user_no: int
-    validation_period: str
-    metrics: ValidationMetrics
-    test_cases: List[TestCase]
 
 
 # =============================================================================
@@ -480,10 +453,9 @@ async def root():
     return {
         "status": "running",
         "service": "Missing Person Destination Prediction API",
-        "version": "11.0.0",
+        "version": "12.0.0",
         "endpoints": {
             "/api/predict-destinations": "실시간 목적지 예측",
-            "/api/validate-model": "모델 검증",
             "/api/health": "헬스 체크",
             "/docs": "API 문서"
         },
@@ -492,498 +464,224 @@ async def root():
             "시간대별 패턴 분석",
             "선호 경로 반영",
             "지리적 분산 고려",
-            "모델 검증 기능"
+            "Spring Boot 연동"
         ]
     }
 
 
 @app.post("/api/predict-destinations", response_model=PredictionResponse)
-async def predict_destinations(
-    user_no: int = Query(..., description="사용자 번호"),
-    missing_time: str = Query(..., description="실종 시간 (YYYY-MM-DD HH:MM)"),
-    analysis_days: int = Query(120, ge=1, le=365, description="분석 기간 (일)"),
-    time_window_hours: int = Query(3, ge=1, le=12, description="시간대 필터 (±시간)"),
-    session_gap: int = Query(30, ge=5, le=120, description="세션 구분 (분)"),
-    min_cluster_size: int = Query(10, ge=3, le=50, description="최소 클러스터 크기"),
-    max_search_radius: int = Query(2000, ge=500, le=5000, description="검색 반경 (m)"),
-    min_cluster_separation: int = Query(200, ge=50, le=500, description="클러스터 간 거리 (m)"),
-    road_network_radius: int = Query(2500, ge=1000, le=5000, description="도로망 반경 (m)"),
-    csv_path: str = Query("all_locations.csv", description="POI CSV")
-):
+async def predict_destinations(request: PredictionRequest):
     """
     실종자 목적지 예측
     
-    실종 시간 이전의 GPS 데이터를 분석하여 가능성 높은 목적지와 경로 예측
+    Spring Boot에서 GPS 데이터를 직접 받아서 처리
     """
     
     print(f"\n{'='*60}")
-    print(f"[예측 요청] user={user_no}, time={missing_time}")
+    print(f"[예측 요청] user={request.user_no}, time={request.missing_time}")
+    print(f"수신 GPS: {len(request.gps_data)}개")
     print(f"{'='*60}")
     
+    # 시간 파싱
     try:
-        target_time = datetime.strptime(missing_time, "%Y-%m-%d %H:%M")
+        target_time = datetime.strptime(request.missing_time, "%Y-%m-%d %H:%M")
     except ValueError:
         raise HTTPException(status_code=400, detail="시간 형식 오류 (YYYY-MM-DD HH:MM)")
     
+    # GPS 데이터 검증
+    if not request.gps_data:
+        raise HTTPException(status_code=404, detail="GPS 데이터 없음")
+    
+    # GPS 데이터 파싱
+    gps_data = []
+    for record in request.gps_data:
+        try:
+            record_time = datetime.strptime(record.record_time, "%Y-%m-%d %H:%M:%S")
+            gps_data.append((record.latitude, record.longitude, record_time))
+        except ValueError:
+            continue  # 잘못된 데이터 스킵
+    
+    if not gps_data:
+        raise HTTPException(status_code=400, detail="유효한 GPS 데이터 없음")
+    
+    print(f"✅ 파싱된 GPS: {len(gps_data)}개")
+    
+    # POI 로드
     try:
-        pois_df = pd.read_csv(csv_path)
+        pois_df = pd.read_csv(request.csv_path)
         print(f"✅ POI: {len(pois_df)}개")
     except:
         pois_df = pd.DataFrame()
         print(f"⚠️ POI 파일 없음")
     
-    async with SessionLocal() as session:
-        metadata = MetaData()
-        locations_table = Table(
-            'user_location', metadata,
-            Column('location_no', Integer, primary_key=True),
-            Column('user_no', Integer),
-            Column('latitude', Float),
-            Column('longitude', Float),
-            Column('record_time', DateTime)
+    # 데이터 충분성 판단
+    EXPECTED_28DAYS = 3 * 20 * 24 * 28
+    EXPECTED_7DAYS = 3 * 20 * 24 * 7
+    
+    if len(gps_data) < EXPECTED_7DAYS:
+        data_sufficiency = "nono"
+    elif len(gps_data) < EXPECTED_28DAYS:
+        data_sufficiency = "no"
+    else:
+        data_sufficiency = "yes"
+    
+    print(f"📊 데이터 충분성: {data_sufficiency}")
+    
+    # 마지막 위치 추출
+    sorted_gps = sorted(gps_data, key=lambda x: x[2])
+    last_lat, last_lon, last_time = sorted_gps[-1]
+    
+    print(f"📍 마지막 위치: ({last_lat:.6f}, {last_lon:.6f})")
+    
+    # 시간대 필터링
+    print(f"⏰ 시간대 필터링 (±{request.time_window_hours}시간)...")
+    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=request.time_window_hours)
+    print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
+    
+    if len(time_filtered_gps) < 100:
+        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=6)
+        print(f"   범위 확대: {len(time_filtered_gps)}개")
+    
+    if len(time_filtered_gps) < 50:
+        time_filtered_gps = gps_data
+        print(f"   전체 사용: {len(time_filtered_gps)}개")
+    
+    # 도로망 다운로드
+    print(f"🌐 도로망 로딩...")
+    G = await get_road_network(last_lat, last_lon, radius_m=request.road_network_radius)
+    
+    # BallTree 구축
+    tree_data = None
+    if G is not None:
+        print(f"🔧 BallTree 구축...")
+        tree_data = build_balltree(G)
+        print(f"✅ BallTree 준비")
+    
+    # 클러스터링
+    print(f"🔎 클러스터링...")
+    
+    all_clusters = await find_frequent_locations_with_sessions(
+        time_filtered_gps,
+        last_known_coords=(last_lat, last_lon),
+        max_search_radius_m=request.max_search_radius,
+        min_visits=5,
+        session_gap_minutes=request.session_gap,
+        min_cluster_size=request.min_cluster_size
+    )
+    
+    print(f"✅ 클러스터: {len(all_clusters)}개")
+    
+    if not all_clusters:
+        raise HTTPException(status_code=404, detail="클러스터 없음")
+    
+    # 거리별 분류
+    clusters_by_distance = {"500m": [], "1000m": [], "1500m": []}
+    
+    for cluster_lat, cluster_lon, visit_sessions, total_records, stability in all_clusters:
+        distance = haversine_distance(last_lat, last_lon, cluster_lat, cluster_lon)
+        
+        if distance < 50:
+            continue
+        
+        cluster_data = (cluster_lat, cluster_lon, visit_sessions, total_records, stability, distance)
+        
+        if distance <= 500:
+            clusters_by_distance["500m"].append(cluster_data)
+        elif distance <= 1000:
+            clusters_by_distance["1000m"].append(cluster_data)
+        elif distance <= 1500:
+            clusters_by_distance["1500m"].append(cluster_data)
+    
+    print(f"\n📊 거리별 분포: 500m({len(clusters_by_distance['500m'])}), "
+          f"1000m({len(clusters_by_distance['1000m'])}), 1500m({len(clusters_by_distance['1500m'])})")
+    
+    # 각 범위 처리
+    destinations_by_distance = {}
+    
+    for range_key in ["500m", "1000m", "1500m"]:
+        print(f"\n🎯 {range_key}...")
+        
+        selected_clusters = select_diverse_clusters(
+            clusters_by_distance[range_key],
+            max_count=5,
+            min_separation_m=request.min_cluster_separation
         )
         
-        start_time = target_time - timedelta(days=analysis_days)
-        end_time = target_time
+        destinations = []
         
-        print(f"📅 분석 기간: {analysis_days}일")
-        
-        query = select(
-            locations_table.c.latitude,
-            locations_table.c.longitude,
-            locations_table.c.record_time
-        ).where(
-            and_(
-                locations_table.c.user_no == user_no,
-                locations_table.c.record_time >= start_time,
-                locations_table.c.record_time < end_time
-            )
-        ).order_by(locations_table.c.record_time)
-        
-        result = await session.execute(query)
-        locations = result.fetchall()
-        
-        if not locations:
-            raise HTTPException(status_code=404, detail="GPS 데이터 없음")
-        
-        print(f"✅ GPS: {len(locations)}개")
-        
-        # ✅ 수정: 데이터 충분성 판단
-        EXPECTED_28DAYS_RECORDS = 3 * 20 * 24 * 28  # 데이터 기간이 28일 보다 적다면?
-        EXPECTED_7DAYS_RECORDS = 3 * 20 * 24 * 7 # 데이터 기간이 7일보다 적다면?
-        if len(locations) < EXPECTED_7DAYS_RECORDS :
-            data_sufficiency = "nono"
-        elif len(locations) < EXPECTED_28DAYS_RECORDS :
-            data_sufficiency = "no"
-        else : 
-            data_sufficiency = "yes"        
-        print(f"✅ GPS: {len(locations)}개")
-                
-        last_location = locations[-1]
-        last_lat = last_location.latitude
-        last_lon = last_location.longitude
-        last_time = last_location.record_time
-        
-        print(f"📍 마지막 위치: ({last_lat:.6f}, {last_lon:.6f})")
-        
-        gps_data = [(loc.latitude, loc.longitude, loc.record_time) for loc in locations]
-        
-        # 시간대 필터링
-        print(f"⏰ 시간대 필터링 (±{time_window_hours}시간)...")
-        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=time_window_hours)
-        print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
-        
-        if len(time_filtered_gps) < 100:
-            time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=6)
-            print(f"   범위 확대: {len(time_filtered_gps)}개")
-        
-        if len(time_filtered_gps) < 50:
-            time_filtered_gps = gps_data
-            print(f"   전체 사용: {len(time_filtered_gps)}개")
-        
-        # 도로망 다운로드
-        print(f"🌐 도로망 로딩...")
-        G = await get_road_network(last_lat, last_lon, radius_m=road_network_radius)
-        
-        # BallTree 구축
-        tree_data = None
-        if G is not None:
-            print(f"🔧 BallTree 구축...")
-            tree_data = build_balltree(G)
-            print(f"✅ BallTree 준비")
-        
-        # 클러스터링
-        print(f"🔎 클러스터링...")
-        
-        all_clusters = await find_frequent_locations_with_sessions(
-            time_filtered_gps,
-            last_known_coords=(last_lat, last_lon),
-            max_search_radius_m=max_search_radius,
-            min_visits=5,
-            session_gap_minutes=session_gap,
-            min_cluster_size=min_cluster_size
-        )
-        
-        print(f"✅ 클러스터: {len(all_clusters)}개")
-        
-        if not all_clusters:
-            raise HTTPException(status_code=404, detail="클러스터 없음")
-        
-        # 거리별 분류
-        clusters_by_distance = {"500m": [], "1000m": [], "1500m": []}
-        
-        for cluster_lat, cluster_lon, visit_sessions, total_records, stability in all_clusters:
-            distance = haversine_distance(last_lat, last_lon, cluster_lat, cluster_lon)
-            
-            if distance < 50:
-                continue
-            
-            cluster_data = (cluster_lat, cluster_lon, visit_sessions, total_records, stability, distance)
-            
-            if distance <= 500:
-                clusters_by_distance["500m"].append(cluster_data)
-            elif distance <= 1000:
-                clusters_by_distance["1000m"].append(cluster_data)
-            elif distance <= 1500:
-                clusters_by_distance["1500m"].append(cluster_data)
-        
-        print(f"\n📊 거리별 분포: 500m({len(clusters_by_distance['500m'])}), "
-              f"1000m({len(clusters_by_distance['1000m'])}), 1500m({len(clusters_by_distance['1500m'])})")
-        
-        # 각 범위 처리
-        destinations_by_distance = {}
-        
-        for range_key in ["500m", "1000m", "1500m"]:
-            print(f"\n🎯 {range_key}...")
-            
-            selected_clusters = select_diverse_clusters(
-                clusters_by_distance[range_key],
-                max_count=5,
-                min_separation_m=min_cluster_separation
+        for cluster_lat, cluster_lon, visit_sessions, total_records, stability, distance in selected_clusters:
+            waypoints, preference_score, route_method = await generate_road_snapped_waypoints(
+                G,
+                tree_data,
+                time_filtered_gps,
+                last_lat, last_lon,
+                cluster_lat, cluster_lon
             )
             
-            destinations = []
+            print(f"  - {distance:.0f}m, 방문 {visit_sessions}회, {route_method}")
             
-            for cluster_lat, cluster_lon, visit_sessions, total_records, stability, distance in selected_clusters:
-                waypoints, preference_score, route_method = await generate_road_snapped_waypoints(
-                    G,
-                    tree_data,
-                    time_filtered_gps,
-                    last_lat, last_lon,
-                    cluster_lat, cluster_lon
-                )
-                
-                print(f"  - {distance:.0f}m, 방문 {visit_sessions}회, {route_method}")
-                
-                poi_name = None
-                if not pois_df.empty:
-                    for _, poi in pois_df.iterrows():
-                        if haversine_distance(cluster_lat, cluster_lon, poi['lat'], poi['lon']) < 100:
-                            poi_name = poi['name']
-                            break
-                
-                destination = {
-                    "destination_id": len(destinations) + 1,
-                    "latitude": float(round(cluster_lat, 6)),
-                    "longitude": float(round(cluster_lon, 6)),
-                    "visit_count": int(visit_sessions),
-                    "total_gps_records": int(total_records),
-                    "distance_meters": float(round(distance, 1)),
-                    "cluster_stability": float(round(stability, 3)),
-                    "waypoints": waypoints,
-                    "preference_score": float(round(preference_score, 3)),
-                    "route_method": route_method
-                }
-                
-                if poi_name:
-                    destination["name"] = poi_name
-                
-                destinations.append(destination)
+            poi_name = None
+            if not pois_df.empty:
+                for _, poi in pois_df.iterrows():
+                    if haversine_distance(cluster_lat, cluster_lon, poi['lat'], poi['lon']) < 100:
+                        poi_name = poi['name']
+                        break
             
-            destinations_by_distance[range_key] = destinations
+            destination = {
+                "destination_id": len(destinations) + 1,
+                "latitude": float(round(cluster_lat, 6)),
+                "longitude": float(round(cluster_lon, 6)),
+                "visit_count": int(visit_sessions),
+                "total_gps_records": int(total_records),
+                "distance_meters": float(round(distance, 1)),
+                "cluster_stability": float(round(stability, 3)),
+                "waypoints": waypoints,
+                "preference_score": float(round(preference_score, 3)),
+                "route_method": route_method
+            }
+            
+            if poi_name:
+                destination["name"] = poi_name
+            
+            destinations.append(destination)
         
-        print(f"\n✅ 예측 완료!\n")
-        
-        response_data = {
-            "user_no": user_no,
-            "missing_time": target_time.isoformat(),
-            "last_known_location": {
-                "latitude": float(last_lat),
-                "longitude": float(last_lon),
-                "time": last_time.isoformat()
-            },
-            "analysis_period_days": analysis_days,
-            "session_gap_minutes": session_gap,
-            "time_filtered_records": len(time_filtered_gps),
-            "total_clusters_found": len(all_clusters),
-            "destinations_by_distance": destinations_by_distance,
-            "data_sufficiency": data_sufficiency,
-            "total_gps_records": len(locations)
-        }
-        
-        return response_data
-
-
-@app.post("/api/validate-model", response_model=ValidationResponse)
-async def validate_model(
-    user_no: int = Query(..., description="사용자 번호"),
-    validation_start: str = Query(..., description="검증 시작 (YYYY-MM-DD HH:MM)"),
-    validation_end: str = Query(..., description="검증 종료 (YYYY-MM-DD HH:MM)"),
-    training_days: int = Query(120, description="학습 기간 (일)"),
-    test_interval_hours: int = Query(24, description="테스트 간격 (시간)"),
-    csv_path: str = Query("all_locations.csv")
-):
-    """
-    모델 검증
+        destinations_by_distance[range_key] = destinations
     
-    과거 데이터로 모델 성능 평가
-    - Hit Rate: 예측 정확도
-    - 평균 거리 오차
-    - 경로 유사도
-    """
+    print(f"\n✅ 예측 완료!\n")
     
-    print(f"\n{'='*60}")
-    print(f"[검증 시작] user={user_no}")
-    print(f"검증 기간: {validation_start} ~ {validation_end}")
-    print(f"{'='*60}\n")
+    response_data = {
+        "user_no": request.user_no,
+        "missing_time": target_time.isoformat(),
+        "last_known_location": {
+            "latitude": float(last_lat),
+            "longitude": float(last_lon),
+            "time": last_time.isoformat()
+        },
+        "analysis_period_days": request.analysis_days,
+        "session_gap_minutes": request.session_gap,
+        "time_filtered_records": len(time_filtered_gps),
+        "total_clusters_found": len(all_clusters),
+        "destinations_by_distance": destinations_by_distance,
+        "data_sufficiency": data_sufficiency,
+        "total_gps_records": len(gps_data)
+    }
     
-    try:
-        val_start_time = datetime.strptime(validation_start, "%Y-%m-%d %H:%M")
-        val_end_time = datetime.strptime(validation_end, "%Y-%m-%d %H:%M")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="시간 형식 오류")
-    
-    try:
-        pois_df = pd.read_csv(csv_path)
-    except:
-        pois_df = pd.DataFrame()
-    
-    async with SessionLocal() as session:
-        metadata = MetaData()
-        locations_table = Table(
-            'user_location', metadata,
-            Column('location_no', Integer, primary_key=True),
-            Column('user_no', Integer),
-            Column('latitude', Float),
-            Column('longitude', Float),
-            Column('record_time', DateTime)
-        )
-        
-        # 전체 데이터 로드
-        full_start = val_start_time - timedelta(days=training_days)
-        full_end = val_end_time
-        
-        query = select(
-            locations_table.c.latitude,
-            locations_table.c.longitude,
-            locations_table.c.record_time
-        ).where(
-            and_(
-                locations_table.c.user_no == user_no,
-                locations_table.c.record_time >= full_start,
-                locations_table.c.record_time <= full_end
-            )
-        ).order_by(locations_table.c.record_time)
-        
-        result = await session.execute(query)
-        all_locations = result.fetchall()
-        
-        if not all_locations:
-            raise HTTPException(status_code=404, detail="데이터 없음")
-        
-        print(f"✅ 전체 데이터: {len(all_locations)}개")
-        
-        # 테스트 케이스 생성
-        test_times = []
-        current_test_time = val_start_time
-        while current_test_time <= val_end_time:
-            test_times.append(current_test_time)
-            current_test_time += timedelta(hours=test_interval_hours)
-        
-        print(f"📊 테스트 케이스: {len(test_times)}개\n")
-        
-        # 검증 지표
-        hits_500m = 0
-        hits_1000m = 0
-        hits_1500m = 0
-        distance_errors = []
-        route_similarities = []
-        test_cases = []
-        
-        for test_idx, test_time in enumerate(test_times):
-            print(f"[테스트 {test_idx+1}/{len(test_times)}] {test_time.strftime('%Y-%m-%d %H:%M')}")
-            
-            # 학습 데이터
-            train_start = test_time - timedelta(days=training_days)
-            train_end = test_time
-            
-            train_data = [
-                (loc.latitude, loc.longitude, loc.record_time)
-                for loc in all_locations
-                if train_start <= loc.record_time < train_end
-            ]
-            
-            if len(train_data) < 100:
-                print(f"  ⚠️ 학습 데이터 부족, 스킵")
-                continue
-            
-            # 마지막 위치
-            last_lat, last_lon, last_time = train_data[-1]
-            
-            # 시간대별 필터링
-            time_filtered = filter_by_similar_time(train_data, test_time, time_window_hours=3)
-            
-            if len(time_filtered) < 50:
-                time_filtered = train_data
-            
-            # 클러스터링
-            try:
-                clusters = await find_frequent_locations_with_sessions(
-                    time_filtered,
-                    last_known_coords=(last_lat, last_lon),
-                    max_search_radius_m=2000,
-                    min_visits=5,
-                    session_gap_minutes=30,
-                    min_cluster_size=10
-                )
-            except Exception as e:
-                print(f"  ⚠️ 클러스터링 실패: {e}, 스킵")
-                continue
-            
-            if not clusters:
-                print(f"  ⚠️ 클러스터 없음, 스킵")
-                continue
-            
-            # 예측: 가장 가능성 높은 목적지
-            pred_lat, pred_lon = clusters[0][0], clusters[0][1]
-            
-            # 실제 데이터: 미래 6시간
-            actual_future_data = [
-                (loc.latitude, loc.longitude, loc.record_time)
-                for loc in all_locations
-                if test_time <= loc.record_time < test_time + timedelta(hours=6)
-            ]
-            
-            if len(actual_future_data) < 10:
-                print(f"  ⚠️ 실제 데이터 부족, 스킵")
-                continue
-            
-            # 실제 목적지
-            try:
-                actual_clusters = await find_frequent_locations_with_sessions(
-                    actual_future_data,
-                    last_known_coords=(last_lat, last_lon),
-                    max_search_radius_m=2000,
-                    min_visits=3,
-                    session_gap_minutes=30,
-                    min_cluster_size=5
-                )
-            except Exception as e:
-                print(f"  ⚠️ 실제 클러스터링 실패, 스킵")
-                continue
-            
-            if not actual_clusters:
-                print(f"  ⚠️ 실제 클러스터 없음, 스킵")
-                continue
-            
-            actual_lat, actual_lon = actual_clusters[0][0], actual_clusters[0][1]
-            
-            # 거리 오차
-            distance_error = haversine_distance(pred_lat, pred_lon, actual_lat, actual_lon)
-            distance_errors.append(distance_error)
-            
-            # Hit rate
-            hit_500 = distance_error <= 500
-            hit_1000 = distance_error <= 1000
-            hit_1500 = distance_error <= 1500
-            
-            if hit_500:
-                hits_500m += 1
-                hits_1000m += 1
-                hits_1500m += 1
-            elif hit_1000:
-                hits_1000m += 1
-                hits_1500m += 1
-            elif hit_1500:
-                hits_1500m += 1
-            
-            # 경로 유사도 (예측 위치 근처 통과 여부)
-            passed_near = any(
-                haversine_distance(pred_lat, pred_lon, gps_lat, gps_lon) <= 100
-                for gps_lat, gps_lon, gps_time in actual_future_data
-            )
-            route_similarities.append(1.0 if passed_near else 0.0)
-            
-            # 테스트 케이스 저장
-            test_cases.append({
-                "test_time": test_time.isoformat(),
-                "predicted_location": {"lat": float(pred_lat), "lon": float(pred_lon)},
-                "actual_location": {"lat": float(actual_lat), "lon": float(actual_lon)},
-                "distance_error": float(round(distance_error, 1)),
-                "hit_500m": hit_500,
-                "hit_1000m": hit_1000,
-                "hit_1500m": hit_1500
-            })
-            
-            print(f"  ✓ 오차: {distance_error:.0f}m")
-        
-        total_tests = len(test_cases)
-        
-        if total_tests == 0:
-            raise HTTPException(status_code=404, detail="유효한 테스트 없음")
-        
-        # 검증 지표 계산
-        metrics = {
-            "total_test_cases": total_tests,
-            "hit_rate_500m": float(round(hits_500m / total_tests, 3)),
-            "hit_rate_1000m": float(round(hits_1000m / total_tests, 3)),
-            "hit_rate_1500m": float(round(hits_1500m / total_tests, 3)),
-            "average_distance_error": float(round(np.mean(distance_errors), 1)),
-            "median_distance_error": float(round(np.median(distance_errors), 1)),
-            "route_similarity_score": float(round(np.mean(route_similarities), 3))
-        }
-        
-        print(f"\n{'='*60}")
-        print(f"검증 결과")
-        print(f"{'='*60}")
-        print(f"총 테스트: {total_tests}개")
-        print(f"500m 적중률: {metrics['hit_rate_500m']*100:.1f}%")
-        print(f"1000m 적중률: {metrics['hit_rate_1000m']*100:.1f}%")
-        print(f"1500m 적중률: {metrics['hit_rate_1500m']*100:.1f}%")
-        print(f"평균 오차: {metrics['average_distance_error']:.0f}m")
-        print(f"중간값 오차: {metrics['median_distance_error']:.0f}m")
-        print(f"경로 유사도: {metrics['route_similarity_score']:.2f}")
-        print(f"{'='*60}\n")
-        
-        response = {
-            "user_no": user_no,
-            "validation_period": f"{validation_start} ~ {validation_end}",
-            "metrics": metrics,
-            "test_cases": test_cases[:20]  # 최대 20개
-        }
-        
-        return response
+    return response_data
 
 
 @app.get("/api/health")
 async def health_check():
     """헬스 체크"""
-    try:
-        async with SessionLocal() as session:
-            await session.execute(select(1))
-        return {
-            "status": "healthy",
-            "database": "connected",
-            "version": "11.0.0",
-            "features": [
-                "BallTree optimization",
-                "Time-based filtering",
-                "Road network snapping",
-                "Model validation"
-            ]
-        }
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+    return {
+        "status": "healthy",
+        "version": "12.0.0",
+        "features": [
+            "BallTree optimization",
+            "Time-based filtering",
+            "Road network snapping",
+            "Spring Boot integration"
+        ]
+    }
 
 
 # =============================================================================
@@ -997,7 +695,6 @@ if __name__ == "__main__":
     print("="*60)
     print("📖 문서: http://0.0.0.0:8000/docs")
     print("🔍 예측: POST /api/predict-destinations")
-    print("📊 검증: POST /api/validate-model")
     print("💚 헬스: GET /api/health")
     print("="*60)
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import lx.project.dementia_care.dto.PredictionResponseDTO;
-import lx.project.dementia_care.vo.LocationDataVO;
+import lx.project.dementia_care.vo.PredictVO;
 
 @Component
 public class PredictionDAO {
@@ -15,7 +15,7 @@ public class PredictionDAO {
 	@Autowired
 	SqlSession session;
 	
-	public List<PredictionResponseDTO> getLocationData(LocationDataVO vo) {
+	public List<PredictionResponseDTO> getLocationData(PredictVO vo) {
 		return session.selectList("lx.project.dementia_care.dao.PredictionDAO.getLocationData", vo);
 	}
 }
