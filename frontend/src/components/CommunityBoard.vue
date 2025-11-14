@@ -25,7 +25,6 @@
           <span class="post-time">{{ formatTimeAgo(post.createdAt) }}</span>
         </div>
       </div>
-      <button class="options-button">⋮</button>
     </div>
 
     <div class="card-body">

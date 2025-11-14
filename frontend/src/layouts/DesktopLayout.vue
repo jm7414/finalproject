@@ -69,7 +69,7 @@ const menuItems = [
   { name: '예상 위치', route: '/desktop/predict' },
   { name: 'AI보고서', route: null },
   { name: '일정', route: '/desktop/schedule' },
-  { name: '커뮤니티', route: null },
+  { name: '커뮤니티', route: '/desktop/communityView' },
   { name: '마이페이지', route: null }
 ]
 

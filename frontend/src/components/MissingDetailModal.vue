@@ -13,6 +13,46 @@ const props = defineProps({
 // 부모로 전달할 이벤트 정의
 const emit = defineEmits(['close', 'join-search']);
 
+// 상세정보 출력용
+const descriptionLabels = {
+  appearance: "인상착의",
+  hair: "두발상태",
+  health: "건강상태/병력",
+  items: "소지품",
+  other: "기타 특이사항"
+};
+
+function formatDescription(jsonString) {
+  if (!jsonString) return '정보 없음';
+
+  try {
+    // 1. JSON 문자열을 실제 객체로 변환합니다.
+    const data = JSON.parse(jsonString);
+    const parts = []; // 한글 라인들을 저장할 배열
+
+    // 2. 라벨 순서대로(appearance, hair 등) 값을 확인하고 배열에 추가합니다.
+    for (const key in descriptionLabels) {
+      const value = data[key];
+      
+      // 3. 값이 비어있지 않은 항목만 추가합니다.
+      if (value) {
+        const label = descriptionLabels[key]; // 한글 라벨 (예: "인상착의")
+        parts.push(`- ${label}: ${value}`);
+      }
+    }
+
+    if (parts.length === 0) return '상세 정보가 없습니다.';
+    
+    // 4. 모든 항목을 "줄바꿈(\n)" 문자로 합쳐서 반환합니다.
+    return parts.join('\n');
+
+  } catch (e) {
+    // 5. 만약 JSON이 아닌 일반 텍스트가 들어오면, 그냥 \n만 처리해서 반환합니다.
+    console.error("설명란(description) JSON 파싱 실패:", e, jsonString);
+    return jsonString.replace(/\\n/g, '\n');
+  }
+}
+
 // '닫기' 버튼 클릭 시
 function closeModal() {
   emit('close');
@@ -55,11 +95,6 @@ function calculateAge(birthDateString) {
     }
     return age >= 0 ? age : '?';
   } catch(e) { return '?'; }
-}
-
-function formatDescription(desc) {
-  if (!desc) return '상세 정보 없음';
-  return String(desc).replace(/\\n/g, '\n');
 }
 
 // 기본 이미지 경로 (CommunityMissing.vue와 동일하게 설정)

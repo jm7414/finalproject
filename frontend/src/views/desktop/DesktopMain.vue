@@ -7,6 +7,7 @@
             <h1>안심존 관리</h1>
             <p class="subtitle">환자의 현재 위치와 안심존을 모니터링하세요.</p>
           </div>
+          <button type="button" class="create-zone-btn" @click="">환자 상태변환</button>
           <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
         </div>
 

@@ -50,6 +50,12 @@ import NH_Notice from '@/views/NH_Notice.vue'
 import DesktopMain from '@/views/desktop/DesktopMain.vue'
 import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
+import DesktopCommunityView from '@/views/desktop/DesktopCommunityView.vue'
+import DesktopCommunityPost from '@/components/desktop/DesktopCommunityPost.vue'
+import DesktopCommunityBoard from '@/components/desktop/DesktopCommunityBoard.vue'
+import DesktopCommunityEvent from '@/components/desktop/DesktopCommunityEvent.vue'
+import DesktopCommunityMissing from '@/components/desktop/DesktopCommunityMissing.vue'
+import DesktopCommunityPostWrite from '@/components/desktop/DesktopCommunityPostWrite.vue'
 import DesktopPredict from '@/views/desktop/DesktopPredict.vue'
 
 const router = createRouter({
@@ -188,26 +194,68 @@ const router = createRouter({
       path: '/SightingReportBoard/:id',
       name: 'SightingReportBoard',
       component: SightingReportBoard,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },
     {
       path: '/SightingReportWrite/:id',
       name: 'SightingReportWrite',
       component: SightingReportWrite,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },
     {
       path: '/report-edit/:id',
       name: 'ReportEdit',
       component: SightingReportWrite,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },    
     {
       path: '/SightingReport/:id',
       name: 'SightingReport',
       component: SightingReport,
-      meta: { requiresAuth: true, roles: [1, 3, 4] }
+      meta: { requiresAuth: true, roles: [1, 4] }
     },
+    {
+        path: '/desktop/communityView',
+        name: 'desktop-communityView',
+        component: DesktopCommunityView,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },    
+    {
+        path: '/desktop/communityBoard',
+        name: 'desktop-communityBoard',
+        component: DesktopCommunityBoard,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },
+    {
+        path: '/desktop/communityPost/:id',
+        name: 'desktop-communityPost',
+        component: DesktopCommunityPost,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },
+    {
+        path: '/desktop/communityPostWrite',
+        name: 'desktop-communityPostWrite',
+        component: DesktopCommunityPostWrite,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },   
+    {
+        path: '/desktop/post/edit/:id',
+        name: 'desktop-PostEdit',
+        component: DesktopCommunityPostWrite,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },           
+    {
+        path: '/desktop/communityMissing',
+        name: 'desktop-communityMissing',
+        component: DesktopCommunityMissing,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },
+    {
+        path: '/desktop/communityEvent',
+        name: 'desktop-communityEvent',
+        component: DesktopCommunityEvent,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },        
     // 병욱 게시판 끝
     {
       path: '/geo-fencing',

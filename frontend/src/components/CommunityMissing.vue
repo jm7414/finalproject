@@ -9,9 +9,49 @@ const missingPeople = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
+// 상세정보 출력용
+const descriptionLabels = {
+  appearance: "인상착의",
+  hair: "두발상태",
+  health: "건강상태/병력",
+  items: "소지품",
+  other: "기타 특이사항"
+};
+
 onMounted(() => {
   fetchMissingPeople();
 });
+
+function formatDescription(jsonString) {
+  if (!jsonString) return '정보 없음';
+
+  try {
+    // 1. JSON 문자열을 실제 객체로 변환합니다.
+    const data = JSON.parse(jsonString);
+    const parts = []; // 한글 라인들을 저장할 배열
+
+    // 2. 라벨 순서대로(appearance, hair 등) 값을 확인하고 배열에 추가합니다.
+    for (const key in descriptionLabels) {
+      const value = data[key];
+      
+      // 3. 값이 비어있지 않은 항목만 추가합니다.
+      if (value) {
+        const label = descriptionLabels[key]; // 한글 라벨 (예: "인상착의")
+        parts.push(`- ${label}: ${value}`);
+      }
+    }
+
+    if (parts.length === 0) return '상세 정보가 없습니다.';
+    
+    // 4. 모든 항목을 "줄바꿈(\n)" 문자로 합쳐서 반환합니다.
+    return parts.join('\n');
+
+  } catch (e) {
+    // 5. 만약 JSON이 아닌 일반 텍스트가 들어오면, 그냥 \n만 처리해서 반환합니다.
+    console.error("설명란(description) JSON 파싱 실패:", e, jsonString);
+    return jsonString.replace(/\\n/g, '\n');
+  }
+}
 
 // 백엔드 API 호출 함수 (커뮤니티 미싱에서 실종자 가져오는 API)
 async function fetchMissingPeople() {
@@ -178,7 +218,7 @@ const defaultPersonImage = '/default-person.png';
         <div class="card-extra-info">
           <div class="info-item full-description">
             <span class="tag">상세정보</span>
-            <p>{{ person.description?.trim().replace(/\\n/g, '\n') || '정보 없음' }}</p>
+            <p>{{ formatDescription(person.description) }}</p>
           </div>
           <div class="info-item">
             <span class="tag">함께하는 이웃</span>
