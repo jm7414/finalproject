@@ -139,16 +139,16 @@
           # 해당 위치를 기반으로 안심존이 활성화 됩니다.
         </div>
       </div>
-    </div>
 
-    <!-- 액션 버튼 -->
-    <div class="action-buttons">
-      <button class="save-btn" @click="saveSchedule" :disabled="!isFormValid">
-        {{ isEditMode ? '수정 완료' : '저장' }}
-      </button>
-      <button class="cancel-btn" @click="cancelSchedule">
-        취소
-      </button>
+      <!-- 액션 버튼 -->
+      <div class="action-buttons">
+        <button class="save-btn" @click="saveSchedule" :disabled="!isFormValid">
+          {{ isEditMode ? '수정 완료' : '저장' }}
+        </button>
+        <button class="cancel-btn" @click="cancelSchedule">
+          취소
+        </button>
+      </div>
     </div>
 
     <!-- 시간 선택 모달 -->
@@ -625,11 +625,12 @@ onMounted(async () => {
 
 <style scoped>
 .add-schedule-page {
-  min-height: 100vh;
+  height: 100%;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding-bottom: 80px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* 헤더 */
@@ -997,7 +998,8 @@ onMounted(async () => {
 
 /* 액션 버튼 */
 .action-buttons {
-  padding: 0 20px 20px;
+  margin-top: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;

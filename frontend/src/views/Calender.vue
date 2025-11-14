@@ -455,6 +455,10 @@ function selectDate(date) {
 
 // 특정 날짜로 일정 추가 페이지 이동
 function goToAddScheduleWithDate(date) {
+  // 수정 모드 관련 데이터 정리 (새 일정 추가를 위해)
+  sessionStorage.removeItem('editScheduleNo')
+  sessionStorage.removeItem('isScheduleInProgress')
+  
   // 선택된 날짜를 YYYY-MM-DD 형식으로 변환
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -471,6 +475,11 @@ function goToAddScheduleWithDate(date) {
 
 // 일정 추가 페이지로 이동
 function goToAddSchedule() {
+  // 일정 추가 모드로 가기 전에 수정 모드 관련 데이터 정리
+  sessionStorage.removeItem('editScheduleNo')
+  sessionStorage.removeItem('isScheduleInProgress')
+  sessionStorage.removeItem('selectedDate')
+  
   router.push({ name: 'add-schedule' })
 }
 
@@ -483,6 +492,10 @@ function closeDateSchedulesModal() {
 // 선택된 날짜에 일정 추가
 function addScheduleForDate() {
   if (!selectedDateForModal.value) return
+  
+  // 수정 모드 관련 데이터 정리 (새 일정 추가를 위해)
+  sessionStorage.removeItem('editScheduleNo')
+  sessionStorage.removeItem('isScheduleInProgress')
   
   // 선택된 날짜를 세션 스토리지에 저장
   sessionStorage.setItem('selectedDate', selectedDateForModal.value)
@@ -660,16 +673,18 @@ onMounted(() => {
 
 <style scoped>
 .calendar-page {
-  min-height: 100vh;
+  height: 100%;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding-bottom: 80px; /* 하단 네비게이션 공간 확보 */
+  overflow-y: auto; /* 필요할 때만 스크롤 */
+  overflow-x: hidden;
 }
 
 
 /* 캘린더 섹션 */
 .calendar-section {
+  flex-shrink: 0; /* 내용에 맞게 크기 조정 */
   padding: 20px;
   background: #ffffff;
 }
@@ -808,8 +823,8 @@ onMounted(() => {
 
 /* 일정 섹션 */
 .schedule-section {
-  flex: 1;
-  padding: 0 20px;
+  flex-shrink: 0; /* 내용에 맞게 크기 조정 */
+  padding: 0 20px 20px;
   background: #ffffff;
 }
 
@@ -880,7 +895,7 @@ onMounted(() => {
 /* 플로팅 액션 버튼 */
 .fab {
   position: fixed;
-  bottom: 100px;
+  bottom: 90px; /* 푸터와 적절한 간격 */
   right: calc((100vw - 375px) / 2 + 20px);
   width: 56px;
   height: 56px;

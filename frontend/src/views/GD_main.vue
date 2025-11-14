@@ -626,16 +626,25 @@ async function checkPatientInSafeZone() {
     if (safeZoneData) {
       if (currentSchedule && safeZoneData.coordinates) {
         // 경로형 안심존 (폴리곤) - 점이 폴리곤 내부에 있는지 판단
+        console.log('[GD_main - 경로형 안심존] 판단 시작')
+        console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
+        console.log('- 안심존 데이터:', safeZoneData)
+        
         const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
+        console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
+        
         isInside = isPointInPolygon(patientLat, patientLng, coordinates)
+        console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
       } else if (safeZoneData.type === 'Circle') {
         // 기본형 안심존 (원형) - 중심점과의 거리 계산
+        console.log('[GD_main - 원형 안심존] 판단 시작')
         const centerLat = safeZoneData.center.lat
         const centerLng = safeZoneData.center.lng
         const radius = safeZoneData.radius
         
         const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
         isInside = distance <= radius
+        console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m, 결과: ${isInside ? '내부' : '외부'}`)
       }
     }
     
@@ -692,7 +701,9 @@ function isPointInPolygon(lat, lng, polygon) {
     const xj = polygon[j].longitude
     const yj = polygon[j].latitude
     
-    if (((yi > lng) !== (yj > lng)) && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi)) {
+    // Ray casting: 점의 y좌표(위도)가 선분의 y좌표 범위 안에 있고,
+    // 점의 x좌표(경도)가 교차점의 x좌표보다 왼쪽에 있으면 교차
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
       inside = !inside
     }
   }

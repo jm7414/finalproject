@@ -57,14 +57,26 @@ public class SecurityConfig {
                         .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**")
                         .hasAnyRole("GUARDIAN", "SUBSCRIBER")
 
-                        // 일정 관리 API (보호자/구독자 전용)
+                        // 일정 조회 API (환자도 자신의 일정 조회 가능)
+                        .requestMatchers(HttpMethod.GET, "/api/schedule/list/**", "/api/schedule/*/locations", 
+                                "/api/schedule/*/route", "/api/schedule/safe-zones/**", 
+                                "/api/schedule/basic-safe-zone/**", "/api/schedule/current/**", "/api/schedule/*")
+                        .hasAnyRole("GUARDIAN", "PATIENT", "SUBSCRIBER")
+
+                        // 일정 생성/수정/삭제 API (보호자/구독자 전용)
                         .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
 
-                        // 보호자가 관리하는 환자 조회 API
-                        .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+                        // 위치 업데이트 API (환자/구독자 전용)
+                        .requestMatchers(HttpMethod.POST, "/api/location/update").hasAnyRole("PATIENT", "SUBSCRIBER")
+
+                        // 위치 조회 API (보호자/구독자 전용)
+                        .requestMatchers(HttpMethod.GET, "/api/location/patient/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
+
+                        // 환자 정보 조회 API (보호자는 연결된 환자 조회, 환자는 자신 조회)
+                        .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "PATIENT", "SUBSCRIBER")
 
                         // 환자 전용 페이지 및 API
-                        .requestMatchers("/DP", "/api/patient/**").hasRole("PATIENT")
+                        .requestMatchers("/DP", "/api/patient/**").hasAnyRole("PATIENT", "SUBSCRIBER")
 
                         // 이웃 페이지 (보호자와 이웃 접근 가능)
                         .requestMatchers("/NH").hasAnyRole("GUARDIAN", "NEIGHBOR")

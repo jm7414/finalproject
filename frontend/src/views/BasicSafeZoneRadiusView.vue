@@ -224,17 +224,18 @@ function cancelSettings() {
 .page {
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-bottom: 60px; /* 하단 네비게이션 여유 공간 */
 }
 
 .map-box {
   width: 100%;
-  flex: 1;
-  min-height: 300px;
-  max-height: 50vh; /* 지도 최대 높이를 화면의 50%로 제한 */
+  height: 35vh; /* 지도 높이를 35vh로 고정 */
+  min-height: 250px;
+  flex-shrink: 0;
 }
 
 /* 컨트롤 패널 */
@@ -242,30 +243,29 @@ function cancelSettings() {
   flex-shrink: 0;
   background: #ffffff;
   border-top: 1px solid #e5e7eb;
-  padding: 24px 20px;
+  padding: 20px;
   overflow-y: auto;
-  margin-bottom: 60px; /* 하단 네비게이션 여유 공간 */
 }
 
 .control-header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .control-header h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 
 .control-header p {
-  font-size: 14px;
+  font-size: 13px;
   color: #6b7280;
   margin: 0;
 }
 
 .control-row {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 /* 반경 선택 버튼 */
@@ -320,7 +320,7 @@ function cancelSettings() {
 .action-row {
   display: flex;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .set-btn, .cancel-btn {
@@ -359,12 +359,16 @@ function cancelSettings() {
 /* 반응형 */
 @media (max-width: 480px) {
   .map-box {
-    max-height: 40vh; /* 모바일에서는 지도 높이를 더 줄임 */
+    height: 30vh; /* 모바일에서는 지도 높이를 더 줄임 */
+    min-height: 200px;
   }
 
   .controls {
-    padding: 20px 16px;
-    margin-bottom: 60px;
+    padding: 16px;
+  }
+
+  .control-header {
+    margin-bottom: 16px;
   }
 
   .level-options {

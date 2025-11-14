@@ -420,11 +420,13 @@ function goBack() {
 
 <style scoped>
 .page {
-  min-height: 100vh;
+  height: 100%;
   background: #f9fafb;
-  padding: 20px 0 100px 0;
+  padding: 20px 0 20px 0;
   position: relative;
   z-index: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 
@@ -783,7 +785,7 @@ input:focus {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   gap: 12px;
-  margin-bottom: 100px; /* 하단 네비게이션 여유 공간 */
+  margin-bottom: 20px; /* 적절한 여백만 */
 }
 
 .primary, .ghost {

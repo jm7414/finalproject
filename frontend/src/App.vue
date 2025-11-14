@@ -248,8 +248,8 @@ async function getCurrentUser() {
   }
 }
 
-// 보호자-환자 연결 관계 확인
-async function checkGuardianPatientConnection(guardianNo) {
+// 환자 정보 확인 (보호자: 연결된 환자, 환자: 자기 자신)
+async function checkGuardianPatientConnection(userNo) {
   try {
     const response = await fetch(`/api/user/my-patient`, {
       method: 'GET',
@@ -262,7 +262,7 @@ async function checkGuardianPatientConnection(guardianNo) {
 
     const result = await response.json()
 
-    // 메시지만 있는 경우 (환자가 없는 경우)
+    // 메시지만 있는 경우 (보호자인데 연결된 환자가 없는 경우)
     if (result.message) {
       return null
     }
@@ -272,7 +272,7 @@ async function checkGuardianPatientConnection(guardianNo) {
       patientName: result.name
     }
   } catch (error) {
-    console.error('환자 연결 관계 확인 오류:', error)
+    console.error('환자 정보 확인 오류:', error)
     return null
   }
 }
@@ -417,7 +417,9 @@ function isPointInPolygon(lat, lng, polygon) {
     const xj = polygon[j].longitude
     const yj = polygon[j].latitude
 
-    if (((yi > lng) !== (yj > lng)) && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi)) {
+    // Ray casting: 점의 y좌표(위도)가 선분의 y좌표 범위 안에 있고,
+    // 점의 x좌표(경도)가 교차점의 x좌표보다 왼쪽에 있으면 교차
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
       inside = !inside
     }
   }
@@ -494,16 +496,25 @@ async function checkSafeZoneStatus(patientNo, patientLocation) {
 
     if (currentSchedule && safeZoneData.coordinates) {
       // 경로형 안심존 (폴리곤) - 점이 폴리곤 내부에 있는지 판단
+      console.log('[경로형 안심존] 판단 시작')
+      console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
+      console.log('- 안심존 데이터:', safeZoneData)
+      
       const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
+      console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
+      
       isInside = isPointInPolygon(patientLat, patientLng, coordinates)
+      console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
     } else if (safeZoneData.type === 'Circle') {
       // 기본형 안심존 (원형) - 중심점과의 거리 계산
+      console.log('[원형 안심존] 판단 시작')
       const centerLat = safeZoneData.center.lat
       const centerLng = safeZoneData.center.lng
       const radius = safeZoneData.radius
 
       const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
       isInside = distance <= radius
+      console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m, 결과: ${isInside ? '내부' : '외부'}`)
     }
 
     return isInside ? 'inside' : 'outside'
@@ -531,14 +542,14 @@ async function startSafeZoneMonitoring() {
 
     console.log('현재 사용자:', currentUser)
 
-    // 보호자-환자 연결 관계 확인
+    // 모니터링할 환자 정보 확인 (보호자: 연결된 환자, 환자: 자기 자신)
     const connection = await checkGuardianPatientConnection(currentUser.userNo)
     if (!connection) {
-      console.warn('[안심존] 환자 연결 정보를 가져올 수 없습니다.')
+      console.warn('[안심존] 모니터링할 환자 정보를 가져올 수 없습니다.')
       return
     }
 
-    console.log('환자 연결 정보:', connection)
+    console.log('모니터링 대상 환자:', connection)
     connectedPatientNo.value = connection.patientNo
     patientName.value = connection.patientName
 
