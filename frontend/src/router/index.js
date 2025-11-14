@@ -51,7 +51,11 @@ import DesktopMain from '@/views/desktop/DesktopMain.vue'
 import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
 import DesktopCommunityView from '@/views/desktop/DesktopCommunityView.vue'
+import DesktopCommunityPost from '@/components/desktop/DesktopCommunityPost.vue'
 import DesktopCommunityBoard from '@/components/desktop/DesktopCommunityBoard.vue'
+import DesktopCommunityEvent from '@/components/desktop/DesktopCommunityEvent.vue'
+import DesktopCommunityMissing from '@/components/desktop/DesktopCommunityMissing.vue'
+import DesktopCommunityPostWrite from '@/components/desktop/DesktopCommunityPostWrite.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -215,6 +219,36 @@ const router = createRouter({
         component: DesktopCommunityBoard,
         meta: { requiresAuth: true, layout: 'desktop' }
     },
+    {
+        path: '/desktop/communityPost/:id',
+        name: 'desktop-communityPost',
+        component: DesktopCommunityPost,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },
+    {
+        path: '/desktop/communityPostWrite',
+        name: 'desktop-communityPostWrite',
+        component: DesktopCommunityPostWrite,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },   
+    {
+        path: '/desktop/post/edit/:id',
+        name: 'desktop-PostEdit',
+        component: DesktopCommunityPostWrite,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },           
+    {
+        path: '/desktop/communityMissing',
+        name: 'desktop-communityMissing',
+        component: DesktopCommunityMissing,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },
+    {
+        path: '/desktop/communityEvent',
+        name: 'desktop-communityEvent',
+        component: DesktopCommunityEvent,
+        meta: { requiresAuth: true, layout: 'desktop' }
+    },        
     // 병욱 게시판 끝
     {
       path: '/geo-fencing',

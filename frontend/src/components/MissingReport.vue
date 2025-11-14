@@ -12,24 +12,28 @@ const route = useRoute();
 const patientNo = ref(null);
 const missingDate = ref(''); // 날짜 입력용
 const missingTime = ref(''); // 시간 입력용
-const description = ref('');
 const reporterContact = ref('');
 const photoFile = ref(null);
 const imagePreviewUrl = ref(null);
 const isUploading = ref(false);
+// 특이사항용
+const descAppearance = ref(''); // 인상착의
+const descHair = ref('');       // 두발상태
+const descHealth = ref('');     // 건강상태/병력
+const descItems = ref('');      // 소지품
+const descOther = ref('');      // 기타
 
 // 이미지 업로드 관련
 const { upload } = usePostImageUpload();
 const fileInput = ref(null); // <input type="file"> 참조
 
-
 onMounted(() => {
-  patientNo.value = route.params.id;
-  if (!patientNo.value) {
-    alert('신고 대상 환자 정보가 올바르지 않습니다.');
-  } else {
-    console.log('실종 신고 페이지 로드. 대상 환자 ID (params):', patientNo.value);
-  }
+  patientNo.value = route.params.id;
+  if (!patientNo.value) {
+    alert('신고 대상 환자 정보가 올바르지 않습니다.');
+  } else {
+    console.log('실종 신고 페이지 로드. 대상 환자 ID (params):', patientNo.value);
+  }
 
   // 기능 12: 현재 날짜 및 시간으로 초기값 설정
   const now = new Date();
@@ -64,12 +68,22 @@ async function submitReport() {
   if (!patientNo.value) {
     alert('신고 대상 환자 정보가 없습니다.'); return;
   }
-  if (!missingDate.value || !missingTime.value || !description.value || !reporterContact.value) {
-    alert('실종 날짜, 실종 시간, 특이사항, 신고자 연락처를 모두 입력해주세요.'); return;
+  // [수정] 유효성 검사에서 missingLocation 제거
+  if (!missingDate.value || !missingTime.value || !reporterContact.value) {
+    alert('실종 날짜, 실종 시간, 신고자 연락처를 모두 입력해주세요.(없으면 없음이라고 적어주세요!)'); return;
   }
 
   // 날짜와 시간을 ISO 8601 형식으로 결합
   const reportedAtValue = `${missingDate.value}T${missingTime.value}`;
+
+  const descriptionData = {
+    appearance: descAppearance.value,
+    hair: descHair.value,
+    health: descHealth.value,
+    items: descItems.value,
+    other: descOther.value,
+  };
+  const descriptionString = JSON.stringify(descriptionData);
 
   isUploading.value = true;
   let uploadedImageUrl = null;
@@ -79,12 +93,12 @@ async function submitReport() {
     if (photoFile.value) {
       uploadedImageUrl = await upload(photoFile.value);
     }
-
+    
     // API 전송 데이터 준비
     const reportData = {
       patientUserNo: patientNo.value,
-      photoPath: uploadedImageUrl,
-      description: description.value,
+      photoPath: uploadedImageUrl, 
+      description: descriptionString,
       status: "실종",
     };
 
@@ -143,15 +157,34 @@ function goBack() {
       <div class="guide-box">
         <span>ℹ️</span>
         <div>
-          <strong>실종장소 안내</strong>
-          <p>실종시간을 기반으로 예상위치 페이지에서 표시됩니다.</p>
+          <strong>실종장소 안내</strong><p>입력된 실종장소와 시간을 기반으로 예상 위치를 추적합니다.</p>
         </div>
       </div>
 
       <section class="form-section">
-        <label for="description" class="form-label small mb-1">특이사항</label>
-        <textarea id="description" v-model="description" placeholder="실종자를 찾는데 도움이 될 수 있는 모든 정보를 입력해주세요"
-          class="form-control content-textarea" maxlength="1000" rows="4"></textarea>
+        <label for="desc-appearance" class="form-label small mb-1">인상착의 (상의, 하의, 신발)</label>
+        <input id="desc-appearance" type="text" v-model="descAppearance" placeholder="예: 파란색 잠바, 검정 바지, 흰색 운동화" class="form-control" />
+      </section>
+
+      <section class="form-section">
+        <label for="desc-hair" class="form-label small mb-1">두발상태 (머리 색, 스타일)</label>
+        <input id="desc-hair" type="text" v-model="descHair" placeholder="예: 하얀색 짧은 머리, 대머리" class="form-control" />
+      </section>
+
+      <section class="form-section">
+        <label for="desc-health" class="form-label small mb-1">건강상태 / 병력</label>
+        <input id="desc-health" type="text" v-model="descHealth" placeholder="예: 치매 초기, 당뇨, 거동 불편" class="form-control" />
+      </section>
+
+      <section class="form-section">
+        <label for="desc-items" class="form-label small mb-1">소지품</label>
+        <input id="desc-items" type="text" v-model="descItems" placeholder="예: 검정색 지팡이, 은색 안경, 손가방" class="form-control" />
+      </section>
+
+      <section class="form-section">
+        <label for="desc-other" class="form-label small mb-1">기타 특이사항</label>
+        <textarea id="desc-other" v-model="descOther" placeholder="예: '집에 간다'는 말을 자주 함, 걸음이 느림"
+          class="form-control content-textarea" rows="3"></textarea>
       </section>
 
       <section class="form-section">

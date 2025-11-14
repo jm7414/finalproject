@@ -3,7 +3,7 @@
 
 <mapper namespace="lx.project.dementia_care.mapper.PostMapper">
 
-        <resultMap id="PostListResultMap" type="lx.project.dementia_care.dto.PostListDto">
+    <resultMap id="PostListResultMap" type="lx.project.dementia_care.dto.PostListDto">
         <id property="postId" column="post_id"/>
         <result property="title" column="title"/>
         <result property="author" column="author"/>
@@ -23,6 +23,7 @@
         <result property="views" column="view_count"/>
         <result property="createdAt" column="created_at"/>
         <result property="image" column="image_path"/>
+        <result property="userId" column="user_no"/>
     </resultMap>
 
         <select id="findAllPosts" resultMap="PostListResultMap">
@@ -118,7 +119,7 @@
             post_id = #{postId}
     </update>
 
-        <delete id="deletePost" parameterType="int">
+    <delete id="deletePost" parameterType="int">
         DELETE FROM post WHERE post_id = #{postId}
     </delete>
 

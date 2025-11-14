@@ -7,6 +7,7 @@
             <h1>안심존 관리</h1>
             <p class="subtitle">환자의 현재 위치와 안심존을 모니터링하세요.</p>
           </div>
+          <button type="button" class="create-zone-btn" @click="">환자 상태변환</button>
           <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
         </div>
 
@@ -106,30 +107,6 @@
           <div v-else class="today-schedule-empty">
             오늘 예정된 일정이 없습니다.
           </div>
-        </section>
-
-        <section class="panel community-panel">
-          <header class="panel-header">
-            <h2>최신 게시글</h2>
-            <button type="button" class="panel-action more-btn" @click="goToCommunityBoard">
-              더보기
-            </button>
-          </header>
-          
-          <!-- <div v-if="recentPosts.length > 0" class="recent-post-list">
-            <div v-for="post in recentPosts":key="post.id" class="recent-post-item">
-              <div class="recent-post-header">
-                <span class="post-category">{{ post.category }}</span> 
-                <span class="post-time">{{ post.time }}</span>
-              </div>
-              <strong class="recent-post-title">{{ post.title }}</strong>
-              <div class="recent-post-author">{{ post.author }}</div>
-            </div>
-          </div>
-          
-          <div v-else class="recent-post-empty">
-            최신 게시글이 없습니다.
-          </div> -->
         </section>
       </aside>
     </section>
@@ -1077,10 +1054,6 @@ function scheduleStatusMeta(schedule) {
 
 function goToSchedule() {
   router.push('/desktop/schedule')
-}
-
-function goToCommunityBoard() {
-  router.push('/desktop/communityBoard') 
 }
 
 /* ===== 기본 안심존 변경 모달 ===== */
