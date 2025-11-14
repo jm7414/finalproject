@@ -54,33 +54,6 @@
 
     <div class="predict-layout">
       <section class="map-section">
-        <div class="timeline-legend-top">
-          <button
-            class="legend-item"
-            :class="{ active: selectedMinutes <= 30 }"
-            @click="setTime(30)"
-          >
-            <span class="legend-color color-1"></span>
-            <span class="legend-text">실종~30분</span>
-          </button>
-          <button
-            class="legend-item"
-            :class="{ active: selectedMinutes > 30 && selectedMinutes <= 60 }"
-            @click="setTime(60)"
-          >
-            <span class="legend-color color-2"></span>
-            <span class="legend-text">30~60분</span>
-          </button>
-          <button
-            class="legend-item"
-            :class="{ active: selectedMinutes > 60 }"
-            @click="setTime(90)"
-          >
-            <span class="legend-color color-3"></span>
-            <span class="legend-text">60~90분</span>
-          </button>
-        </div>
-
         <div class="map-card">
           <div ref="mapContainer" class="map-view"></div>
         </div>
@@ -110,19 +83,19 @@
             <div class="timeline-markers">
               <div class="timeline-marker" style="left: 0%">
                 <div class="marker-dot"></div>
-                <span class="marker-label">실종</span>
+                <span>실종</span>
               </div>
               <div class="timeline-marker" style="left: 33.33%">
                 <div class="marker-dot mid"></div>
-                <span class="marker-label">30분</span>
+                <span>30분</span>
               </div>
               <div class="timeline-marker" style="left: 66.66%">
                 <div class="marker-dot mid"></div>
-                <span class="marker-label">60분</span>
+                <span>60분</span>
               </div>
               <div class="timeline-marker" style="left: 100%">
                 <div class="marker-dot end"></div>
-                <span class="marker-label">90분</span>
+                <span>90분</span>
               </div>
             </div>
 
@@ -137,6 +110,33 @@
               </div>
               <div class="handle-tooltip">{{ selectedMinutes }}분</div>
             </div>
+          </div>
+
+          <div class="timeline-legend">
+            <button
+              class="legend-item"
+              :class="{ active: selectedMinutes <= 30 }"
+              @click="setTime(30)"
+            >
+              <span class="legend-color color-1"></span>
+              <span class="legend-text">실종~30분</span>
+            </button>
+            <button
+              class="legend-item"
+              :class="{ active: selectedMinutes > 30 && selectedMinutes <= 60 }"
+              @click="setTime(60)"
+            >
+              <span class="legend-color color-2"></span>
+              <span class="legend-text">30~60분</span>
+            </button>
+            <button
+              class="legend-item"
+              :class="{ active: selectedMinutes > 60 }"
+              @click="setTime(90)"
+            >
+              <span class="legend-color color-3"></span>
+              <span class="legend-text">60~90분</span>
+            </button>
           </div>
         </div>
       </section>
@@ -267,17 +267,17 @@ const zone3Routes = ref([])
 
 const displayedZone1 = computed(() => {
   const data = zone_level_1.value || []
-  return showAllLocations.value ? data : data.slice(0, 3)
+  return showAllLocations.value ? data : data.slice(0, 4)
 })
 
 const displayedZone2 = computed(() => {
   const data = zone_level_2.value || []
-  return showAllLocations.value ? data : data.slice(0, 3)
+  return showAllLocations.value ? data : data.slice(0, 4)
 })
 
 const displayedZone3 = computed(() => {
   const data = zone_level_3.value || []
-  return showAllLocations.value ? data : data.slice(0, 3)
+  return showAllLocations.value ? data : data.slice(0, 4)
 })
 
 const displayedZoneToShow = computed(() => {
@@ -292,7 +292,7 @@ const hasMoreData = computed(() => {
   if (displayZoneLevel.value === 1) total = zone_level_1.value?.length || 0
   else if (displayZoneLevel.value === 2) total = zone_level_2.value?.length || 0
   else total = zone_level_3.value?.length || 0
-  return total > 3
+  return total > 4
 })
 
 const progressWidth = computed(() => (selectedMinutes.value / 90) * 100)
@@ -1220,7 +1220,7 @@ function formatDisplayDate(date) {
 .map-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-height: 0;
   overflow: hidden;
 }
@@ -1243,12 +1243,12 @@ function formatDisplayDate(date) {
 
 .timeline-panel {
   background: linear-gradient(180deg, #ffffff 0%, #f8f9fd 100%);
-  border-radius: 18px;
-  padding: 16px 18px 18px;
+  border-radius: 20px;
+  padding: 18px 20px 20px;
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   flex-shrink: 0;
 }
 
@@ -1373,7 +1373,6 @@ function formatDisplayDate(date) {
 
 .marker-label {
   margin-top: 18px;
-  white-space: nowrap;
 }
 
 .timeline-handle {
@@ -1413,16 +1412,13 @@ function formatDisplayDate(date) {
   color: #fff;
   font-size: 13px;
   font-weight: 700;
-  white-space: nowrap;
-  min-width: 60px;
-  text-align: center;
 }
 
-.timeline-legend-top {
+.timeline-legend {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
-  flex-shrink: 0;
+  margin-top: 12px;
 }
 
 .legend-item {
@@ -1431,7 +1427,7 @@ function formatDisplayDate(date) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
+  height: 40px;
   border-radius: 20px;
   border: 1px solid #e5e7f3;
   background: #ffffff;
@@ -1482,27 +1478,25 @@ function formatDisplayDate(date) {
 .insight-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-height: 0;
-  overflow: hidden;
 }
 
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 10px;
 }
 
 .metric-card {
   background: #fff;
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 16px 18px;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 90px;
+  gap: 8px;
+  min-height: 100px;
 }
 
 .metric-label {
@@ -1530,12 +1524,11 @@ function formatDisplayDate(date) {
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
-  flex-shrink: 0;
 }
 
 .list-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   color: #111827;
 }
 
@@ -1548,27 +1541,24 @@ function formatDisplayDate(date) {
 .location-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex: 0 0 auto;
-  max-height: 396px;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 6px;
-  padding-bottom: 4px;
 }
 
 .location-card {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 14px;
+  gap: 16px;
   background: #fff;
-  border-radius: 14px;
-  padding: 20px 22px;
+  border-radius: 16px;
+  padding: 18px 20px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
   border: 1px solid transparent;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  flex-shrink: 0;
-  min-height: 120px;
 }
 
 .location-card:hover {
@@ -1641,7 +1631,7 @@ function formatDisplayDate(date) {
 }
 
 .more-container {
-  margin-top: 12px;
+  margin-top: 16px;
   display: flex;
   justify-content: center;
 }

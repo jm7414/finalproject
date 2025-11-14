@@ -42,9 +42,10 @@ export function useBottomSheet(options = {}) {
     return (0.6 * t).toFixed(2)
   })
 
-  // 현위치 버튼의 bottom 위치 계산 (바텀시트 기본 높이 이하로 내려가면 따라감)
+  // 현위치 버튼의 bottom 위치 계산 (기본 위치에서 아래로 내릴 때만 반응형으로 내려감)
   const locationBtnBottom = computed(() => {
     const btnOffset = 20 // 바텀시트 위로 20px 여백
+    // 기본 위치(collapsedH) 이하로 내릴 때만 반응형, 위로 올라갈 때는 기본 위치에 고정
     return Math.min(sheetHeight.value, collapsedH.value) + btnOffset
   })
 

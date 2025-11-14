@@ -1087,7 +1087,13 @@ function reportMissing() {
 /* ===== Bottom Sheet ===== */
 .bs-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  max-width: 375px;
   background: #000;
   transition: opacity .15s ease;
   z-index: 998;
@@ -1095,11 +1101,11 @@ function reportMissing() {
 
 .bs-sheet {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 0;
   width: 100%;
-  max-width: 100%;
+  max-width: 375px;
   background: #EEF3F8;
   border: 0;
   z-index: 999;
