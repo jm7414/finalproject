@@ -57,6 +57,14 @@ import DesktopCommunityEvent from '@/components/desktop/DesktopCommunityEvent.vu
 import DesktopCommunityMissing from '@/components/desktop/DesktopCommunityMissing.vue'
 import DesktopCommunityPostWrite from '@/components/desktop/DesktopCommunityPostWrite.vue'
 import DesktopPredict from '@/views/desktop/DesktopPredict.vue'
+import DesktopMypage from '@/views/desktop/DesktopMypage.vue'
+import DesktopMypageModify from '@/views/desktop/DesktopMypageModify.vue'
+import DesktopMypageBilling from '@/views/desktop/DesktopMypageBilling.vue'
+import DesktopMypagePlusplan from '@/views/desktop/DesktopMypagePlusplan.vue'
+import DesktopMypageConnect from '@/views/desktop/DesktopMypageConnect.vue'
+import DesktopMypageAdmin from '@/views/desktop/DesktopMypageAdmin.vue'
+import DesktopMypageSafezone from '@/views/desktop/DesktopMypageSafezone.vue'
+import DesktopMypageSafezoneRadius from '@/views/desktop/DesktopMypageSafezoneRadius.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -114,6 +122,54 @@ const router = createRouter({
       path: '/desktop/predict',
       name: 'desktop-predict',
       component: DesktopPredict,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage',
+      name: 'desktop-mypage',
+      component: DesktopMypage,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/modify',
+      name: 'desktop-mypage-modify',
+      component: DesktopMypageModify,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/connect',
+      name: 'desktop-mypage-connect',
+      component: DesktopMypageConnect,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/admin',
+      name: 'desktop-mypage-admin',
+      component: DesktopMypageAdmin,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/safezone',
+      name: 'desktop-mypage-safezone',
+      component: DesktopMypageSafezone,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/safezone/radius',
+      name: 'desktop-mypage-safezone-radius',
+      component: DesktopMypageSafezoneRadius,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/billing',
+      name: 'desktop-mypage-billing',
+      component: DesktopMypageBilling,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/mypage/plusplan',
+      name: 'desktop-mypage-plusplan',
+      component: DesktopMypagePlusplan,
       meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
     },
     {

@@ -43,7 +43,7 @@
 
         <div class="sidebar-footer">
           <p class="support-text">궁금한 점이 있으신가요?</p>
-          <button type="button" class="support-btn">고객센터 연결</button>
+          <button type="button" class="support-btn" @click="showSupportModal = true">고객센터 연결</button>
         </div>
       </aside>
 
@@ -51,6 +51,36 @@
         <slot />
       </main>
     </div>
+
+    <!-- 고객센터 정보 모달 -->
+    <Teleport to="body">
+      <div v-if="showSupportModal" class="modal-overlay" @click.self="showSupportModal = false">
+        <div class="support-modal" @click.stop>
+          <div class="modal-header">
+            <h2 class="modal-title">고객센터 연결</h2>
+            <button class="close-btn" @click="showSupportModal = false">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="support-info">
+              <div class="support-name">이재빈</div>
+              <div class="support-phone">
+                <i class="bi bi-telephone-fill"></i>
+                <a href="tel:010-8602-2556">010-8602-2556</a>
+              </div>
+            </div>
+            <div class="support-actions">
+              <button class="btn-call" @click="callSupport">
+                <i class="bi bi-telephone-fill"></i>
+                전화 걸기
+              </button>
+              <button class="btn-close-modal" @click="showSupportModal = false">닫기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -63,6 +93,7 @@ const route = useRoute()
 const router = useRouter()
 const isProcessing = ref(false)
 const guardianName = ref('보호자')
+const showSupportModal = ref(false)
 
 const menuItems = [
   { name: '안심존', route: '/desktop/main' },
@@ -70,11 +101,15 @@ const menuItems = [
   { name: 'AI보고서', route: null },
   { name: '일정', route: '/desktop/schedule' },
   { name: '커뮤니티', route: '/desktop/communityView' },
-  { name: '마이페이지', route: null }
+  { name: '마이페이지', route: '/desktop/mypage' }
 ]
 
 const activeMenu = computed(() => {
   const currentPath = route.path
+  // 마이페이지는 서브 경로도 포함하여 활성화
+  if (currentPath.startsWith('/desktop/mypage')) {
+    return '/desktop/mypage'
+  }
   const matched = menuItems.find(item => item.route && currentPath.startsWith(item.route))
   return matched?.route ?? ''
 })
@@ -104,6 +139,10 @@ async function handleLogout() {
   } finally {
     isProcessing.value = false
   }
+}
+
+function callSupport() {
+  window.location.href = 'tel:010-8602-2556'
 }
 
 onMounted(async () => {
@@ -330,6 +369,143 @@ onMounted(async () => {
   .sidebar {
     width: 260px;
   }
+}
+
+/* 고객센터 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 24px;
+}
+
+.support-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #171717;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 20px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #171717;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.support-info {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.support-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #171717;
+  margin-bottom: 12px;
+}
+
+.support-phone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 18px;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.support-phone i {
+  font-size: 20px;
+}
+
+.support-phone a {
+  color: #6366f1;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.support-phone a:hover {
+  color: #4f46e5;
+}
+
+.support-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-call,
+.btn-close-modal {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-call {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.btn-call:hover {
+  background: #4f46e5;
+}
+
+.btn-close-modal {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.btn-close-modal:hover {
+  background: #e5e7eb;
+  color: #171717;
 }
 </style>
 
