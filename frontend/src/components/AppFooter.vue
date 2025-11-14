@@ -58,7 +58,7 @@ function navigate(item) {
   left: 0;
   right: 0;
   height: 70px;
-  z-index: 1000;
+  z-index: 1002;
 }
 .nav-container {
   display: flex;

@@ -182,7 +182,6 @@ const showMobileHeader = computed(() => {
 const showMobileFooter = computed(() => {
   if (isDesktopLayout.value) return false
   return !(isDPMainPage.value ||
-    isMapMainPage.value ||
     isLoginPage.value ||
     isSignUpPage.value ||
     isDpMypage.value ||

@@ -1,77 +1,79 @@
 <!-- src/views/GD_main.vue -->
 <template>
-  <!-- 지도 컨테이너 -->
-  <div class="cg-wrap position-relative bg-white" style="margin-top: 0;">
-    <!-- 지도 -->
-    <div ref="mapEl" class="w-100" style="height:100%;"></div>
+  <div class="map-main-wrapper">
+    <!-- 지도 컨테이너 -->
+    <div class="cg-wrap position-relative bg-white" style="margin-top: 0;">
+      <!-- 지도 -->
+      <div ref="mapEl" class="w-100" style="height:100%;"></div>
 
-    <!-- 하단 흰 영역 채우기(디자인 유지) -->
-    <div class="position-absolute start-0 end-0 bg-white" style="height:176px; bottom:0;"></div>
+      <!-- 하단 흰 영역 채우기(디자인 유지) -->
+      <div class="position-absolute start-0 end-0 bg-white" style="height:176px; bottom:0;"></div>
 
-    <!-- (에러 표시) -->
-    <div v-if="err" class="position-absolute top-0 start-0 w-100 text-center p-2"
-      style="background:rgba(255,255,255,.92);">
-      {{ err }}
+      <!-- (에러 표시) -->
+      <div v-if="err" class="position-absolute top-0 start-0 w-100 text-center p-2"
+        style="background:rgba(255,255,255,.92);">
+        {{ err }}
+      </div>
+
+      <!-- 지도 컨트롤 -->
+      <MapControls 
+        :is-patient-connected="isPatientConnected"
+        :is-safe-zone-enabled="isSafeZoneEnabled"
+        :is-safe-zone-control-expanded="isSafeZoneControlExpanded"
+        :current-active-zone="currentActiveZone"
+        :selected-level="selectedLevel"
+        :buffer-levels="bufferLevels"
+        :location-btn-bottom="locationBtnBottom"
+        @toggle-safe-zone="toggleSafeZone"
+        @toggle-safe-zone-control="toggleSafeZoneControl"
+        @select-level="selectLevel"
+        @zoom-in="zoomIn"
+        @zoom-out="zoomOut"
+        @move-to-patient-location="moveToPatientLocation"
+      />
     </div>
 
-    <!-- 지도 컨트롤 -->
-    <MapControls 
-      :is-patient-connected="isPatientConnected"
-      :is-safe-zone-enabled="isSafeZoneEnabled"
-      :is-safe-zone-control-expanded="isSafeZoneControlExpanded"
-      :current-active-zone="currentActiveZone"
-      :selected-level="selectedLevel"
-      :buffer-levels="bufferLevels"
-      :location-btn-bottom="locationBtnBottom"
-      @toggle-safe-zone="toggleSafeZone"
-      @toggle-safe-zone-control="toggleSafeZoneControl"
-      @select-level="selectLevel"
-      @zoom-in="zoomIn"
-      @zoom-out="zoomOut"
-      @move-to-patient-location="moveToPatientLocation"
-    />
-  </div>
+    <!-- ================== Bottom Sheet ================== -->
+    <div class="bs-backdrop"
+      :style="{ opacity: backdropOpacity, pointerEvents: sheetHeight > collapsedH + 1 ? 'auto' : 'none' }"
+      @click="toCollapsed"></div>
 
-  <!-- ================== Bottom Sheet ================== -->
-  <div class="bs-backdrop"
-    :style="{ opacity: backdropOpacity, pointerEvents: sheetHeight > collapsedH + 1 ? 'auto' : 'none' }"
-    @click="toCollapsed"></div>
+    <div ref="sheetEl" class="bs-sheet card rounded-top-4 shadow-lg" :style="sheetStyle" @pointerdown="onPointerDown">
+      <div class="d-flex justify-content-center pt-2 pb-1">
+        <div class="bs-handle"></div>
+      </div>
 
-  <div ref="sheetEl" class="bs-sheet card rounded-top-4 shadow-lg" :style="sheetStyle" @pointerdown="onPointerDown">
-    <div class="d-flex justify-content-center pt-2 pb-1">
-      <div class="bs-handle"></div>
+      <!-- 환자 정보 카드 -->
+      <PatientInfoCard 
+        :patient-info="patientInfo"
+        @go-to-my-page="goToMyPage"
+        @report-missing="reportMissing"
+        @go-to-connect="goToConnect"
+        @statusUpdated="fetchPatientInfo"
+      />
+
+      <!-- 안심존 상태 카드 -->
+      <SafeZoneStatusCard 
+        :safe-zone-status="safeZoneStatus"
+        :patient-steps="'1,057'"
+        ref="safeZoneStatusCardRef"
+      />
+
+      <!-- 🔽 접힘 기준 앵커 -->
+        <div ref="foldAnchor" style="height:0; margin:0; padding:0;"></div>
+
+      <!-- 일정 목록 -->
+      <ScheduleList 
+        :today-schedules="todaySchedules"
+        :format-time="formatTime"
+        :format-location="formatLocation"
+        :get-schedule-status="getScheduleStatus"
+        :get-schedule-card-style="getScheduleCardStyle"
+        :is-scrollable="sheetHeight >= openH() - 10"
+        @go-to-calendar="goToCalendar"
+        @select-schedule="selectSchedule"
+      />
     </div>
-
-    <!-- 환자 정보 카드 -->
-    <PatientInfoCard 
-      :patient-info="patientInfo"
-      @go-to-my-page="goToMyPage"
-      @report-missing="reportMissing"
-      @go-to-connect="goToConnect"
-      @statusUpdated="fetchPatientInfo"
-    />
-
-    <!-- 안심존 상태 카드 -->
-    <SafeZoneStatusCard 
-      :safe-zone-status="safeZoneStatus"
-      :patient-steps="'1,057'"
-      ref="safeZoneStatusCardRef"
-    />
-
-    <!-- 🔽 접힘 기준 앵커 -->
-      <div ref="foldAnchor" style="height:0; margin:0; padding:0;"></div>
-
-    <!-- 일정 목록 -->
-    <ScheduleList 
-      :today-schedules="todaySchedules"
-      :format-time="formatTime"
-      :format-location="formatLocation"
-      :get-schedule-status="getScheduleStatus"
-      :get-schedule-card-style="getScheduleCardStyle"
-      :is-scrollable="sheetHeight >= openH() - 10"
-      @go-to-calendar="goToCalendar"
-      @select-schedule="selectSchedule"
-    />
   </div>
 </template>
 
@@ -280,7 +282,10 @@ const {
   toCollapsed,
   init: initBottomSheet,
   cleanup: cleanupBottomSheet
-} = useBottomSheet({ foldNudge: props.foldNudge })
+} = useBottomSheet({ 
+  foldNudge: props.foldNudge,
+  minHeight: 90 // 푸터(70px) + 손잡이 여백(20px)
+})
 
 // 컴포넌트 참조
 const safeZoneStatusCardRef = ref(null)
@@ -1075,6 +1080,14 @@ function reportMissing() {
 </script>
 
 <style scoped>
+/* ===== MapMain 전체 Wrapper ===== */
+.map-main-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
 /* ===== 전체 프레임: 화면 가득 채우기 ===== */
 .cg-wrap {
   width: 100%;
@@ -1086,29 +1099,22 @@ function reportMissing() {
 
 /* ===== Bottom Sheet ===== */
 .bs-backdrop {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  right: auto;
-  bottom: 0;
-  width: 100%;
-  max-width: 375px;
+  position: absolute;
+  inset: 0;
   background: #000;
   transition: opacity .15s ease;
   z-index: 998;
 }
 
 .bs-sheet {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute;
+  left: 0;
+  right: 0;
   bottom: 0;
   width: 100%;
-  max-width: 375px;
   background: #EEF3F8;
   border: 0;
-  z-index: 999;
+  z-index: 1001;
   touch-action: none;
 }
 

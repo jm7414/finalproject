@@ -201,7 +201,7 @@ const emit = defineEmits([
 }
 
 .map-controls-location-group {
-  position: fixed;
+  position: absolute;
   right: 20px;
   z-index: 100;
   display: flex;
@@ -209,11 +209,6 @@ const emit = defineEmits([
   align-items: center;
   gap: 10px;
   transition: bottom 0.2s ease;
-}
-
-/* 모바일 레이아웃에서는 모바일 너비 내부에 위치 */
-body.mobile-mode .map-controls-location-group:not(.desktop) {
-  right: calc(50% - 167.5px);
 }
 
 .zoom-controls {
