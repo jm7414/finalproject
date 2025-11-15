@@ -148,8 +148,7 @@
                     </div>
                     <div class="basic-info-wrapper">
                         <div class="name-age-row">
-                            <h2 class="person-name">{{ personDetail.patientName || '정보 없음' }} ({{
-                                calculateAge(personDetail.patientBirthDate) }}세)</h2>
+                            <h2 class="person-name">{{ personDetail.patientName || '정보 없음' }} ({{ calculateAge(personDetail.patientBirthDate) }}세)</h2>
                         </div>
                         <p class="age-info">
                             <i class="bi bi-clock"></i>
@@ -160,6 +159,11 @@
                             실종일시: {{ formatSimpleDateTime(missingTimeDB) }}
                         </p>
                         <p class="missing-location" style="font-size: 12px;">
+                            <i class="bi bi-geo-alt"></i>
+                            실종장소: {{ missingAddress?.fullAddress || '주소 로딩 중...' }}
+                        </p>
+
+                        <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
                             실종장소: {{ missingAddress.fullAddress }}
                         </p>
@@ -174,8 +178,7 @@
                                 <i class="bi bi-person-badge"></i>
                                 <span class="badge-label">신체 특징</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures
-                                || '170cm 마른 체형' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures || '170cm 마른 체형' }}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -183,8 +186,7 @@
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'
-                                }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'}}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -192,8 +194,7 @@
                                 <i class="bi bi-exclamation-triangle"></i>
                                 <span class="badge-label">특이사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).specialNotes ||
-                                '지팡이를 짚고 다니심' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).specialNotes || '지팡이를 짚고 다니심' }}</span>
                         </div>
 
                         <div>
@@ -201,9 +202,7 @@
                                 <i class="bi bi-people"></i>
                                 <span class="badge-label">함께하는 이웃</span>
                             </div>
-                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount !=
-                                null) ?
-                                personDetail.searchTogetherCount : participantsCount }}명</span>
+                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount != null) ? personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
                                 <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
                                     @click="wherePeople">
@@ -276,8 +275,7 @@
                         </div>
                         <p class="location-distance">
                         <div>
-                            <i class="bi bi-geo-alt-fill"></i>
-                            실종지로부터 {{ loc.dist_m }}m · {{ getTimeRangeText(((loc.dist_m) / 20).toFixed(0)) }}
+                            <i class="bi bi-geo-alt-fill"></i>실종지로부터 {{ loc.dist_m }}m · {{ getTimeRangeText(((loc.dist_m) / 20).toFixed(0)) }}
                         </div>
                         </p>
                     </div>
@@ -422,7 +420,7 @@ async function fetchPredictionData() {
     const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
 
     if (patientUserNo.value && !notMyPatientNo) {
-       userNo = patientUserNo.value
+        userNo = patientUserNo.value
     } else {
         userNo = notMyPatientNo
     }
@@ -896,7 +894,7 @@ async function searchVWorldPOI(address) {
 
         const data = await response.json()
 
-        // VWorld Search API 응답 구조 확인
+        // VWorld Search API 응답 구조  
         if (data?.response?.result?.items && data.response.result.items.length > 0) {
             const firstItem = data.response.result.items[0]
 
@@ -1020,7 +1018,7 @@ async function requestAllRoutes() {
 
                 const data = await resp.json()
 
-                // ⭐ features 존재 여부 확인
+                // ⭐ features 존재 여부  
                 if (data && data.features && Array.isArray(data.features) && data.features.length > 0) {
                     zone.storage.value.push(data.features)
                     console.log(`✅ Zone ${zone.level}-${i + 1} 경로 저장 (${data.features.length}개 feature)`)
@@ -1342,37 +1340,37 @@ let centerMarker = null
 // 실종자 정보 조회
 // ========================================================================================
 
-async function fetchMissingPersonDetail() {
-    if (!missingPostId.value) {
-        console.warn('⚠️ missingPostId가 없어서 실종자 정보 조회를 건너뜁니다.')
-        personLoading.value = false
-        return
-    }
+// async function fetchMissingPersonDetail() {
+//     if (!missingPostId.value) {
+//         console.warn('⚠️ missingPostId가 없어서 실종자 정보 조회를 건너뜁니다.')
+//         personLoading.value = false
+//         return
+//     }
 
-    personLoading.value = true
-    personError.value = null
+//     personLoading.value = true
+//     personError.value = null
 
-    console.log(`실종 신고 ID로 상세 정보 조회: missingPostId=${missingPostId.value}`)
-    try {
-        const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
-            withCredentials: true
-        })
-        personDetail.value = response.data
+//     console.log(`실종 신고 ID로 상세 정보 조회: missingPostId=${missingPostId.value}`)
+//     try {
+//         const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
+//             withCredentials: true
+//         })
+//         personDetail.value = response.data
 
-        console.log('✅ 실종자 상세 정보:', personDetail.value)
+//         console.log('✅ 실종자 상세 정보:', personDetail.value)
 
-        if (response.data && response.data.reportedAt) {
-            missingTimeDB.value = new Date(response.data.reportedAt).getTime()
-            console.log('변환된 timestamp:', missingTimeDB.value)
-        }
+//         if (response.data && response.data.reportedAt) {
+//             missingTimeDB.value = new Date(response.data.reportedAt).getTime()
+//             console.log('변환된 timestamp:', missingTimeDB.value)
+//         }
 
-    } catch (err) {
-        console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err)
-        personError.value = "상세 정보를 불러올 수 없습니다."
-    } finally {
-        personLoading.value = false
-    }
-}
+//     } catch (err) {
+//         console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err)
+//         personError.value = "상세 정보를 불러올 수 없습니다."
+//     } finally {
+//         personLoading.value = false
+//     }
+// }
 
 // 참여자 조회
 async function fetchParticipants() {
@@ -1663,6 +1661,11 @@ const loadKakaoMap = (container) => {
             map = new window.kakao.maps.Map(container, options)
             console.log('지도 초기화 완료')
 
+            // 김병욱 - composable(useParticipantLocations.js)에 map 주입해야 함
+            if (setMap) {
+                setMap(map);
+            }
+
             if (missingLocation.value.lat && missingLocation.value.lon) {
                 centerMarker = new window.kakao.maps.Marker({
                     position: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
@@ -1846,12 +1849,26 @@ function selectLocation(loc, index) {
 
 // 제보 페이지 이동
 function goToReportPage() {
-    console.log('제보하기 페이지로 이동합니다...');
-    router.push({ name: 'ReportCreate' });
+    console.log('제보 목록 페이지로 이동합니다...'); // 1. 로그 메시지 수정
+
+    // 2. 현재 실종 ID (missingPostId)가 있는지  
+    if (!missingPostId.value) {
+        alert("현재 실종 건 ID를 찾을 수 없어 제보 목록으로 이동할 수 없습니다.");
+        return;
+    }
+
+    // 3. (디버깅용) 어떤 ID를 전달하는지 콘솔에 출력
+    console.log(`현재 실종 ID (${missingPostId.value})를 사용하여 제보 목록(SightingReport)으로 이동합니다.`);
+
+    // 4. 라우터 설정('/SightingReport/:id')에 맞게 'params'로 ID 전달
+    router.push({ 
+        name: 'SightingReportBoard',
+        // 라우터의 path가 ':id'이므로, params의 key도 'id'여야 합니다.
+        params: { id: missingPostId.value } 
+    });
 }
 
-const { startParticipantTracking, stopParticipantTracking } = useParticipantLocations({
-    map: map,
+const { startParticipantTracking, stopParticipantTracking, setMap } = useParticipantLocations({
     missingPostId: missingPostId
 });
 const isParticipantsLayerVisible = ref(false);
@@ -2540,7 +2557,7 @@ function setCenter(force = false) {
 .button-text {
     font-size: 15px;
     font-weight: 500;
-    color: #666666; 
+    color: #666666;
     transition: color 0.2s ease;
 }
 

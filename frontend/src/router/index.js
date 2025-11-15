@@ -120,10 +120,10 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
     },
     {
-      path: '/desktop/predict',
+      path: '/desktop/predict/:id?',
       name: 'desktop-predict',
       component: DesktopPredict,
-      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' } // '?''를 추가해서 id를 선택적으로 받음
     },
     {
       path: '/desktop/mypage',
