@@ -34,18 +34,6 @@
                 <!-- 지도 영역 (항상 렌더링) -->
                 <div class="map-section">
                     <div ref="mapContainer" class="simulation-map" style="background: #e5e5e5;"></div>
-
-                    <!-- 지도 위 오버레이 정보 (로딩/에러 아닐 때만 표시) -->
-                    <div class="map-overlay" v-show="!isLoading && !error">
-                        <div class="scenario-badge">
-                            <i class="bi bi-clock"></i>
-                            <span>{{ currentScenario }}</span>
-                        </div>
-                        <div class="agent-count-badge">
-                            <i class="bi bi-people"></i>
-                            <span>{{ agentsList.length }}명</span>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- 컨트롤 패널 (로딩/에러 아닐 때만 표시) -->
@@ -104,8 +92,6 @@
                         <div v-for="agent in agentsList" :key="agent.rank"
                             :class="['agent-item', { selected: selectedAgent === agent.rank }]"
                             @click="selectAgent(agent.rank)">
-
-
                             <div class="agent-card">
                                 <div class="agent-header">
                                     <div class="rank-badge" :style="{ backgroundColor: getColorByRank(agent.rank) }">
@@ -114,9 +100,6 @@
                                     <div class="title-section">
                                         <h3>{{ agent.address }}</h3>
                                         <p class="description">{{ agent.description }}</p>
-                                    </div>
-                                    <div class="probability-badge">
-                                        <span>확률 : {{ agent.probability.toFixed(1) }}%</span>
                                     </div>
                                 </div>
 
@@ -131,16 +114,34 @@
                                         </svg>
                                         <span class="distance-text">
                                             실종지로부터
-                                            <strong>{{ calculateDistance(props.missingLocation.lat,
-                                                props.missingLocation.lon, agent.final_lat, agent.final_lon)
-                                            }}m</strong>
+                                            <strong>{{
+                                                calculateDistance(props.missingLocation.lat, props.missingLocation.lon,
+                                                    agent.final_lat, agent.final_lon) }}m</strong>
                                         </span>
+                                        <div class="distance-text">
+                                            <span>확률 :
+                                                <strong>
+                                                    {{ agent.probability.toFixed(1) }}%
+                                                </strong>
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-
-
+                    <div class="stat-card-modern">
+                        <div class="stat-icon-modern" style="--stat-color: #667eea;">
+                            <i class="bi bi-geo-alt"></i>
+                        </div>
+                        <div class="stat-content-modern">
+                            <p class="stat-label-modern">분석 방법</p>
+                            <p class="stat-sublabel-modern-1">
+                                치매환자 행동 특성 기반으로 진행한
+                            </p>
+                            <p class="stat-sublabel-modern-1">100번의 시뮬레이션의 이동경로 및</p>
+                            <p class="stat-sublabel-modern-1">예측 위치를 나타냅니다.</p>
                         </div>
                     </div>
                 </div>
@@ -412,7 +413,7 @@ const loadSimulationData = async () => {
             // 각 시나리오별로 순회
             for (const [scenarioKey, scenarioData] of Object.entries(scenarios)) {
                 console.log(`\n📍 시나리오: ${scenarioKey}`)
-                
+
                 if (!scenarioData.frames || scenarioData.frames.length === 0) {
                     console.log(`⚠️ ${scenarioKey}에 프레임 없음`)
                     continue
@@ -429,12 +430,12 @@ const loadSimulationData = async () => {
                 // 각 에이전트의 주소를 순차적으로 조회
                 for (let i = 0; i < firstFrame.agents.length; i++) {
                     const agent = firstFrame.agents[i]
-                    
+
                     try {
                         console.log(`⏳ [${scenarioKey}] Agent ${agent.rank} 조회 중... (${i + 1}/${firstFrame.agents.length})`)
-                        
+
                         await fetchAgentAddress(agent)
-                        
+
                         console.log(`✅ [${scenarioKey}] Agent ${agent.rank}: ${agent.address}`)
                     } catch (e) {
                         console.error(`❌ [${scenarioKey}] Agent ${agent.rank} 조회 실패:`, e)
@@ -486,13 +487,10 @@ const loadSimulationData = async () => {
 }
 
 // VWorld를 통해 도로명주소 불러오는 것 추가
-// ⭐ 에이전트 주소 조회 함수 (비동기)
-const agentAddresses = ref({})  // rank를 key로 하는 주소 저장소
-
 // VWorld API 키
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 
-// ⭐ VWorld 공식 역지오코딩 API
+// ⭐ VWorld 역지오코딩 API
 async function fetchVWorldData(location) {
     try {
         console.log(`🗺️ VWorld 역지오코딩 API: ${location.lon}, ${location.lat}`)
@@ -533,7 +531,7 @@ async function fetchVWorldData(location) {
         if (data.response?.result?.length > 0) {
             const fullAddress = data.response.result[0].text
             console.log(`📍 전체 주소:`, fullAddress)
-            
+
             return { address: fullAddress }
         }
 
@@ -563,10 +561,6 @@ async function fetchAgentAddress(agent) {
         agent.address = '주소 조회 실패'
     }
 }
-
-
-
-
 
 // ⭐ 시나리오 변경 - 수정됨
 const changeScenario = async (scenario) => {
@@ -855,10 +849,66 @@ watch(() => props.isVisible, async (newVal) => {
 onUnmounted(() => {
     stopAnimation()
     clearMapElements()
+    currentScenario.value = null
 })
 </script>
 
 <style scoped>
+/* ========================================================================================
+   확률 말해주는 부분
+   ======================================================================================== */
+.stat-card-modern {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    width: 350px;
+    position: relative;
+    height: 150px;
+}
+
+.stat-icon-modern {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: var(--stat-color);
+    color: white;
+    font-size: 24px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-content-modern {
+    flex: 1;
+    position: relative;
+    top: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-label-modern {
+    font-size: 12px;
+    font-weight: 600;
+    color: #585858;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-sublabel-modern-1 {
+    font-size: 13px;
+    color: #3f3f3f;
+    margin: 4px 0 0 0;
+}
+
 /* ⭐ 모달 전체 스크롤 가능하도록 수정된 CSS */
 
 /* 1. 오버레이는 스크롤 없음 */
@@ -874,7 +924,8 @@ onUnmounted(() => {
     justify-content: center;
     z-index: 10000;
     animation: fadeIn 0.3s ease;
-    overflow: hidden; /* ⭐ 변경: auto → hidden */
+    overflow: hidden;
+    /* ⭐ 변경: auto → hidden */
 }
 
 @keyframes fadeIn {
@@ -893,12 +944,14 @@ onUnmounted(() => {
     border-radius: 20px;
     width: 355px;
     height: 780px;
-    max-height: 90vh; /* ⭐ 추가: 화면 높이의 90% 이하로 제한 */
+    max-height: 90vh;
+    /* ⭐ 추가: 화면 높이의 90% 이하로 제한 */
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
-    overflow: hidden; /* ⭐ 변경: auto → hidden (자식에서 스크롤 처리) */
+    overflow: hidden;
+    /* ⭐ 변경: auto → hidden (자식에서 스크롤 처리) */
     position: relative;
     cursor: default;
 }
@@ -922,25 +975,27 @@ onUnmounted(() => {
     align-items: center;
     padding: 15px 20px;
     border-bottom: 2px solid #f0f0f0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #667eea;
     color: white;
     border-radius: 20px 20px 0 0;
-    flex-shrink: 0; /* ⭐ 중요: 헤더 크기 고정 */
+    flex-shrink: 0;
+    /* ⭐ 중요: 헤더 크기 고정 */
     cursor: move;
     user-select: none;
 }
 
-.header-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
 
 .drag-indicator {
     margin-left: 8px;
     color: rgba(255, 255, 255, 0.6);
     font-size: 14px;
     letter-spacing: 2px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .header-content i {
@@ -966,11 +1021,6 @@ onUnmounted(() => {
     color: white;
     transition: all 0.3s;
     font-size: 14px;
-}
-
-.close-button:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
 }
 
 .loading-state,
@@ -1026,21 +1076,27 @@ onUnmounted(() => {
 
 /* 4. ⭐⭐⭐ 핵심: modal-content가 스크롤 가능한 영역 */
 .modal-content {
-    flex: 1; /* ⭐ 남은 공간 모두 차지 */
+    flex: 1;
+    /* ⭐ 남은 공간 모두 차지 */
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* ⭐⭐⭐ 변경: hidden → auto (세로 스크롤 활성화) */
+    overflow-y: auto;
+    /* ⭐⭐⭐ 변경: hidden → auto (세로 스크롤 활성화) */
     overflow-x: hidden;
-    min-height: 0; /* ⭐ Flexbox 스크롤을 위한 필수 속성 */
-        scrollbar-width: none;  /* Firefox */
-    -ms-overflow-style: none;  /* IE, Edge */
+    min-height: 0;
+    /* ⭐ Flexbox 스크롤을 위한 필수 속성 */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE, Edge */
 }
 
 /* 5. 지도 영역은 고정 높이 */
 .map-section {
     height: 280px;
     position: relative;
-    flex-shrink: 0; /* ⭐ 크기 고정 */
+    flex-shrink: 0;
+    /* ⭐ 크기 고정 */
 }
 
 .simulation-map {
@@ -1086,7 +1142,8 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 12px;
     border-top: 1px solid #e0e0e0;
-    flex-shrink: 0; /* ⭐ 크기 고정 */
+    flex-shrink: 0;
+    /* ⭐ 크기 고정 */
 }
 
 .scenario-selector label {
@@ -1218,7 +1275,8 @@ onUnmounted(() => {
 
 /* 7. ⭐ 에이전트 리스트는 flex로 늘어남 (스크롤 없음) */
 .agents-list-panel {
-    flex-shrink: 0; /* ⭐ 변경: 리스트가 스크롤이 아니라 그냥 길어짐 */
+    flex-shrink: 0;
+    /* ⭐ 변경: 리스트가 스크롤이 아니라 그냥 길어짐 */
     background: white;
     border-top: 1px solid #e0e0e0;
     display: flex;
@@ -1245,24 +1303,20 @@ onUnmounted(() => {
 
 /* 8. ⭐ agents-list는 그냥 쌓임 (스크롤 없음) */
 .agents-list {
-    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap:12px;
 }
 
 .agent-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px;
-    justify-content: center;
-    margin-bottom: 6px;
-    background: #f8f9fa;
-    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s;
 }
 
-.agent-item.selected {
-    background: #d9f4fd;
+.agent-item.selected .agent-card {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
 }
 
 .rank-badge {
@@ -1279,12 +1333,11 @@ onUnmounted(() => {
 }
 
 .agent-card {
-    background: #fff;
+    background: white;
+    border: 2px solid #f0f0f0;
     border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    border: 1px solid #f0f0f0;
+    padding: 14px;
+    transition: all 0.3s;
 }
 
 .agent-header {
@@ -1347,8 +1400,7 @@ onUnmounted(() => {
 }
 
 .agent-info {
-    margin-top: 12px;
-    padding-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid #f5f5f5;
 }
 

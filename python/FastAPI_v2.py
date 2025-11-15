@@ -545,8 +545,8 @@ class RealisticPatientAgent(GeoAgent):
         
         # ⭐ 수정: 더 현실적인 이동을 위해 방향 유지 비중 증가
         self.behavior_weights = {
-            'random_walk': 0.20,      # 랜덤 이동 감소
-            'direction_persist': 0.50, # 방향 유지 증가 (직진 선호)
+            'random_walk': 0.3,      # 랜덤 이동 감소
+            'direction_persist': 0.40, # 방향 유지 증가 (직진 선호)
             'backtrack': 0.05,         # 되돌아가기
             'stay_put': 0.25           # 멈춤
         }

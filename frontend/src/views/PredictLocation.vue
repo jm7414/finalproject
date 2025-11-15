@@ -332,12 +332,8 @@
             </div>
         </div>
         <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
-        <AgentSimulationModal 
-        :isVisible="showAgentSimulation" 
-        :userNo="patientUserNo"
-        :missingLocation="missingLocation" 
-        :missingTime="missingTimeDB" 
-        @close="closeAgentSimulation" />
+        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="patientUserNo"
+            :missingLocation="missingLocation" :missingTime="missingTimeDB" @close="closeAgentSimulation" />
     </div>
 </template>
 
@@ -365,8 +361,27 @@ const searchStore = useSearchStore();
 // ★★★ 에이전트 시뮬레이션 모달 상태 추가 ★★★
 const showAgentSimulation = ref(false)
 
-// 모달 열기 함수
+// 모달 열기 함수 - 유효성 검사 추가
 const openAgentSimulation = () => {
+    // ⭐ 필수 값 유효성 검사
+    if (!patientUserNo.value) {
+        console.error('❌ patientUserNo가 없습니다:', patientUserNo.value)
+        alert('환자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+        return
+    }
+
+    if (!missingLocation.value.lat || !missingLocation.value.lon) {
+        console.error('❌ missingLocation이 없습니다:', missingLocation.value)
+        alert('실종 위치 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+        return
+    }
+
+    console.log('✅ 시뮬레이션 모달 열기:', {
+        patientUserNo: patientUserNo.value,
+        missingLocation: missingLocation.value,
+        missingTimeDB: missingTimeDB.value
+    })
+
     showAgentSimulation.value = true
 }
 
@@ -446,8 +461,10 @@ let total_cluster = ref(null)
 // API 호출 함수 - 예측 데이터 가져오기
 // ========================================================================================
 let userNo = ref('')
-
+let lessData = ref(false)
 async function fetchPredictionData() {
+
+    console.log(`fetchPredictionData 실행됨`)
 
     const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
 
@@ -467,6 +484,32 @@ async function fetchPredictionData() {
         });
 
         const gpsData = gpsResponse.data;
+
+        console.log(`fetchPrediction GPS DATA ::::: ${JSON.stringify(gpsData)}`);
+
+        // 일주일간 데이터 부족시 뒤로 돌아가기 만들음
+        if (gpsData.length < 3 * 20 * 24 * 7) {
+            const lastGPSData = gpsData[gpsData.length - 1];
+            console.log(`lastGPSData => ${JSON.stringify(lastGPSData)}`)
+            if (confirm(`환자의 위치데이터가 부족하여 시뮬레이션만 볼 수 있습니다. 페이지를 이동합니다.`)) {
+                router.push({
+                    path: '/simulation',
+                    query: {
+                        userNo: userNo,
+                        lat: lastGPSData.latitude,
+                        lon: lastGPSData.longitude,
+                        missingTime: missingTimeDB.value
+                    }
+                });
+            } else {
+                router.push(`/GD`)
+            }
+
+
+            return false;
+        } else if (gpsData.length < 3 * 20 * 24 * 28) {
+            lessData.value = true;
+        }
 
         // ⭐ 카멜케이스 → 스네이크케이스 변환 + 초 추가
         const gpsRecords = gpsData.map(record => {
@@ -526,7 +569,7 @@ async function fetchPredictionData() {
 
         total_cluster.value = data.total_clusters_found;
 
-        processDestinationsToZones(data);
+        await processDestinationsToZones(data);
 
         return true;
 
@@ -1574,7 +1617,7 @@ async function fetchPatientAndMissingReport() {
             missingTimeDB.value = new Date(response.data.reportedAt).getTime();
         }
 
-        fetchParticipants();
+        await fetchParticipants();
         return true;
 
     } catch (err) {
@@ -2263,27 +2306,27 @@ function updateMapForTime(minutes) {
     try {
         // ⭐ Circle 반경만 업데이트 (중심이나 줌은 변경하지 않음)
         if (minutes <= 30) {
-            const radius = (minutes / 30) * 600
+            const radius = (minutes / 30) * 500
             circles.value.circle700.setRadius(radius)
             circles.value.circle1500.setRadius(0)
             circles.value.circle2100.setRadius(0)
         }
         else if (minutes <= 60) {
-            circles.value.circle700.setRadius(600)
-            const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
+            circles.value.circle700.setRadius(500)
+            const radius = 500 + ((minutes - 30) / 30) * (1000 - 500)
             circles.value.circle1500.setRadius(radius)
             circles.value.circle2100.setRadius(0)
         }
         else if (minutes <= 90) {
-            circles.value.circle700.setRadius(600)
-            circles.value.circle1500.setRadius(1300)
-            const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
+            circles.value.circle700.setRadius(500)
+            circles.value.circle1500.setRadius(1000)
+            const radius = 1000 + ((minutes - 60) / 30) * (1500 - 1000)
             circles.value.circle2100.setRadius(radius)
         }
         else {
-            circles.value.circle700.setRadius(600)
-            circles.value.circle1500.setRadius(1300)
-            circles.value.circle2100.setRadius(2000)
+            circles.value.circle700.setRadius(500)
+            circles.value.circle1500.setRadius(1000)
+            circles.value.circle2100.setRadius(1500)
         }
 
         // ⭐ 지도 중심과 줌은 변경하지 않음!
@@ -2346,7 +2389,7 @@ function setCenter(force = false) {
 }
 
 .loading-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;

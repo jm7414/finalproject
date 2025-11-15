@@ -9,6 +9,7 @@ import Login from '@/views/Login.vue'
 import MissingReport from '@/components/MissingReport.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
+import Simulation from '@/views/NoDataSimulation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
 import SightingReportBoard from '@/views/SightingReportBoard.vue'
@@ -147,6 +148,12 @@ const router = createRouter({
       path: '/predict-location/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'predict-location',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: PredictLocation,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
+    {
+      path: '/simulation',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
+      name: 'simulation',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
+      component: Simulation,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
