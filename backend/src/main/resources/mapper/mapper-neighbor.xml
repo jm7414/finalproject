@@ -155,25 +155,27 @@
         LIMIT 1
     </select>
 
-    <!-- 광장 멤버들의 최근 위치 조회 (5분 이내) -->
+    <!-- 광장 멤버의 최근 위치 조회 (5분 이내) -->
     <select id="getPlazaMembersRecentLocation" parameterType="int" resultType="lx.project.dementia_care.dto.ActiveMemberDTO">
         SELECT 
-            u.user_no AS userNo,
+            p.user_no AS userNo,
             u.name AS name,
             u.profile_photo AS profilePhoto,
             ul.latitude AS latitude,
-            ul.longitude AS longitude
+            ul.longitude AS longitude,
+            ul.record_time AS recordTime
         FROM plaza p
-        JOIN users u ON p.user_no = u.user_no
+        INNER JOIN users u ON p.user_no = u.user_no
         LEFT JOIN LATERAL (
-            SELECT user_no, latitude, longitude, record_time
+            SELECT latitude, longitude, record_time
             FROM user_location
             WHERE user_no = p.user_no
+            AND record_time >= NOW() - INTERVAL '5 minutes'
             ORDER BY record_time DESC
             LIMIT 1
-        ) ul ON ul.user_no = p.user_no
+        ) ul ON TRUE
         WHERE p.plaza_no = #{plazaNo}
-          AND ul.record_time >= NOW() - INTERVAL '5 minutes'
+        AND ul.latitude IS NOT NULL
     </select>
 
     <!-- ==================== Safe Zone (광장 버퍼) ==================== -->
@@ -193,7 +195,7 @@
             user_no AS userNo
         FROM safe_zone
         WHERE zone_type = '만남의 광장'
-          AND boundary_coordinates::text LIKE '%"plazaNo":' || #{plazaNo} || '%'
+          AND boundary_coordinates::jsonb @> jsonb_build_object('plazaNo', #{plazaNo}::int)
         LIMIT 1
     </select>
 
@@ -204,34 +206,124 @@
           AND boundary_coordinates::text LIKE '%"plazaNo":' || #{plazaNo} || '%'
     </delete>
 
-<!-- ==================== 내 광장 조회 ==================== -->
+    <!-- ==================== 내 광장 조회 (1개만) ==================== -->
 
-<!-- 내가 방장인 광장 조회 -->
-<select id="getMyOwnedPlaza" parameterType="int" resultType="lx.project.dementia_care.vo.PlazaVO">
-    SELECT 
-        plaza_member_no AS plazaMemberNo,
-        plaza_no AS plazaNo,
-        plaza_name AS plazaName,
-        member_name AS memberName,
-        user_no AS userNo
-    FROM plaza
-    WHERE user_no = #{userNo}
-      AND member_name = '방장'
-    LIMIT 1
-</select>
+    <!-- 내가 속한 광장 조회 (1개) -->
+    <select id="getMyPlaza" parameterType="int" resultType="lx.project.dementia_care.dto.MyPlazaDTO">
+        SELECT 
+            p.plaza_no AS plazaNo,
+            p.plaza_name AS plazaName,
+            p.member_name AS memberName,
+            COUNT(DISTINCT p2.user_no) AS memberCount,
+            (p.member_name = '방장') AS isOwner,
+            0 AS activeMemberCount
+        FROM plaza p
+        LEFT JOIN plaza p2 ON p.plaza_no = p2.plaza_no
+        WHERE p.user_no = #{userNo}
+        GROUP BY p.plaza_no, p.plaza_name, p.member_name
+        LIMIT 1
+    </select>
 
-<!-- 내가 이웃으로 참여 중인 광장 목록 조회 -->
-<select id="getMyJoinedPlazas" parameterType="int" resultType="lx.project.dementia_care.vo.PlazaVO">
-    SELECT 
-        plaza_member_no AS plazaMemberNo,
-        plaza_no AS plazaNo,
-        plaza_name AS plazaName,
-        member_name AS memberName,
-        user_no AS userNo
-    FROM plaza
-    WHERE user_no = #{userNo}
-      AND member_name = '이웃'
-    ORDER BY created_at DESC
-</select>
+    <!-- 사용자가 속한 광장 개수 조회 -->
+    <select id="countUserPlazas" parameterType="int" resultType="int">
+        SELECT COUNT(DISTINCT plaza_no)
+        FROM plaza
+        WHERE user_no = #{userNo}
+    </select>
+
+    <!-- ==================== 공지 기능으로 인한 추가 ==================== -->
+
+    <!-- 광장 공지 목록 조회 -->
+    <select id="getPlazaNotices" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaNoticeDTO">
+        SELECT 
+            p.post_id AS postId,
+            p.title AS title,
+            p.content AS content,
+            p.user_no AS authorUserNo,
+            u.name AS authorName,
+            p.created_at AS createdAt,
+            p.view_count AS viewCount
+        FROM post p
+        JOIN users u ON p.user_no = u.user_no
+        WHERE p.plaza_no = #{plazaNo}
+          AND p.notice_type = '공지'
+        ORDER BY p.created_at DESC
+    </select>
+
+    <!-- 광장 공지 작성 -->
+    <insert id="insertPlazaNotice" parameterType="map">
+        INSERT INTO post (title, content, user_no, plaza_no, notice_type)
+        VALUES (#{title}, #{content}, #{userNo}, #{plazaNo}, '공지')
+    </insert>
+
+    <!-- 공지 수정 -->
+    <update id="updatePlazaNotice" parameterType="map">
+        UPDATE post
+        SET title = #{title}, content = #{content}
+        WHERE post_id = #{noticeNo}
+        AND plaza_no = #{plazaNo}
+        AND notice_type = '공지'
+    </update>
+
+    <!-- 공지 삭제 -->
+    <delete id="deletePlazaNotice" parameterType="int">
+        DELETE FROM post 
+        WHERE post_id = #{noticeNo}
+        AND notice_type = '공지'
+    </delete>
+
+    <!-- 공지 상세 조회 -->
+    <select id="getPlazaNoticeById" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaNoticeDTO">
+        SELECT post_id AS noticeNo, title, content, user_no AS authorUserNo, created_at AS createdAt, view_count AS viewCount
+        FROM post
+        WHERE post_id = #{noticeNo}
+        AND notice_type = '공지'
+    </select>
+
+    <!-- ==================== 일정 기능으로 인한 추가 ==================== -->
+
+    <!-- 광장 일정 목록 조회 -->
+    <select id="getPlazaSchedules" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaScheduleDTO">
+        SELECT 
+            ns.schedule_no AS scheduleNo,
+            ns.schedule_title AS scheduleTitle,
+            ns.content AS content,
+            ns.schedule_date AS scheduleDate,
+            ns.user_no AS userNo,
+            u.name AS authorName,
+            ns.plaza_no AS plazaNo
+        FROM neighbor_schedule ns
+        JOIN users u ON ns.user_no = u.user_no
+        WHERE ns.plaza_no = #{plazaNo}
+        ORDER BY ns.schedule_date DESC
+    </select>
+
+    <!-- 광장 일정 작성 -->
+    <insert id="insertPlazaSchedule" parameterType="map">
+        INSERT INTO neighbor_schedule (schedule_title, content, schedule_date, user_no, plaza_no)
+        VALUES (#{scheduleTitle}, #{content}, #{scheduleDate}, #{userNo}, #{plazaNo})
+    </insert>
+
+    <!-- 일정 번호로 일정 조회 -->
+    <select id="getPlazaScheduleByNo" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaScheduleDTO">
+        SELECT 
+            ns.schedule_no AS scheduleNo,
+            ns.schedule_title AS scheduleTitle,
+            ns.content AS content,
+            ns.schedule_date AS scheduleDate,
+            ns.user_no AS userNo,
+            u.name AS authorName,
+            ns.plaza_no AS plazaNo
+        FROM neighbor_schedule ns
+        JOIN users u ON ns.user_no = u.user_no
+        WHERE ns.schedule_no = #{scheduleNo}
+    </select>
+
+    <!-- 광장 일정 삭제 -->
+    <delete id="deletePlazaSchedule" parameterType="int">
+        DELETE FROM neighbor_schedule
+        WHERE schedule_no = #{scheduleNo}
+    </delete>
 
 </mapper>
+

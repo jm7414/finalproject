@@ -265,6 +265,7 @@ function ensureKakaoPlaces() {
 }
 
 function searchLocation() {
+  console.log(`입력된 값 : ${locationQuery.value}`)
   if (!locationQuery.value || !placesService) return
 
   placesService.keywordSearch(locationQuery.value, (data, status) => {
@@ -312,7 +313,7 @@ function onLocationSelected() {
   hasExistingLocation.value = true
 }
 
-// ✅ 광장 만들기 (50m 고정)
+// 수정: 광장 만들기 (50m 고정 + 에러 메시지 표시)
 async function createPlaza() {
   if (!selectedLocation.value) {
     alert('위치를 선택해주세요.')
@@ -333,7 +334,7 @@ async function createPlaza() {
       plazaName: plazaName.value.trim(),
       centerLat: parseFloat(selectedLocation.value.y),
       centerLng: parseFloat(selectedLocation.value.x),
-      radiusMeters: 50  // ✅ 고정 50m
+      radiusMeters: 50  // 고정 50m
     })
 
     alert('광장이 성공적으로 만들어졌습니다! 🎉')
@@ -343,9 +344,18 @@ async function createPlaza() {
     
     // 광장 상세 페이지로 이동
     router.push(`/plazaDetail/${response.data.plazaNo}`)
+    
   } catch (error) {
     console.error('광장 생성 실패:', error)
-    alert(error.response?.data?.message || '광장 생성에 실패했습니다.')
+    
+    // 수정: 백엔드 에러 메시지 표시
+    if (error.response?.data?.message) {
+      alert(error.response.data.message)
+    } else if (error.response?.status === 400) {
+      alert('이미 광장에 속해 있습니다. 광장은 1개만 소속 가능합니다.')
+    } else {
+      alert('광장 생성에 실패했습니다.')
+    }
   } finally {
     isCreating.value = false
   }
@@ -358,6 +368,7 @@ function goBack() {
 </script>
 
 <style scoped>
+/* 기존 스타일 동일 (변경 없음) */
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
 * {
@@ -375,7 +386,6 @@ function goBack() {
   overflow-y: auto;
 }
 
-/* 설명 카드 */
 .description-card {
   margin: 20px;
   padding: 16px;
@@ -393,7 +403,6 @@ function goBack() {
   margin: 0;
 }
 
-/* 카드 */
 .card {
   margin: 20px;
   padding: 20px;
@@ -429,7 +438,6 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(167, 204, 16, 0.1);
 }
 
-/* 방법 선택 섹션 */
 .method-selection {
   margin: 20px;
   position: relative;
@@ -538,7 +546,6 @@ input:focus {
   cursor: not-allowed;
 }
 
-/* 섹션 타이틀 */
 .section-title {
   font-size: 16px;
   font-weight: 700;
@@ -546,7 +553,6 @@ input:focus {
   margin: 0 20px 12px 20px;
 }
 
-/* 검색 결과 */
 .results {
   list-style: none;
   padding: 0;
@@ -607,7 +613,6 @@ input:focus {
   background: #8fb80e;
 }
 
-/* 위치 미리보기 */
 .location-preview {
   margin: 20px;
   padding: 16px;
@@ -618,7 +623,6 @@ input:focus {
   z-index: 2;
 }
 
-/* 기본 위치가 없는 경우 */
 .no-location-card {
   margin: 20px;
   padding: 16px;
@@ -725,7 +729,6 @@ input:focus {
   color: #6b7280;
 }
 
-/* 액션 버튼 */
 .actions {
   margin: 20px;
   padding: 16px 20px;

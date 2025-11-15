@@ -8,7 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import lx.project.dementia_care.dto.ActiveMemberDTO;
+import lx.project.dementia_care.dto.MyPlazaDTO;
 import lx.project.dementia_care.dto.PlazaMemberDTO;
+// 공지 기능으로 인한 추가
+import lx.project.dementia_care.dto.PlazaNoticeDTO;
+import lx.project.dementia_care.dto.PlazaScheduleDTO;
 import lx.project.dementia_care.vo.NeighborFriendVO;
 import lx.project.dementia_care.vo.PlazaVO;
 import lx.project.dementia_care.vo.SafeZoneVO;
@@ -181,20 +185,81 @@ public class NeighborDAO {
         sqlSession.delete(NAMESPACE + ".deleteSafeZoneByPlazaNo", plazaNo);
     }
 
-    // ==================== ✅ 추가: 내 광장 조회 ====================
+    // ==================== 내 광장 조회 (1개만) ====================
 
     /**
-     * 내가 방장인 광장 조회
+     * 내가 속한 광장 조회 (1개)
      */
-    public PlazaVO getMyOwnedPlaza(Integer userNo) {
-        return sqlSession.selectOne(NAMESPACE + ".getMyOwnedPlaza", userNo);
+    public MyPlazaDTO getMyPlaza(Integer userNo) {
+        return sqlSession.selectOne(NAMESPACE + ".getMyPlaza", userNo);
     }
 
     /**
-     * 내가 이웃으로 참여 중인 광장 목록 조회
+     * 사용자가 속한 광장 개수 조회
      */
-    public List<PlazaVO> getMyJoinedPlazas(Integer userNo) {
-        return sqlSession.selectList(NAMESPACE + ".getMyJoinedPlazas", userNo);
-
+    public Integer countUserPlazas(Integer userNo) {
+        return sqlSession.selectOne(NAMESPACE + ".countUserPlazas", userNo);
     }
+
+    // ==================== 공지 기능으로 인한 추가 ====================
+
+    /**
+     * 광장 공지 목록 조회
+     */
+    public List<PlazaNoticeDTO> getPlazaNotices(Integer plazaNo) {
+        return sqlSession.selectList(NAMESPACE + ".getPlazaNotices", plazaNo);
+    }
+
+    /**
+     * 광장 공지 작성
+     */
+    public void insertPlazaNotice(Map<String, Object> params) {
+        sqlSession.insert(NAMESPACE + ".insertPlazaNotice", params);
+    }
+
+    // 공지 수정
+    public void updatePlazaNotice(Map<String, Object> params) {
+        sqlSession.update(NAMESPACE + ".updatePlazaNotice", params);
+    }
+
+    // 공지 삭제
+    public void deletePlazaNotice(Integer noticeNo) {
+        sqlSession.delete(NAMESPACE + ".deletePlazaNotice", noticeNo);
+    }
+
+    // 공지 상세 조회
+    public PlazaNoticeDTO getPlazaNoticeById(Integer noticeNo) {
+        return sqlSession.selectOne(NAMESPACE + ".getPlazaNoticeById", noticeNo);
+    }
+
+    // ==================== 일정 기능으로 인한 추가 ====================
+
+    /**
+     * 광장 일정 목록 조회
+     */
+    public List<PlazaScheduleDTO> getPlazaSchedules(Integer plazaNo) {
+        return sqlSession.selectList(NAMESPACE + ".getPlazaSchedules", plazaNo);
+    }
+
+    /**
+     * 광장 일정 작성
+     */
+    public void insertPlazaSchedule(Map<String, Object> params) {
+        sqlSession.insert(NAMESPACE + ".insertPlazaSchedule", params);
+    }
+
+    /**
+     * 일정 번호로 일정 조회
+     */
+    public PlazaScheduleDTO getPlazaScheduleByNo(Integer scheduleNo) {
+        return sqlSession.selectOne(NAMESPACE + ".getPlazaScheduleByNo", scheduleNo);
+    }
+
+    /**
+     * 광장 일정 삭제
+     */
+    public void deletePlazaSchedule(Integer scheduleNo) {
+        sqlSession.delete(NAMESPACE + ".deletePlazaSchedule", scheduleNo);
+    }
+
 }

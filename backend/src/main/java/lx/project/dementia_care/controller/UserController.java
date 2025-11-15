@@ -36,7 +36,7 @@ public class UserController {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private MissingPersonService missingPersonService;    
+    private MissingPersonService missingPersonService;
 
     @GetMapping("/api/user/check-duplicate")
     public ResponseEntity<?> checkDuplicateId(@RequestParam String userId) {
@@ -156,7 +156,7 @@ public class UserController {
         }
     }
 
-    /* 내정보 수정 */
+    /* 내정보 수정 */ //(지현) 비밀번호 변경 필드 추가
     @PostMapping("/api/user/update")
     public ResponseEntity<?> updateCurrentUser(@RequestBody Map<String, Object> body) {
         try {
@@ -165,9 +165,7 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "로그인이 필요합니다."));
             }
-
             UserVO current = (UserVO) auth.getPrincipal();
-
             UserVO patch = new UserVO();
             patch.setUserNo(current.getUserNo());
 
@@ -183,14 +181,13 @@ public class UserController {
                                 .body(Map.of("message", "생년월일 형식이 올바르지 않습니다. (예: 1970-01-31)"));
                     }
                     try {
-                        LocalDate parsed = LocalDate.parse(bd); // "yyyy-MM-dd"
+                        LocalDate parsed = LocalDate.parse(bd);
                         patch.setBirthDate(parsed);
                     } catch (DateTimeParseException e) {
                         return ResponseEntity.badRequest()
                                 .body(Map.of("message", "생년월일 파싱에 실패했습니다. (예: 1970-01-31)"));
                     }
                 }
-                // 빈 문자열("")이면 패치하지 않음(필요 시 null로 초기화하는 로직을 별도로 추가)
             }
 
             if (body.get("phoneNumber") != null) {
@@ -200,6 +197,14 @@ public class UserController {
                 patch.setProfilePhoto((String) body.get("profilePhoto"));
             }
 
+            // 비밀번호 변경 처리 추가
+            if (body.get("password") != null) {
+                String rawPw = (String) body.get("password");
+                if (rawPw != null && !rawPw.isBlank()) {
+                    patch.setUserPw(passwordEncoder.encode(rawPw));
+                }
+            }
+
             int updated = userDAO.updateById(patch);
             if (updated <= 0) {
                 return ResponseEntity.badRequest()
@@ -207,9 +212,8 @@ public class UserController {
             }
 
             UserVO fresh = userDAO.findByUserNo(current.getUserNo());
-            // 세션의 Principal 갱신
             Authentication newAuth = new UsernamePasswordAuthenticationToken(
-                    fresh, // 최신 UserVO로 교체
+                    fresh,
                     auth.getCredentials(),
                     auth.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(newAuth);

@@ -195,11 +195,10 @@ let map = null
 let circle = null
 let markers = []
 let refreshInterval = null
+let locationInterval = null //추가
 
-// 활성 멤버 수
 const activeMemberCount = computed(() => activeMembers.value.length)
 
-// 초대 가능한 친구 (이미 멤버인 친구 제외)
 const invitableFriends = computed(() => {
   const memberUserNos = allMembers.value.map(m => m.userNo)
   return myFriends.value.filter(f => !memberUserNos.includes(f.userNo))
@@ -215,13 +214,73 @@ onMounted(async () => {
   refreshInterval = setInterval(() => {
     loadActiveMembers()
   }, 10000)
+  
+  // 실시간 위치 전송 시작
+  startLocationTracking()
 })
 
 onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval)
   }
+  
+  // 위치 전송 중지
+  stopLocationTracking()
 })
+
+// 실시간 위치 추적 시작
+function startLocationTracking() {
+  sendCurrentLocation()
+  locationInterval = setInterval(() => {
+    sendCurrentLocation()
+  }, 30000)
+}
+
+// 위치 추적 중지
+function stopLocationTracking() {
+  if (locationInterval) {
+    clearInterval(locationInterval)
+    locationInterval = null
+  }
+}
+
+// 현재 위치를 서버로 전송
+async function sendCurrentLocation() {
+  if (!navigator.geolocation) {
+    console.warn('이 브라우저는 위치 서비스를 지원하지 않습니다.')
+    return
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const latitude = position.coords.latitude
+      const longitude = position.coords.longitude
+      
+      console.log('현재 위치:', latitude, longitude)
+      
+      try {
+        await axios.post('/NH/api/neighbor/location/update', {
+          latitude: latitude,
+          longitude: longitude
+        })
+        console.log('위치 전송 성공')
+      } catch (error) {
+        console.error('위치 전송 실패:', error)
+      }
+    },
+    (error) => {
+      console.error('위치 조회 오류:', error.message)
+      if (error.code === error.PERMISSION_DENIED) {
+        console.warn('위치 권한이 거부되었습니다.')
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  )
+}
 
 // 카카오맵 초기화
 async function initMap() {
@@ -231,7 +290,7 @@ async function initMap() {
 
   const container = mapEl.value
   const options = {
-    center: new window.kakao.maps.LatLng(37.5665, 126.9780), // 임시 좌표
+    center: new window.kakao.maps.LatLng(37.5665, 126.9780),
     level: 3
   }
 
@@ -263,11 +322,9 @@ async function loadPlazaInfo() {
     const response = await axios.get(`/NH/api/neighbor/plazas/${plazaNo.value}`)
     plazaInfo.value = response.data
 
-    // 지도 중심 이동 및 버퍼 표시
     const center = new window.kakao.maps.LatLng(plazaInfo.value.centerLat, plazaInfo.value.centerLng)
     map.setCenter(center)
 
-    // 버퍼 원 그리기
     circle = new window.kakao.maps.Circle({
       center: center,
       radius: plazaInfo.value.radius,
@@ -293,10 +350,8 @@ async function loadAllMembers() {
     const response = await axios.get(`/NH/api/neighbor/plazas/${plazaNo.value}/members`)
     allMembers.value = response.data
 
-    // 방장 여부 확인 (현재 사용자가 방장인지)
     const myUser = allMembers.value.find(m => m.memberName === '방장')
     if (myUser) {
-      // 실제로는 로그인한 사용자 정보와 비교해야 함
       isOwner.value = true
     }
   } catch (error) {
@@ -306,18 +361,16 @@ async function loadAllMembers() {
   }
 }
 
-// 활성 멤버 조회 (버퍼 안에 있는 이웃)
+// 활성 멤버 조회
 async function loadActiveMembers() {
   loadingActive.value = true
   try {
     const response = await axios.get(`/NH/api/neighbor/plazas/${plazaNo.value}/active-members`)
     activeMembers.value = response.data
 
-    // 기존 마커 제거
     markers.forEach(marker => marker.setMap(null))
     markers = []
 
-    // 활성 멤버 마커 표시
     activeMembers.value.forEach(member => {
       const position = new window.kakao.maps.LatLng(member.latitude, member.longitude)
       
@@ -341,7 +394,7 @@ async function refreshActiveMembers() {
   await loadActiveMembers()
 }
 
-// ✅ 수정: 친구 초대 모달 열기 + 친구 목록 로드
+// 친구 초대 모달 열기
 async function openInviteModal() {
   showInviteModal.value = true
   loadingFriends.value = true
@@ -386,7 +439,7 @@ async function leavePlaza() {
       await axios.post(`/NH/api/neighbor/plazas/${plazaNo.value}/leave`)
       alert('광장에서 탈퇴했습니다.')
     }
-    router.push('/neighbor')
+    router.push('/myPlaza')
   } catch (error) {
     console.error('탈퇴 실패:', error)
     alert(error.response?.data?.message || '처리에 실패했습니다.')
@@ -397,6 +450,7 @@ function goBack() {
   router.back()
 }
 </script>
+
 
 <style scoped>
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');

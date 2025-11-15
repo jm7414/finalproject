@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.sql.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,8 +15,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lx.project.dementia_care.dao.NeighborDAO;
 import lx.project.dementia_care.dto.ActiveMemberDTO;
+import lx.project.dementia_care.dto.MyPlazaDTO;
 import lx.project.dementia_care.dto.PlazaInfoDTO;
 import lx.project.dementia_care.dto.PlazaMemberDTO;
+// 공지 기능으로 인한 추가
+import lx.project.dementia_care.dto.PlazaNoticeDTO;
+import lx.project.dementia_care.dto.PlazaScheduleDTO;
 import lx.project.dementia_care.vo.NeighborFriendVO;
 import lx.project.dementia_care.vo.PlazaVO;
 import lx.project.dementia_care.vo.SafeZoneVO;
@@ -93,6 +98,7 @@ public class NeighborService {
 
     /**
      * 광장 생성 (safe_zone과 함께)
+     * 수정: 1개 광장만 허용
      */
     @Transactional
     public Integer createPlazaWithSafeZone(
@@ -105,9 +111,9 @@ public class NeighborService {
         // 이웃 권한 확인 (role_no = 4)
         validateNeighborRole(ownerUserNo);
 
-        // 이미 방장인 광장이 있는지 확인
-        if (neighborDAO.hasOwnedPlaza(ownerUserNo)) {
-            throw new RuntimeException("이미 만든 광장이 있습니다. 한 계정당 하나의 광장만 생성할 수 있습니다.");
+        // 수정: 이미 광장에 속해있는지 확인 (1개만 허용)
+        if (isUserInAnyPlaza(ownerUserNo)) {
+            throw new IllegalStateException("이미 광장에 속해 있습니다. 광장은 1개만 소속 가능합니다.");
         }
 
         // 다음 plaza_no 가져오기
@@ -125,11 +131,11 @@ public class NeighborService {
         // 2. safe_zone 테이블에 버퍼 정보 저장 (Jackson 사용)
         try {
             Map<String, Object> boundary = new HashMap<>();
-            
+
             Map<String, Double> center = new HashMap<>();
             center.put("lat", centerLat);
             center.put("lng", centerLng);
-            
+
             boundary.put("center", center);
             boundary.put("radius", radiusMeters);
             boundary.put("plazaNo", plazaNo);
@@ -227,8 +233,7 @@ public class NeighborService {
                 double distance = calculateDistance(
                         centerLat, centerLng,
                         member.getLatitude().doubleValue(),
-                        member.getLongitude().doubleValue()
-                );
+                        member.getLongitude().doubleValue());
 
                 if (distance <= radius) {
                     member.setDistanceFromCenter(distance);
@@ -245,6 +250,7 @@ public class NeighborService {
 
     /**
      * 광장에 친구 초대
+     * 수정: 1개 광장만 허용 (초대할 친구도 확인)
      */
     @Transactional
     public void inviteToPlaza(Integer plazaNo, Integer ownerUserNo, Integer friendUserNo) {
@@ -256,6 +262,11 @@ public class NeighborService {
         // 친구 관계 확인
         if (!neighborDAO.isFriend(ownerUserNo, friendUserNo)) {
             throw new RuntimeException("친구만 초대할 수 있습니다.");
+        }
+
+        // 수정: 초대할 친구가 이미 광장에 속해있는지 확인
+        if (isUserInAnyPlaza(friendUserNo)) {
+            throw new IllegalStateException("이미 다른 광장에 속해 있어 초대할 수 없습니다.");
         }
 
         // 이미 멤버인지 확인
@@ -326,6 +337,127 @@ public class NeighborService {
         neighborDAO.insertUserLocation(location);
     }
 
+    // ==================== 내 광장 조회 ====================
+
+    /**
+     * 내가 속한 광장 조회 (1개)
+     */
+    public MyPlazaDTO getMyPlaza(Integer userNo) {
+        return neighborDAO.getMyPlaza(userNo);
+    }
+
+    /**
+     * 사용자가 광장에 속해있는지 확인
+     */
+    public boolean isUserInAnyPlaza(Integer userNo) {
+        Integer count = neighborDAO.countUserPlazas(userNo);
+        return count != null && count > 0;
+    }
+
+    // ==================== 공지 기능으로 인한 추가 ====================
+
+    /**
+     * 내 광장의 공지 목록 조회
+     */
+    public List<PlazaNoticeDTO> getMyPlazaNotices(Integer userNo) {
+        // 1. 내가 속한 광장 조회
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+
+        if (myPlaza == null) {
+            return new ArrayList<>();
+        }
+
+        // 2. 해당 광장의 공지 조회
+        return neighborDAO.getPlazaNotices(myPlaza.getPlazaNo());
+    }
+
+    /**
+     * 공지 작성 (방장만 가능)
+     */
+    @Transactional
+    public void createPlazaNotice(Integer userNo, String title, String content) {
+        // 1. 내가 속한 광장 조회
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+
+        if (myPlaza == null) {
+            throw new RuntimeException("속한 광장이 없습니다.");
+        }
+
+        // 2. 방장 권한 확인
+        if (!myPlaza.isOwner()) {
+            throw new IllegalStateException("방장만 공지를 작성할 수 있습니다.");
+        }
+
+        // 3. 공지 작성
+        Map<String, Object> params = new HashMap<>();
+        params.put("title", title);
+        params.put("content", content);
+        params.put("userNo", userNo);
+        params.put("plazaNo", myPlaza.getPlazaNo());
+
+        neighborDAO.insertPlazaNotice(params);
+    }
+
+    // ===== 공지 기능 =====
+
+    /**
+     * 공지 수정 (방장만 가능)
+     */
+    @Transactional
+    public void updatePlazaNotice(Integer noticeNo, Integer userNo, String title, String content) {
+        // 1. 내가 속한 광장 조회
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+        if (myPlaza == null) {
+            throw new RuntimeException("속한 광장이 없습니다.");
+        }
+
+        // 2. 방장 권한 확인
+        if (!myPlaza.isOwner()) {
+            throw new IllegalStateException("방장만 공지를 수정할 수 있습니다.");
+        }
+
+        // 3. 수정 파라미터 설정 및 DAO 호출
+        Map<String, Object> params = new HashMap<>();
+        params.put("noticeNo", noticeNo);
+        params.put("title", title);
+        params.put("content", content);
+        params.put("plazaNo", myPlaza.getPlazaNo());
+
+        neighborDAO.updatePlazaNotice(params);
+    }
+
+    /**
+     * 공지 삭제 (방장만 가능)
+     */
+    @Transactional
+    public void deletePlazaNotice(Integer noticeNo, Integer userNo) {
+        // 1. 내가 속한 광장 조회
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+        if (myPlaza == null) {
+            throw new RuntimeException("속한 광장이 없습니다.");
+        }
+
+        // 2. 방장 권한 확인
+        if (!myPlaza.isOwner()) {
+            throw new IllegalStateException("방장만 공지를 삭제할 수 있습니다.");
+        }
+
+        neighborDAO.deletePlazaNotice(noticeNo);
+    }
+
+    /**
+     * 내 광장에서의 역할 조회 (방장/이웃)
+     */
+    public String getMyPlazaRole(Integer userNo) {
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+
+        if (myPlaza == null) {
+            return null;
+        }
+
+        return myPlaza.getMemberName();
+    }
+
     // ==================== 유틸리티 메서드 ====================
 
     /**
@@ -339,6 +471,7 @@ public class NeighborService {
 
     /**
      * 두 좌표 사이의 거리 계산 (Haversine formula)
+     * 
      * @return 거리 (미터)
      */
     private double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
@@ -349,39 +482,77 @@ public class NeighborService {
 
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                        * Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return EARTH_RADIUS * c;
     }
-    // ==================== ✅ 추가: 내 광장 조회 ====================
 
-/**
- * 내가 방장인 광장 조회
- */
-public PlazaVO getMyOwnedPlaza(Integer userNo) {
-    return neighborDAO.getMyOwnedPlaza(userNo);
-}
+    // ==================== 일정 기능으로 인한 추가 ====================
 
-/**
- * 내가 이웃으로 참여 중인 광장 목록 조회
- */
-public List<Map<String, Object>> getMyJoinedPlazas(Integer userNo) {
-    List<PlazaVO> plazas = neighborDAO.getMyJoinedPlazas(userNo);
-    
-    List<Map<String, Object>> result = new ArrayList<>();
-    for (PlazaVO plaza : plazas) {
-        List<PlazaMemberDTO> members = neighborDAO.getPlazaMembers(plaza.getPlazaNo());
-        
-        Map<String, Object> plazaInfo = new HashMap<>();
-        plazaInfo.put("plazaNo", plaza.getPlazaNo());
-        plazaInfo.put("plazaName", plaza.getPlazaName());
-        plazaInfo.put("memberCount", members.size());
-        
-        result.add(plazaInfo);
+    /**
+     * 내 광장의 일정 목록 조회
+     */
+    public List<PlazaScheduleDTO> getMyPlazaSchedules(Integer userNo) {
+        // 1. 내가 속한 광장 조회
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+
+        if (myPlaza == null) {
+            return new ArrayList<>();
+        }
+
+        // 2. 해당 광장의 일정 조회
+        return neighborDAO.getPlazaSchedules(myPlaza.getPlazaNo());
     }
-    
-    return result;
-}
+
+    /**
+     * 일정 작성 (광장 멤버 모두 가능)
+     */
+    @Transactional
+    public void createPlazaSchedule(Integer userNo, String title, String content, String scheduleDate) {
+        // 1. 내가 속한 광장 조회
+        MyPlazaDTO myPlaza = getMyPlaza(userNo);
+
+        if (myPlaza == null) {
+            throw new RuntimeException("속한 광장이 없습니다.");
+        }
+
+        // 2. 광장 멤버인지 확인 (방장과 이웃 모두 가능)
+        if (!neighborDAO.isPlazaMember(myPlaza.getPlazaNo(), userNo)) {
+            throw new IllegalStateException("광장 멤버만 일정을 작성할 수 있습니다.");
+        }
+
+        // 3. 일정 작성
+        Map<String, Object> params = new HashMap<>();
+        params.put("scheduleTitle", title);
+        params.put("content", content);
+        params.put("scheduleDate", Date.valueOf(scheduleDate)); // String을 Date로 변환
+        params.put("userNo", userNo);
+        params.put("plazaNo", myPlaza.getPlazaNo());
+
+        neighborDAO.insertPlazaSchedule(params);
+    }
+
+    /**
+     * 일정 삭제 (작성자만 가능)
+     */
+    @Transactional
+    public void deletePlazaSchedule(Integer scheduleNo, Integer userNo) {
+        // 1. 일정 작성자 확인
+        PlazaScheduleDTO schedule = neighborDAO.getPlazaScheduleByNo(scheduleNo);
+
+        if (schedule == null) {
+            throw new RuntimeException("일정을 찾을 수 없습니다.");
+        }
+
+        // 2. 작성자 본인인지 확인
+        if (!schedule.getUserNo().equals(userNo)) {
+            throw new IllegalStateException("작성자만 일정을 삭제할 수 있습니다.");
+        }
+
+        // 3. 일정 삭제
+        neighborDAO.deletePlazaSchedule(scheduleNo);
+    }
+
 }
