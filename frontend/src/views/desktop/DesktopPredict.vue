@@ -38,6 +38,10 @@
           <span class="value">{{ formatDisplayDate(lastKnownLocation.time) }}</span>
         </div>
       </div>
+      <button class="report-board-btn" @click="openReportBoard">
+        <i class="bi bi-chat-square-text"></i>
+        제보 게시판 보기
+      </button>
     </div>
 
     <div v-if="loadError" class="error-banner">
@@ -222,7 +226,12 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
+import SightingReportBoard from '../SightingReportBoard.vue'
+
+const route = useRoute()
+const missingPostId = ref(null) // 게시판용 ID 변수
 
 const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
@@ -326,13 +335,52 @@ onMounted(async () => {
   isLoading.value = true
   loadError.value = ''
 
+  const idFromParam = route.params.id;
+  missingPostId.value = idFromParam;
+  
   try {
-    await ensureKakaoLoaded()
-    patientUserNo.value = await fetchMyPatient()
+    await ensureKakaoLoaded()
+    const idFromParam = route.params.id; // URL에서 ID (missingPostId)를 읽어옴
 
-    if (!patientUserNo.value) {
-      loadError.value = '연결된 환자를 찾을 수 없습니다. 환자 연결 정보를 확인해 주세요.'
-      return
+    if (idFromParam) {
+        // 게시판/모달에서 진입 (ID가 있음) 
+        console.log("URL 파라미터 ID 사용:", idFromParam);
+        missingPostId.value = idFromParam; 
+
+        try {
+            const response = await axios.get(`/api/missing-persons/${missingPostId.value}`);
+            if (!response.data || !response.data.patientUserNo) {
+                throw new Error("API 응답에 patientUserNo가 없습니다.");
+            }
+            patientUserNo.value = response.data.patientUserNo;
+            console.log(`실종 ID(${missingPostId.value})에 연결된 환자 ID(${patientUserNo.value})를 찾았습니다.`);
+
+        } catch (e) {
+            console.error("실종 ID로 환자 정보를 찾는 데 실패했습니다:", e);
+            loadError.value = "해당 실종 신고에 연결된 환자 정보를 찾을 수 없습니다.";
+            isLoading.value = false;
+            return;
+        }
+
+    } else {
+        // 홈에서 직접 진입 (ID가 없음) ---
+        console.log("URL 파라미터 없음, '내 환자' 정보 조회");
+        
+        // 예측용 '내 환자' ID 조회
+        patientUserNo.value = await fetchMyPatient();
+        if (!patientUserNo.value) {
+            loadError.value = "연결된 환자 정보가 없습니다.";
+            isLoading.value = false;
+            return;
+        }
+        
+        // 제보 게시판용 '내 환자'의 '최신 실종 ID' 조회
+        const latestInfo = await fetchLatestMissingInfo(patientUserNo.value);
+        missingPostId.value = latestInfo.missingPostId;
+
+        if (!missingPostId.value) {
+            console.warn("현재 활성화된 실종 신고가 없습니다 (제보 게시판 버튼이 작동하지 않을 수 있음).");
+        }
     }
 
     await fetchPredictionData()
@@ -1145,6 +1193,18 @@ function formatDisplayDate(date) {
 
   return `${year}.${month}.${day} ${hours}:${minutes}`
 }
+
+function openReportBoard() {
+  if (!missingPostId.value) {
+    alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
+    return;
+  }
+  isReportBoardVisible.value = true;
+}
+function closeReportBoard() {
+  isReportBoardVisible.value = false;
+}
+
 </script>
 
 <style scoped>

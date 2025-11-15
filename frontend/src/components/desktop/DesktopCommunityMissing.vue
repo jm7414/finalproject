@@ -109,7 +109,12 @@ async function navigateToPredictLocation(missingPostId) {
     } else {
       throw new Error(response.data.message || "함께 찾기에 실패했습니다.");
     }
-    router.push(`/predict-location/${missingPostId}`);
+    
+    router.push({ 
+      name: 'desktop-predict', 
+      params: { id: missingPostId }
+    });
+
     closeMissingDetailModal();
   } catch (err) {
     console.error("'함께 찾기' 처리 중 오류 발생:", err);

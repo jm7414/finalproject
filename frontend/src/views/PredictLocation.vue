@@ -894,7 +894,7 @@ async function searchVWorldPOI(address) {
 
         const data = await response.json()
 
-        // VWorld Search API 응답 구조 확인
+        // VWorld Search API 응답 구조  
         if (data?.response?.result?.items && data.response.result.items.length > 0) {
             const firstItem = data.response.result.items[0]
 
@@ -1018,7 +1018,7 @@ async function requestAllRoutes() {
 
                 const data = await resp.json()
 
-                // ⭐ features 존재 여부 확인
+                // ⭐ features 존재 여부  
                 if (data && data.features && Array.isArray(data.features) && data.features.length > 0) {
                     zone.storage.value.push(data.features)
                     console.log(`✅ Zone ${zone.level}-${i + 1} 경로 저장 (${data.features.length}개 feature)`)
@@ -1849,8 +1849,23 @@ function selectLocation(loc, index) {
 
 // 제보 페이지 이동
 function goToReportPage() {
-    console.log('제보하기 페이지로 이동합니다...');
-    router.push({ name: 'ReportCreate' });
+    console.log('제보 목록 페이지로 이동합니다...'); // 1. 로그 메시지 수정
+
+    // 2. 현재 실종 ID (missingPostId)가 있는지  
+    if (!missingPostId.value) {
+        alert("현재 실종 건 ID를 찾을 수 없어 제보 목록으로 이동할 수 없습니다.");
+        return;
+    }
+
+    // 3. (디버깅용) 어떤 ID를 전달하는지 콘솔에 출력
+    console.log(`현재 실종 ID (${missingPostId.value})를 사용하여 제보 목록(SightingReport)으로 이동합니다.`);
+
+    // 4. 라우터 설정('/SightingReport/:id')에 맞게 'params'로 ID 전달
+    router.push({ 
+        name: 'SightingReportBoard',
+        // 라우터의 path가 ':id'이므로, params의 key도 'id'여야 합니다.
+        params: { id: missingPostId.value } 
+    });
 }
 
 const { startParticipantTracking, stopParticipantTracking, setMap } = useParticipantLocations({

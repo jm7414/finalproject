@@ -97,6 +97,7 @@ const loading = ref(true);
 const error = ref(null);
 const isOptionsMenuVisible = ref(false);
 const currentUser = ref(null);
+const missingPostId = ref(route.params.id); 
 
 // 댓글 관련 변수 (기존 CommunityPost.vue와 동일)
 const comments = ref([]);
@@ -186,12 +187,20 @@ function editReport() {
 async function deleteReport() {
   if (confirm('정말로 이 제보를 삭제하시겠습니까?')) {
     try {
-      // API: DELETE /api/sighting-reports/{id}
       await axios.delete(`/api/sighting-reports/${reportId.value}`, {
         withCredentials: true
       });
       alert('제보가 삭제되었습니다.');
-      router.back(); // 목록 페이지로 돌아가기
+      const boardId = missingPostId.value?.missingPostId; 
+      if (boardId) {
+        router.push({ 
+          name: 'SightingReportBoard',
+          params: { id: missingPostId.value } 
+        });
+      } else {
+        console.error("삭제 후 목록 ID(missingPostId)를 찾지 못해 홈으로 이동합니다.");
+        router.push('/');
+      }
     } catch (err) {
       console.error('제보 삭제 중 오류 발생:', err);
       alert('제보 삭제에 실패했습니다.');
