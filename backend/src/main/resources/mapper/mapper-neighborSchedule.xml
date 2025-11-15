@@ -68,4 +68,19 @@
         LIMIT 2
     </select>
 
+    <select id="selectUpcomingPlazaSchedules" parameterType="String" resultType="lx.project.dementia_care.vo.NeighborScheduleVO">
+        SELECT 
+            ns.schedule_no as scheduleNo,
+            ns.schedule_title as scheduleTitle,
+            ns.schedule_date as scheduleDate,
+            ns.user_no as userNo
+        FROM neighbor_schedule ns
+        JOIN (
+            SELECT DISTINCT user_no FROM plaza WHERE plaza_name = #{plazaName}
+        ) p ON ns.user_no = p.user_no
+        WHERE ns.schedule_date >= CURRENT_DATE
+        ORDER BY ns.schedule_date ASC
+        LIMIT 2
+    </select>
+
 </mapper>

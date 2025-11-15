@@ -1,49 +1,54 @@
 <template>
   <div class="container-sm py-3 neighbor-page-container" style="max-width:414px; position:relative;">
-
     <!-- 상단 문구 -->
     <div class="my-3">
       <div class="d-flex align-items-center justify-content-between">
         <div class="text-start flex-grow-1">
           <div class="safety-status-text">
-            현재 만남의 광장에 3명이 있습니다
+            현재 만남의 광장에 {{ activeMemberCount }}명이 있습니다
           </div>
         </div>
-        <!-- 임시 로그아웃 버튼 -->
-        <button @click="handleLogout" class="btn btn-sm btn-outline-secondary" 
-          style="font-size: 0.75rem; padding: 4px 8px;">
-          <i class="bi bi-box-arrow-right"></i>
-        </button>
       </div>
     </div>
 
-    <!-- Kakao 지도 프리뷰 -->
+    <!-- 경로당 배경 이미지 + 활성 멤버 -->
     <div class="card border-0 shadow-sm position-relative overflow-hidden mb-4 rounded-4">
-      <div ref="mapEl" class="w-100" style="height:280px;"></div>
-      <!-- 항상 노출 -->
-      <button class="btn btn-light rounded-pill position-absolute start-50 translate-middle-x map-detail-btn"
-        style="bottom:12px; z-index:10; pointer-events:auto">
-        지도 자세히 보기
+      <div class="plaza-background" style="height:280px;">
+        <!-- 활성 멤버 프로필 표시 영역 -->
+        <div class="active-members-container">
+          <div
+            v-for="member in activeMembers"
+            :key="member.userNo"
+            class="member-avatar"
+            :style="member.position"
+          >
+            <img 
+              :src="member.profilePhoto || '/default-avatar.png'" 
+              :alt="member.name"
+              class="member-photo"
+            />
+            <span class="member-name">{{ member.name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 지도 아래 버튼 -->
+    <div class="d-flex justify-content-between mb-3 px-2">
+      <button @click="showEditProfileModal = true" class="btn btn-outline-success flex-fill me-2">
+        내 정보 수정
+      </button>
+      <button @click="handleLogout" class="btn btn-outline-danger flex-fill ms-2">
+        로그아웃
       </button>
     </div>
 
-    <!-- 걸음 수 -->
-    <div class="card border-0 shadow-sm rounded-4 mb-2">
-      <div class="card-body text-muted d-flex">
-        <div class="map-detail-btn" style="width:50px; height:30px;">아이콘</div>
-        <div style="width:180px; height:30px;">오늘의 활동량</div>
-        <span>0000걸음</span>
-      </div>
-    </div>
-
-    <!-- 가장 빠른 일정 2개 -->
+    <!-- 모임 일정 -->
     <h6 class="fw-bold mb-2">모임 일정</h6>
-    
+
     <!-- 일정 2개 -->
     <div v-if="upcomingSchedules.length > 0">
-      <div v-for="(schedule, index) in upcomingSchedules"  
-        :key="index" 
-        class="card border-2 rounded-3 p-3 mb-2" 
+      <div v-for="(schedule, index) in upcomingSchedules" :key="index" class="card border-2 rounded-3 p-3 mb-2"
         style="border-color:#e9ecef">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="small text-secondary mb-1">{{ formatDate(schedule.scheduleDate) }}</span>
@@ -53,7 +58,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 일정 없음 -->
     <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
       <div class="card-body text-center text-muted">
@@ -62,121 +67,182 @@
       </div>
     </div>
 
-    <button class="btn btn-outline-dark w-100 rounded-pill mb-3" @click="router.push('/calendar')">
-      일정 자세히 보기
-    </button>
+    <!-- 내 만남의 광장 버튼 -->
+    <div class="mb-3 mt-4">
+      <button class="btn w-100 rounded-pill neighbor-btn-plaza" @click="router.push('/myPlaza')">
+        <i class="bi bi-geo-fill me-2"></i>
+        내 만남의 광장
+      </button>
+    </div>
 
-    <!-- 기능 타일 -->
-    <div class="row g-3 align-items-stretch mb-4">
-      <!-- 1) 기본 안심존 설정 -->
+    <!-- 친구 추가 & 광장 만들기 버튼 -->
+    <div class="row g-2 mb-3">
       <div class="col-6">
-        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          style="height:220px;
-                       background-image:
-                         linear-gradient(0deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.18) 45%, rgba(255,255,255,0) 75%),
-                         linear-gradient(135deg,#6f82ff 0%,#576cff 55%,#475cff 100%);">
-          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
-            style="bottom:44px">
-            <img :src="zone1" alt="" draggable="false"
-              style="height:100%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.14) translateY(2%);">
-          </div>
-          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
-            style="height:44px">기본 안심존 설정</div>
+        <button class="btn w-100 rounded-pill neighbor-btn-primary" @click="router.push('/makeFriends')">
+          <i class="bi bi-person-plus-fill me-1"></i>
+          친구 추가
         </button>
       </div>
-
-      <!-- 2) 예상 위치 -->
       <div class="col-6">
-        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          style="height:196px;
-                       background-image:
-                         linear-gradient(0deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
-                         linear-gradient(135deg,#ff7b64 0%,#ff5a42 60%,#ff3f2e 100%);">
-          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
-            style="bottom:40px">
-            <img :src="locationIcon" alt="" draggable="false"
-              style="height:65%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.12);">
-          </div>
-          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
-            style="height:40px">예상 위치</div>
-        </button>
-      </div>
-
-      <!-- 3) AI 보고서 -->
-      <div class="col-6">
-        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          style="height:196px;
-                       background-image:
-                         linear-gradient(0deg, rgba(255,255,255,.32) 0%, rgba(255,255,255,.14) 45%, rgba(255,255,255,0) 75%),
-                         linear-gradient(135deg,#ffd6b9 0%,#ffb487 62%,#ff965f 100%);">
-          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
-            style="bottom:40px">
-            <img :src="report2" alt="" draggable="false" class="position-absolute top-50 start-50 translate-middle"
-              style="height:132%;max-height:none;width:auto;object-fit:contain;transform:translate(-50%,-56%);">
-          </div>
-          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
-            style="height:40px;color:#232323">AI 보고서</div>
-        </button>
-      </div>
-
-      <!-- 4) 환자 연결 관리 -->
-      <div class="col-6" style="margin-top:-8px">
-        <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          style="height:220px;
-                       background-image:
-                         linear-gradient(0deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
-                         linear-gradient(135deg,#ffe08f 0%,#ffc050 60%,#ffae2a 100%);">
-          <div class="position-absolute top-0 start-0 end-0 d-flex align-items-center justify-content-center"
-            style="bottom:44px">
-            <img :src="connectIcon" alt="" draggable="false"
-              style="height:100%;max-height:100%;width:auto;object-fit:contain;transform:scale(1.14) translateY(6%);">
-          </div>
-          <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
-            style="height:44px;color:#353535">환자 연결 관리</div>
+        <button class="btn w-100 rounded-pill neighbor-btn-secondary" @click="router.push('/createPlaza')">
+          <i class="bi bi-geo-alt-fill me-1"></i>
+          광장 만들기
         </button>
       </div>
     </div>
+
+    <!-- 내정보 수정 모달 -->
+    <NH_ModifyProfileModal :show="showEditProfileModal" @close="showEditProfileModal = false"
+      @saved="reloadUserProfile" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useKakaoMap } from '@/composables/useKakaoMap'
 import { logout } from '@/utils/auth'
-
-import zone1 from '@/assets/images/zone 1.svg'
-import locationIcon from '@/assets/images/location.svg'
-import report2 from '@/assets/images/report2.png'
-import connectIcon from '@/assets/images/connect.svg'
+import NH_ModifyProfileModal from '@/components/NH_ModifyProfileModal.vue'
+import axios from 'axios'
 
 const router = useRouter()
-
-// nextSchedule → upcomingSchedules 배열로 변경
 const upcomingSchedules = ref([])
+const showEditProfileModal = ref(false)
+const activeMembers = ref([])
+const myPlazaNo = ref(null)
 
-/* ===== Kakao Map Loader ===== */
-const {
-  mapEl,
-  initMap
-} = useKakaoMap({
-  kakaoKey: import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891',
-  center: { lat: 37.4943524920695, lng: 126.88767655688868 },
-  defaultLevel: 3,
-  enableControls: false,
-  enableTracking: false
-})
+// 활성 멤버 수 계산
+const activeMemberCount = computed(() => activeMembers.value.length)
 
-/* ===== 날짜 포맷팅 ===== */
+// ===== 실시간 위치 전송 로직 =====
+let locationInterval = null
+
+function startLocationTracking() {
+  sendCurrentLocation()
+  locationInterval = setInterval(() => {
+    sendCurrentLocation()
+  }, 30000)
+}
+
+function stopLocationTracking() {
+  if (locationInterval) {
+    clearInterval(locationInterval)
+    locationInterval = null
+  }
+}
+
+async function sendCurrentLocation() {
+  if (!navigator.geolocation) {
+    console.warn('이 브라우저는 위치 서비스를 지원하지 않습니다.')
+    return
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const latitude = position.coords.latitude
+      const longitude = position.coords.longitude
+      
+      console.log('현재 위치:', latitude, longitude)
+      
+      try {
+        await axios.post('/NH/api/neighbor/location/update', {
+          latitude: latitude,
+          longitude: longitude
+        })
+        console.log('위치 전송 성공')
+      } catch (error) {
+        console.error('위치 전송 실패:', error)
+      }
+    },
+    (error) => {
+      console.error('위치 조회 오류:', error.message)
+      if (error.code === error.PERMISSION_DENIED) {
+        console.warn('위치 권한이 거부되었습니다.')
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  )
+}
+
+// ===== 활성 멤버 조회 =====
+async function fetchActiveMembers() {
+  if (!myPlazaNo.value) return
+  
+  try {
+    const response = await axios.get(`/NH/api/neighbor/plazas/${myPlazaNo.value}/active-members`)
+    const members = response.data || []
+    
+    // 각 멤버에 초기 위치 할당
+    activeMembers.value = members.map(member => ({
+      ...member,
+      position: getRandomPosition()
+    }))
+    
+    console.log('활성 멤버:', activeMembers.value)
+  } catch (error) {
+    console.error('활성 멤버 조회 실패:', error)
+    activeMembers.value = []
+  }
+}
+
+// ===== 내 광장 번호 조회 =====
+async function fetchMyPlaza() {
+  try {
+    const response = await axios.get('/NH/api/neighbor/plazas/my')
+    
+    if (response.data && response.data.plazaNo) {
+      myPlazaNo.value = response.data.plazaNo
+      await fetchActiveMembers()
+    } else {
+      console.log('속한 광장이 없습니다.')
+    }
+  } catch (error) {
+    console.error('내 광장 조회 실패:', error)
+  }
+}
+
+// ===== 랜덤 위치 생성 (TV 아래 영역, 하단 가려짐 방지) =====
+function getRandomPosition() {
+  // TV 아래 영역: 상단 40% ~ 하단 75% 사이 (프로필이 가려지지 않도록 조정)
+  const top = Math.random() * 35 + 40 // 40% ~ 75%
+  const left = Math.random() * 80 + 10 // 10% ~ 90%
+  
+  return {
+    top: `${top}%`,
+    left: `${left}%`
+  }
+}
+
+// ===== 랜덤 이동 애니메이션 시작 =====
+let movementInterval = null
+
+function startRandomMovement() {
+  movementInterval = setInterval(() => {
+    activeMembers.value = activeMembers.value.map(member => ({
+      ...member,
+      position: getRandomPosition()
+    }))
+  }, 5000) // 5초마다 위치 변경
+}
+
+function stopRandomMovement() {
+  if (movementInterval) {
+    clearInterval(movementInterval)
+    movementInterval = null
+  }
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return ''
-  const date = new Date(dateString + 'T00:00:00') // ISO 형식 보정
+  const date = new Date(dateString + 'T00:00:00')
   const month = date.getMonth() + 1
   const day = date.getDate()
   return `${month}/${day}`
 }
 
-/* ===== 로그아웃 처리 ===== */
 const handleLogout = async () => {
   const success = await logout()
   if (success) {
@@ -186,14 +252,12 @@ const handleLogout = async () => {
   }
 }
 
-/* ===== 오늘, 내일 일정 조회 ===== */
 const fetchUpcomingSchedules = async () => {
   try {
     const response = await fetch('/NH/api/schedule/upcoming')
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`)
     }
-
     const data = await response.json()
     upcomingSchedules.value = data || []
   } catch (error) {
@@ -202,45 +266,157 @@ const fetchUpcomingSchedules = async () => {
   }
 }
 
-/* ===== 초기화 ===== */
+const reloadUserProfile = () => {
+  // 내정보 수정 후, 필요한 동작
+}
+
 onMounted(async () => {
   try {
-    // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
-    
-    // 지도 초기화 (빈 지도만 표시)
-    await initMap()
-    
-    // 오늘, 내일 일정 2개 조회
     await fetchUpcomingSchedules()
+    await fetchMyPlaza()
+    
+    // 위치 전송 시작
+    startLocationTracking()
+    
+    // 랜덤 이동 애니메이션 시작
+    startRandomMovement()
+    
+    // 10초마다 활성 멤버 갱신
+    setInterval(() => {
+      fetchActiveMembers()
+    }, 10000)
   } catch (e) {
     console.error(e)
   }
 })
+
+onUnmounted(() => {
+  stopLocationTracking()
+  stopRandomMovement()
+})
 </script>
 
 <style scoped>
-/* 폰트 설정 */
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
-/* 안전 상태 텍스트 */
+/* 경로당 배경 이미지 */
+.plaza-background {
+  width: 100%;
+  background-image: url('/NeighborPlaza.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+/* 활성 멤버 컨테이너 */
+.active-members-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* 멤버 아바타 */
+.member-avatar {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+  transition: top 2s ease-in-out, left 2s ease-in-out;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+/* 바운스 애니메이션 */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.member-photo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 3px solid #a7cc10;
+  object-fit: cover;
+  background: #fff;
+}
+
+.member-name {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
 .safety-status-text {
   font-family: 'SUIT', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1.2rem;
   font-weight: 400;
 }
 
-/* 지도 자세히 보기 버튼 */
-.map-detail-btn {
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(4px);
-}
-
-/* 이웃 페이지 컨테이너 - 하단 푸터 공간 확보 */
 .neighbor-page-container {
   padding-bottom: 100px;
-  margin-bottom: 30px;
+  margin-bottom: 70px;
+  margin-top: -25px;
+}
+
+/* 내 만남의 광장 버튼 */
+.neighbor-btn-plaza {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 14px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  transition: all 0.3s ease;
+}
+
+.neighbor-btn-plaza:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.5);
+}
+
+/* 기존 버튼 스타일 */
+.neighbor-btn-primary {
+  background: linear-gradient(135deg, #a7cc10 0%, #8fb80e 100%);
+  color: white;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 8px rgba(167, 204, 16, 0.25);
+  transition: all 0.3s ease;
+}
+
+.neighbor-btn-primary:hover {
+  background: linear-gradient(135deg, #8fb80e 0%, #7aa00c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(167, 204, 16, 0.35);
+}
+
+.neighbor-btn-secondary {
+  background: white;
+  color: #a7cc10;
+  font-weight: 600;
+  border: 2px solid #a7cc10;
+  transition: all 0.3s ease;
+}
+
+.neighbor-btn-secondary:hover {
+  background: #f5f9e8;
+  border-color: #8fb80e;
+  color: #8fb80e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(167, 204, 16, 0.2);
 }
 </style>
