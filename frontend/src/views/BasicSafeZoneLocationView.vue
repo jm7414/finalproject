@@ -414,7 +414,7 @@ function goBack() {
   // sessionStorage 정리
   sessionStorage.removeItem('basicSafeZoneLocation')
   sessionStorage.removeItem('existingBasicSafeZone')
-  router.push({ name: 'gdmypage' })
+  router.go(-1)
 }
 </script>
 

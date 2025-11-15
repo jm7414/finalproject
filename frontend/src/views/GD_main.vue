@@ -40,10 +40,8 @@
               <span class="patient-name-bold">{{ patient.name }}</span>님은
             </div>
             <div class="d-flex align-items-center gap-2">
-              <div 
-                :class="safeZoneStatus.isInside ? 'status-indicator-safe' : 'status-indicator-danger'"
-                class="status-indicator"
-              ></div>
+              <div :class="safeZoneStatus.isInside ? 'status-indicator-safe' : 'status-indicator-danger'"
+                class="status-indicator"></div>
               <div :class="safeZoneStatus.isInside ? 'text-success' : 'text-danger'" class="safety-status-text">
                 {{ safeZoneStatus.isInside ? '안전한 위치에 있습니다' : '안심존을 벗어났습니다' }}
               </div>
@@ -330,31 +328,31 @@ async function fetchPatientInfo() {
       method: 'GET',
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
       connected.value = false
       throw new Error('환자 정보를 가져올 수 없습니다.')
     }
-    
+
     const patientData = await response.json()
-    
+
     // 메시지만 있는 경우 (환자가 없는 경우)
     if (patientData.message) {
       console.warn(patientData.message)
       connected.value = false
       return null
     }
-    
+
     // 환자 연결 상태 업데이트
     connected.value = true
-    
+
     // 환자 정보 업데이트
     patient.value = {
       userNo: patientData.userNo,
       name: patientData.name || '',
       avatarUrl: patientData.profilePhoto || null
     }
-    
+
     return patientData.userNo
   } catch (error) {
     console.error('환자 정보 조회 오류:', error)
@@ -388,16 +386,16 @@ async function fetchScheduleSafeZone(scheduleNo) {
       method: 'GET',
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
       throw new Error('경로 정보를 가져올 수 없습니다.')
     }
-    
+
     const route = await response.json()
     if (!route.bufferCoordinates) return null
-    
+
     const bufferCoordinates = JSON.parse(route.bufferCoordinates)
-    
+
     // 기존 데이터 호환성 처리
     if (Array.isArray(bufferCoordinates)) {
       return {
@@ -405,7 +403,7 @@ async function fetchScheduleSafeZone(scheduleNo) {
         coordinates: bufferCoordinates
       }
     }
-    
+
     return bufferCoordinates
   } catch (error) {
     console.error('일정 안심존 조회 오류:', error)
@@ -420,18 +418,18 @@ async function fetchBasicSafeZone(userNo) {
       method: 'GET',
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
       throw new Error('기본 안심존을 가져올 수 없습니다.')
     }
-    
+
     const result = await response.json()
-    
+
     if (result.message) {
       console.warn(result.message)
       return null
     }
-    
+
     return result.boundaryCoordinates ? JSON.parse(result.boundaryCoordinates) : null
   } catch (error) {
     console.error('기본 안심존 조회 오류:', error)
@@ -444,13 +442,13 @@ async function fetchBasicSafeZone(userNo) {
 // 지도에 경로형 안심존(버퍼 폴리곤) 그리기
 function drawScheduleSafeZone(map, bufferCoordinates) {
   if (!map || !bufferCoordinates) return
-  
+
   try {
     // 기존 안심존 제거
     if (currentSafeZone) {
       currentSafeZone.setMap(null)
     }
-    
+
     // bufferCoordinates 형식 처리
     let coordinates
     if (Array.isArray(bufferCoordinates)) {
@@ -461,11 +459,11 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       console.error('지원하지 않는 bufferCoordinates 형식:', bufferCoordinates)
       return
     }
-    
-    const kakaoPath = coordinates.map(coord => 
+
+    const kakaoPath = coordinates.map(coord =>
       new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
     )
-    
+
     // 폴리곤 생성
     currentSafeZone = new window.kakao.maps.Polygon({
       path: kakaoPath,
@@ -475,14 +473,14 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       fillColor: '#EF4444',
       fillOpacity: 0.3
     })
-    
+
     currentSafeZone.setMap(map)
-    
+
     // 안심존이 보이도록 지도 범위 조정
     const bounds = new window.kakao.maps.LatLngBounds()
     kakaoPath.forEach(latLng => bounds.extend(latLng))
     map.setBounds(bounds)
-    
+
     console.log('경로형 안심존 표시 완료')
   } catch (error) {
     console.error('경로형 안심존 표시 오류:', error)
@@ -492,33 +490,33 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
 // 지도에 기본형 안심존(원형) 그리기
 function drawBasicSafeZone(map, boundaryData) {
   if (!map || !boundaryData) return
-  
+
   try {
     // 기존 안심존 제거
     if (currentSafeZone) {
       currentSafeZone.setMap(null)
     }
-    
+
     if (boundaryData.type === 'Circle') {
       const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
       const radius = boundaryData.radius
-      
+
       // 원형 폴리곤 생성
       const circlePoints = []
       const steps = 64
       const earthRadius = 6371000
-      
+
       for (let i = 0; i < steps; i++) {
         const angle = (Math.PI * 2 * i) / steps
         const dx = radius * Math.cos(angle)
         const dy = radius * Math.sin(angle)
-        
+
         const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
         const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)
-        
+
         circlePoints.push(new window.kakao.maps.LatLng(lat, lng))
       }
-      
+
       // 폴리곤 생성
       currentSafeZone = new window.kakao.maps.Polygon({
         path: circlePoints,
@@ -528,14 +526,14 @@ function drawBasicSafeZone(map, boundaryData) {
         fillColor: '#6366f1',
         fillOpacity: 0.2
       })
-      
+
       currentSafeZone.setMap(map)
-      
+
       // 지도 레벨 조정
       const bounds = new window.kakao.maps.LatLngBounds()
       circlePoints.forEach(point => bounds.extend(point))
       map.setBounds(bounds)
-      
+
       console.log('기본형 안심존 표시 완료')
     }
   } catch (error) {
@@ -546,16 +544,16 @@ function drawBasicSafeZone(map, boundaryData) {
 // 안심존 업데이트 (현재 일정에 따라)
 async function updateSafeZone(map) {
   if (!map || !patientUserNo.value) return
-  
+
   try {
     // 1. 현재 진행 중인 일정 찾기
     const currentSchedule = getCurrentSchedule()
-    
+
     if (currentSchedule) {
       // 2. 진행 중인 일정이 있으면 해당 일정의 안심존 표시
       console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
       const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
-      
+
       if (bufferCoordinates && (
         (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) ||
         (typeof bufferCoordinates === 'object' && bufferCoordinates.coordinates && bufferCoordinates.coordinates.length > 0)
@@ -564,11 +562,11 @@ async function updateSafeZone(map) {
         return
       }
     }
-    
+
     // 3. 진행 중인 일정이 없거나 안심존이 없으면 기본 안심존 표시
     console.log('기본 안심존 표시')
     const basicSafeZone = await fetchBasicSafeZone(patientUserNo.value)
-    
+
     if (basicSafeZone) {
       drawBasicSafeZone(map, basicSafeZone)
     } else {
@@ -593,7 +591,7 @@ async function checkPatientInSafeZone() {
     }
     return
   }
-  
+
   // 환자 위치가 없는 경우
   if (!patientLocation.value) {
     safeZoneStatus.value = {
@@ -604,17 +602,17 @@ async function checkPatientInSafeZone() {
     }
     return
   }
-  
+
   try {
     const patientLat = patientLocation.value.latitude
     const patientLng = patientLocation.value.longitude
-    
+
     let isInside = false
-    
+
     // 현재 활성화된 안심존 정보 가져오기
     const currentSchedule = getCurrentSchedule()
     let safeZoneData = null
-    
+
     if (currentSchedule) {
       // 현재 일정의 안심존 데이터 가져오기
       safeZoneData = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
@@ -622,17 +620,17 @@ async function checkPatientInSafeZone() {
       // 기본 안심존 데이터 가져오기
       safeZoneData = await fetchBasicSafeZone(patientUserNo.value)
     }
-    
+
     if (safeZoneData) {
       if (currentSchedule && safeZoneData.coordinates) {
         // 경로형 안심존 (폴리곤) - 점이 폴리곤 내부에 있는지 판단
         console.log('[GD_main - 경로형 안심존] 판단 시작')
         console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
         console.log('- 안심존 데이터:', safeZoneData)
-        
+
         const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
         console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
-        
+
         isInside = isPointInPolygon(patientLat, patientLng, coordinates)
         console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
       } else if (safeZoneData.type === 'Circle') {
@@ -641,13 +639,13 @@ async function checkPatientInSafeZone() {
         const centerLat = safeZoneData.center.lat
         const centerLng = safeZoneData.center.lng
         const radius = safeZoneData.radius
-        
+
         const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
         isInside = distance <= radius
         console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m, 결과: ${isInside ? '내부' : '외부'}`)
       }
     }
-    
+
     // 안심존 상태 업데이트
     if (isInside) {
       safeZoneStatus.value = {
@@ -664,9 +662,9 @@ async function checkPatientInSafeZone() {
         bgColor: '#FEE2E2'
       }
     }
-    
+
     console.log(`안심존 상태: ${isInside ? '안전' : '벗어남'} (환자 위치: ${patientLat}, ${patientLng})`)
-    
+
   } catch (error) {
     console.error('안심존 상태 확인 오류:', error)
     safeZoneStatus.value = {
@@ -685,10 +683,10 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000 // 지구 반지름 (미터)
   const dLat = (lat2 - lat1) * Math.PI / 180
   const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng/2) * Math.sin(dLng/2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
 }
 
@@ -700,7 +698,7 @@ function isPointInPolygon(lat, lng, polygon) {
     const yi = polygon[i].latitude
     const xj = polygon[j].longitude
     const yj = polygon[j].latitude
-    
+
     // Ray casting: 점의 y좌표(위도)가 선분의 y좌표 범위 안에 있고,
     // 점의 x좌표(경도)가 교차점의 x좌표보다 왼쪽에 있으면 교차
     if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
@@ -762,22 +760,22 @@ onMounted(async () => {
   try {
     // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
-    
+
     // 일정 데이터 로드
     await loadScheduleData()
-    
+
     // 지도 초기화 (DOM 요소가 준비된 후)
     await initMap()
-    
+
     // 안심존 표시
     await updateSafeZone(mapInstance.value)
-    
+
     // 환자 위치 추적 시작
     startPatientLocationTracking()
-    
+
     // 초기 안심존 상태 확인
     await checkPatientInSafeZone()
-    
+
     // 실종 이벤트 확인
     if (patientUserNo.value) {
       await getActiveMissing(patientUserNo.value)
@@ -803,21 +801,38 @@ onBeforeUnmount(() => {
 async function isReported() {
   try {
     const response = await fetch(`/api/missing-persons/patient/${patientUserNo.value}/latest`, {
-          method: 'GET',
-          credentials: 'include'
-        })
-      const patientData = await response.json()
-      console.log(`response NO ::::: ${JSON.stringify(patientData)}`)
-    
+      method: 'GET',
+      credentials: 'include'
+    })
+
+    if (response.status === 200) {
+      return 200 
+    } else if (response.status === 204) {
+      // 데이터가 없을 때 (No Content)
+      console.log('조회할 실종 신고가 없습니다.')
+      return 204 
+    } else if (response.status === 404) {
+      // 해당 환자를 찾을 수 없을 때
+      console.log('해당 환자 정보를 찾을 수 없습니다.')
+      return 404  
+    }
   } catch (error) {
-  console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :::: ${error}`)    
+    console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :: ${error}`)
+    return null
   }
 }
 
 // 버튼 클릭시 페이지 어디로갈지
-function typeOfMissing() {
-  console.log(`환자 번호는 ::::: ${patientUserNo.value}`) 
-  isReported()  
+async function typeOfMissing() {
+  const status = await isReported() 
+
+  if (status === 204 || status === 404) { 
+    router.push('/not-reported-predict')
+  } else if (status === 200) {
+    router.push('/predict-location')
+  } else {
+    alert('확인 중 오류가 발생했습니다.')
+  }
 }
 </script>
 
