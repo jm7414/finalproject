@@ -59,7 +59,7 @@
     <div class="schedule-section">
       <!-- 오늘 일정 -->
       <div class="schedule-group">
-        <h3 class="schedule-title">오늘 일정</h3>
+        <h3 class="schedule-title-header">오늘 일정</h3>
         <div class="schedule-list">
           <div 
             v-for="schedule in todaySchedules" 
@@ -68,15 +68,8 @@
             @click="openScheduleDetailFromList(schedule.id)"
           >
             <div class="schedule-content">
-              <div class="schedule-time">{{ schedule.time }}</div>
               <div class="schedule-title">{{ schedule.title }}</div>
-              <div class="schedule-location">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>{{ schedule.location }}</span>
-              </div>
+              <div class="schedule-author">작성자: {{ schedule.author }}</div>
             </div>
           </div>
           <div v-if="todaySchedules.length === 0" class="no-schedule">
@@ -87,7 +80,7 @@
 
       <!-- 내일 일정 -->
       <div class="schedule-group">
-        <h3 class="schedule-title">내일 일정</h3>
+        <h3 class="schedule-title-header">내일 일정</h3>
         <div class="schedule-list">
           <div 
             v-for="schedule in tomorrowSchedules" 
@@ -96,15 +89,8 @@
             @click="openScheduleDetailFromList(schedule.id)"
           >
             <div class="schedule-content">
-              <div class="schedule-time">{{ schedule.time }}</div>
               <div class="schedule-title">{{ schedule.title }}</div>
-              <div class="schedule-location">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>{{ schedule.location }}</span>
-              </div>
+              <div class="schedule-author">작성자: {{ schedule.author }}</div>
             </div>
           </div>
           <div v-if="tomorrowSchedules.length === 0" class="no-schedule">
@@ -113,13 +99,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 플로팅 액션 버튼 -->
-    <button class="fab" @click="goToAddSchedule">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
 
     <!-- 날짜별 일정 목록 모달 -->
     <div v-if="showDateSchedulesModal" class="modal-overlay" @click="closeDateSchedulesModal">
@@ -137,14 +116,8 @@
             @click="openScheduleDetail(schedule)"
           >
             <div class="schedule-card-title">{{ schedule.scheduleTitle }}</div>
-            <div class="schedule-card-time">{{ formatTime(schedule.startTime) }} - {{ formatTime(schedule.endTime) }}</div>
-            <div class="schedule-card-location">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>{{ formatLocation(schedule.scheduleNo) }}</span>
-            </div>
+            <div class="schedule-card-author">작성자: {{ schedule.authorName }}</div>
+            <div class="schedule-card-content" v-if="schedule.content">{{ schedule.content }}</div>
           </div>
 
           <div v-if="selectedDateSchedules.length === 0" class="no-schedule-modal">
@@ -182,22 +155,15 @@
           </div>
           <div class="detail-row">
             <label>날짜</label>
-            <div class="detail-value">{{ selectedSchedule?.scheduleDate }}</div>
+            <div class="detail-value">{{ formatDate(selectedSchedule?.scheduleDate) }}</div>
           </div>
           <div class="detail-row">
-            <label>시간</label>
-            <div class="detail-value">
-              {{ formatTime(selectedSchedule?.startTime) }} - {{ formatTime(selectedSchedule?.endTime) }}
-            </div>
-          </div>
-          <div class="detail-row">
-            <label>경로</label>
-            <div class="detail-value">{{ formatLocation(selectedSchedule?.scheduleNo) || '위치 없음' }}</div>
+            <label>작성자</label>
+            <div class="detail-value">{{ selectedSchedule?.authorName }}</div>
           </div>
         </div>
         
         <div class="modal-footer">
-          <button @click="editSchedule" class="edit-btn">수정하기</button>
           <button @click="confirmDeleteSchedule" class="delete-btn">삭제하기</button>
         </div>
       </div>
@@ -208,6 +174,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 
@@ -215,10 +182,8 @@ const router = useRouter()
 const currentDate = ref(new Date())
 const selectedDate = ref(new Date())
 
-// 환자 및 일정 데이터
-const patientUserNo = ref(null)
+// 일정 데이터
 const allSchedules = ref([])
-const scheduleLocations = ref({}) // scheduleNo를 키로 하는 위치 정보 맵
 
 // 모달 관련 상태
 const showDateSchedulesModal = ref(false)
@@ -255,21 +220,25 @@ const selectedDateFormatted = computed(() => {
   return `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`
 })
 
+// 날짜 포맷팅
+function formatDate(dateString) {
+  if (!dateString) return ''
+  const [year, month, day] = dateString.split('-')
+  return `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`
+}
+
 // 캘린더 날짜 생성
 const calendarDates = computed(() => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
   
-  // 이번 달 첫째 날
   const firstDay = new Date(year, month, 1)
-  // 이번 달 마지막 날
   const lastDay = new Date(year, month + 1, 0)
-  // 이번 달 첫째 날의 요일 (0=일요일, 1=월요일...)
-  const firstDayOfWeek = (firstDay.getDay() + 6) % 7 // 월요일을 0으로 변환
+  const firstDayOfWeek = (firstDay.getDay() + 6) % 7
   
   const dates = []
   
-  // 이전 달의 빈 셀 (첫 주를 채우기 위해)
+  // 이전 달의 빈 셀
   for (let i = 0; i < firstDayOfWeek; i++) {
     dates.push({
       day: '',
@@ -300,7 +269,7 @@ const calendarDates = computed(() => {
     })
   }
   
-  // 마지막 주를 완성하기 위한 빈 셀만 추가 (7의 배수로 맞추기)
+  // 마지막 주 완성
   const remainingCells = (7 - (dates.length % 7)) % 7
   for (let i = 1; i <= remainingCells; i++) {
     dates.push({
@@ -325,39 +294,17 @@ function isSameDay(date1, date2) {
          date1.getDate() === date2.getDate()
 }
 
-// 시간을 12시간 형식으로 변환 (오전/오후 포함)
-function formatTime(timeString) {
-  if (!timeString) return ''
-  
-  // timeString: "09:00:00" or "14:30:00"
-  const [hour, minute] = timeString.split(':')
-  const hourNum = parseInt(hour)
-  
-  if (hourNum === 0) {
-    return `오전 12:${minute}`
-  } else if (hourNum < 12) {
-    return `오전 ${String(hourNum).padStart(2, '0')}:${minute}`
-  } else if (hourNum === 12) {
-    return `오후 12:${minute}`
-  } else {
-    return `오후 ${String(hourNum - 12).padStart(2, '0')}:${minute}`
-  }
-}
-
 // 특정 날짜의 이벤트 가져오기
 function getEventsForDate(date) {
-  // 로컬 시간대 기준으로 YYYY-MM-DD 형식 생성 (UTC 변환 없이)
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   const dateKey = `${year}-${month}-${day}`
   
-  // 해당 날짜의 일정 필터링
   const daySchedules = allSchedules.value.filter(schedule => {
     return schedule.scheduleDate === dateKey
   })
   
-  // 일정 개수만큼 이벤트 반환 (최대 3개 표시)
   return daySchedules.slice(0, 3).map(schedule => ({
     id: schedule.scheduleNo,
     title: schedule.scheduleTitle
@@ -367,7 +314,6 @@ function getEventsForDate(date) {
 // 오늘 일정
 const todaySchedules = computed(() => {
   const today = new Date()
-  // 로컬 시간대 기준으로 YYYY-MM-DD 형식 생성 (UTC 변환 없이)
   const year = today.getFullYear()
   const month = String(today.getMonth() + 1).padStart(2, '0')
   const day = String(today.getDate()).padStart(2, '0')
@@ -377,9 +323,8 @@ const todaySchedules = computed(() => {
     .filter(schedule => schedule.scheduleDate === todayKey)
     .map(schedule => ({
       id: schedule.scheduleNo,
-      time: `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`,
       title: schedule.scheduleTitle,
-      completed: false
+      author: schedule.authorName
     }))
 })
 
@@ -387,7 +332,6 @@ const todaySchedules = computed(() => {
 const tomorrowSchedules = computed(() => {
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
-  // 로컬 시간대 기준으로 YYYY-MM-DD 형식 생성 (UTC 변환 없이)
   const year = tomorrow.getFullYear()
   const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
   const day = String(tomorrow.getDate()).padStart(2, '0')
@@ -397,10 +341,8 @@ const tomorrowSchedules = computed(() => {
     .filter(schedule => schedule.scheduleDate === tomorrowKey)
     .map(schedule => ({
       id: schedule.scheduleNo,
-      time: `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`,
       title: schedule.scheduleTitle,
-      location: formatLocation(schedule.scheduleNo),
-      completed: false
+      author: schedule.authorName
     }))
 })
 
@@ -419,21 +361,17 @@ function selectDate(date) {
   if (date.isCurrentMonth && date.date) {
     selectedDate.value = date.date
     
-    // 날짜를 YYYY-MM-DD 형식으로 변환
     const year = date.date.getFullYear()
     const month = String(date.date.getMonth() + 1).padStart(2, '0')
     const day = String(date.date.getDate()).padStart(2, '0')
     const dateString = `${year}-${month}-${day}`
     
-    // 해당 날짜에 일정이 있는지 확인
     const hasSchedules = allSchedules.value.some(schedule => schedule.scheduleDate === dateString)
     
     if (hasSchedules) {
-      // 일정이 있으면 모달 표시
       selectedDateForModal.value = dateString
       showDateSchedulesModal.value = true
     } else {
-      // 일정이 없으면 바로 추가 페이지로 이동
       goToAddScheduleWithDate(date.date)
     }
   }
@@ -441,19 +379,14 @@ function selectDate(date) {
 
 // 특정 날짜로 일정 추가 페이지 이동
 function goToAddScheduleWithDate(date) {
-  // 선택된 날짜를 YYYY-MM-DD 형식으로 변환
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   const dateString = `${year}-${month}-${day}`
   
-  // 세션 스토리지에 선택된 날짜 저장
   sessionStorage.setItem('selectedDate', dateString)
-  
-  // 일정 추가 페이지로 이동
   router.push({ name: 'NH_AddSchedule' })
 }
-
 
 // 일정 추가 페이지로 이동
 function goToAddSchedule() {
@@ -470,13 +403,8 @@ function closeDateSchedulesModal() {
 function addScheduleForDate() {
   if (!selectedDateForModal.value) return
   
-  // 선택된 날짜를 세션 스토리지에 저장
   sessionStorage.setItem('selectedDate', selectedDateForModal.value)
-  
-  // 모달 닫기
   closeDateSchedulesModal()
-  
-  // 일정 추가 페이지로 이동
   router.push({ name: 'NH_AddSchedule' })
 }
 
@@ -484,28 +412,12 @@ function addScheduleForDate() {
 function openScheduleDetail(schedule) {
   selectedSchedule.value = schedule
   showScheduleDetailModal.value = true
-  // 날짜 목록 모달은 닫지 않음 (뒤로가기 느낌을 위해)
 }
 
 // 일정 상세 모달 닫기
 function closeScheduleDetailModal() {
   showScheduleDetailModal.value = false
   selectedSchedule.value = null
-}
-
-// 일정 수정
-function editSchedule() {
-  if (!selectedSchedule.value) return
-  
-  // 수정할 일정 번호를 세션 스토리지에 저장
-  sessionStorage.setItem('editScheduleNo', selectedSchedule.value.scheduleNo)
-  
-  // 모달 닫기
-  closeScheduleDetailModal()
-  closeDateSchedulesModal()
-  
-  // 일정 추가 페이지로 이동 (수정 모드)
-  router.push({ name: 'NH_AddSchedule' })
 }
 
 // 일정 삭제 확인
@@ -517,27 +429,22 @@ async function confirmDeleteSchedule() {
   }
   
   try {
-    const response = await fetch(`/api/schedule/delete/${selectedSchedule.value.scheduleNo}`, {
-      method: 'POST',
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('일정 삭제에 실패했습니다.')
-    }
+    await axios.delete(`/NH/api/neighbor/schedules/${selectedSchedule.value.scheduleNo}`)
     
     alert('일정이 삭제되었습니다.')
     
-    // 모달 닫기
     closeScheduleDetailModal()
     closeDateSchedulesModal()
     
-    // 일정 목록 새로고침
     await loadAllData()
     
   } catch (error) {
     console.error('일정 삭제 오류:', error)
-    alert(error.message || '일정 삭제 중 오류가 발생했습니다.')
+    if (error.response && error.response.status === 403) {
+      alert('작성자만 일정을 삭제할 수 있습니다.')
+    } else {
+      alert('일정 삭제 중 오류가 발생했습니다.')
+    }
   }
 }
 
@@ -549,28 +456,12 @@ function openScheduleDetailFromList(scheduleNo) {
   }
 }
 
-
-
-// 모든 데이터 로드
+// 모든 데이터 로드 (일정 기능으로 인한 수정)
 async function loadAllData() {
   try {
-    // ✅ 광장 일정 조회 (기존 환자 일정 대신 광장 일정 조회)
-    const response = await fetch('NH/api/plaza-schedules', {
-      method: 'GET',
-      credentials: 'include'
-    })
-
-    if (!response.ok) {
-      console.warn('광장 일정을 불러올 수 없습니다.')
-      allSchedules.value = []
-      return
-    }
-
-    const schedules = await response.json()
-    allSchedules.value = schedules
-
-    console.log('광장 일정 로드 성공:', schedules)
-
+    const response = await axios.get('/NH/api/neighbor/schedules')
+    allSchedules.value = response.data
+    console.log('광장 일정 로드 성공:', response.data)
   } catch (error) {
     console.error('광장 일정 조회 오류:', error)
     allSchedules.value = []
@@ -580,25 +471,19 @@ async function loadAllData() {
 onMounted(() => {
   loadAllData()
 })
-
-onMounted(() => {
-  // 컴포넌트 마운트 시 데이터 로드
-  loadAllData()
-})
 </script>
 
 <style scoped>
+/* 기존 스타일 유지 + 일부 수정 */
 .calendar-page {
   min-height: 100vh;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding-bottom: 80px; /* 하단 네비게이션 공간 확보 */
+  padding-bottom: 80px;
   position: relative;
 }
 
-
-/* 캘린더 섹션 */
 .calendar-section {
   padding: 20px;
   background: #ffffff;
@@ -634,7 +519,7 @@ onMounted(() => {
 .nav-btn {
   background: none;
   border: none;
-  color: #6366f1;
+  color: #a7cc10;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -645,7 +530,6 @@ onMounted(() => {
   background: #f5f7ff;
 }
 
-/* 요일 헤더 */
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -661,7 +545,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* 캘린더 그리드 */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -732,11 +615,10 @@ onMounted(() => {
 .event-dot {
   width: 4px;
   height: 4px;
-  background: #6366f1;
+  background: #a7cc10;
   border-radius: 50%;
 }
 
-/* 일정 섹션 */
 .schedule-section {
   flex: 1;
   padding: 0 20px;
@@ -745,6 +627,13 @@ onMounted(() => {
 
 .schedule-group {
   margin-bottom: 24px;
+}
+
+.schedule-title-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
 }
 
 .schedule-list {
@@ -773,22 +662,13 @@ onMounted(() => {
   gap: 4px;
 }
 
-.schedule-time {
-  font-size: 12px;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
 .schedule-title {
   font-size: 14px;
   color: #111827;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.schedule-location {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.schedule-author {
   font-size: 12px;
   color: #9ca3af;
 }
@@ -800,41 +680,6 @@ onMounted(() => {
   padding: 20px;
 }
 
-/* 플로팅 액션 버튼 */
-.fab {
-  position: fixed;
-  bottom: 100px;
-  right: calc((100vw - 375px) / 2 + 20px);
-  width: 56px;
-  height: 56px;
-  background: #a7cc10;
-  color: #ffffff;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  transition: all 0.2s;
-  z-index: 1001;
-}
-
-/* 작은 화면에서는 화면 오른쪽에 고정 */
-@media (max-width: 415px) {
-  .fab {
-    right: 20px;
-  }
-}
-
-.fab:hover {
-  background: #9bbe0f;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
-}
-
-
-/* 모달 오버레이 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -849,7 +694,6 @@ onMounted(() => {
   padding: 20px;
 }
 
-/* 모달 컨테이너 */
 .modal-container {
   background: #ffffff;
   border-radius: 16px;
@@ -862,7 +706,6 @@ onMounted(() => {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-/* 모달 헤더 */
 .modal-header {
   display: flex;
   align-items: center;
@@ -898,14 +741,12 @@ onMounted(() => {
   background: #f3f4f6;
 }
 
-/* 모달 바디 */
 .modal-body {
   padding: 20px;
   overflow-y: auto;
   flex: 1;
 }
 
-/* 일정 목록 모달 - 일정 카드 */
 .schedule-card {
   padding: 16px;
   background: #f9fafb;
@@ -932,22 +773,15 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
-.schedule-card-time {
-  font-size: 14px;
+.schedule-card-author {
+  font-size: 13px;
   color: #6b7280;
   margin-bottom: 8px;
 }
 
-.schedule-card-location {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+.schedule-card-content {
+  font-size: 14px;
   color: #9ca3af;
-}
-
-.schedule-card-location svg {
-  flex-shrink: 0;
 }
 
 .no-schedule-modal {
@@ -957,7 +791,6 @@ onMounted(() => {
   padding: 40px 20px;
 }
 
-/* 모달 푸터 */
 .modal-footer {
   padding: 20px;
   border-top: 1px solid #e5e7eb;
@@ -966,7 +799,7 @@ onMounted(() => {
 .add-schedule-btn {
   width: 100%;
   padding: 12px 20px;
-  background: #6366f1;
+  background: #a7cc10;
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -981,10 +814,9 @@ onMounted(() => {
 }
 
 .add-schedule-btn:hover {
-  background: #4f46e5;
+  background: #9bbe0f;
 }
 
-/* 일정 상세 모달 */
 .detail-body {
   display: flex;
   flex-direction: column;
@@ -1012,7 +844,7 @@ onMounted(() => {
   word-break: break-word;
 }
 
-.edit-btn, .delete-btn {
+.delete-btn {
   width: 100%;
   padding: 12px 20px;
   border: none;
@@ -1021,19 +853,6 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 8px;
-}
-
-.edit-btn {
-  background: #6366f1;
-  color: #ffffff;
-}
-
-.edit-btn:hover {
-  background: #4f46e5;
-}
-
-.delete-btn {
   background: #ffffff;
   color: #ef4444;
   border: 1px solid #ef4444;
@@ -1043,11 +862,6 @@ onMounted(() => {
   background: #fef2f2;
 }
 
-.delete-btn:last-child {
-  margin-bottom: 0;
-}
-
-/* 반응형 디자인 */
 @media (max-width: 480px) {
   .calendar-day {
     min-height: 50px;
@@ -1059,11 +873,6 @@ onMounted(() => {
   
   .schedule-item {
     padding: 10px;
-  }
-  
-  .schedule-time {
-    min-width: 80px;
-    font-size: 11px;
   }
 
   .modal-overlay {
@@ -1078,7 +887,6 @@ onMounted(() => {
     padding: 16px;
   }
 
-  /* 이웃 페이지 컨테이너 - 하단 푸터 공간 확보 */
   .neighbor-page-container {
     padding-bottom: 100px;
     margin-bottom: 30px;

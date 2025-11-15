@@ -1,20 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import axios from 'axios';
-
-const router = useRouter();
-
-const props = defineProps({
-  plazaId: {
-    type: Number,
-    required: true
-  },
-  userId: {
-    type: Number,
-    required: true
-  }
-});
 
 const emit = defineEmits(['notice-created', 'cancel']);
 
@@ -23,6 +9,7 @@ const content = ref('');
 const contentLength = computed(() => content.value.length);
 const loading = ref(false);
 
+// 공지 기능으로 인한 수정: 새로운 API 사용
 async function submitNotice() {
   if (!title.value.trim() || !content.value.trim()) {
     alert('제목과 내용을 모두 입력해주세요.');
@@ -32,23 +19,21 @@ async function submitNotice() {
   loading.value = true;
 
   try {
-    const postData = {
+    await axios.post('/NH/api/neighbor/notices', {
       title: title.value,
-      content: content.value,
-      user_id: props.userId,
-      notice_check: '공지',
-      created_at: new Date().toISOString()
-    };
-
-    await axios.post(`/api/posts`, postData, {
-      withCredentials: true
+      content: content.value
     });
 
     alert('공지가 성공적으로 작성되었습니다!');
     emit('notice-created');
   } catch (error) {
     console.error('공지 작성 중 오류가 발생했습니다:', error);
-    alert('작업에 실패했습니다. 다시 시도해주세요.');
+    
+    if (error.response && error.response.status === 403) {
+      alert('방장만 공지를 작성할 수 있습니다.');
+    } else {
+      alert('작업에 실패했습니다. 다시 시도해주세요.');
+    }
   } finally {
     loading.value = false;
   }
@@ -104,7 +89,6 @@ function cancel() {
 </template>
 
 <style scoped>
-/* 전체 페이지 레이아웃 */
 .page-container {
   width: 100%;
   margin-top: 70px;
@@ -124,7 +108,6 @@ function cancel() {
   gap: 24px;
 }
 
-/* 사진 첨부 섹션 */
 .form-section {
   margin-bottom: 24px;
 }
@@ -140,7 +123,6 @@ function cancel() {
   font-weight: 500;
 }
 
-/* 제목 입력 */
 .title-input {
   width: 100%;
   height: 46px;
@@ -153,10 +135,10 @@ function cancel() {
   color: #ADAEBC;
 }
 .title-input:focus {
-  outline: 1px solid #8E97FD;
+  outline: 2px solid #a7cc10; /* 아보카도 색상 */
+  border-color: #a7cc10;
 }
 
-/* 내용 입력 */
 .textarea-container {
   position: relative;
 }
@@ -174,7 +156,8 @@ function cancel() {
   color: #ADAEBC;
 }
 .content-textarea:focus {
-  outline: 1px solid #8E97FD;
+  outline: 2px solid #a7cc10; /* 아보카도 색상 */
+  border-color: #a7cc10;
 }
 
 .char-counter {
@@ -185,7 +168,6 @@ function cancel() {
   color: #737373;
 }
 
-/* 하단 버튼 */
 .footer-buttons {
   background: #FFFFFF;
   padding: 17px 16px;
@@ -209,12 +191,13 @@ function cancel() {
   opacity: 0.8;
 }
 
+/* 아보카도 색상으로 변경 */
 .submit-btn {
-  background: #8E97FD;
+  background: #a7cc10; /* 아보카도 색상 */
   color: #FFFFFF;
 }
 .submit-btn:disabled {
-  background: #c7cefd;
+  background: #d4e487; /* 아보카도 색상 비활성화 */
   cursor: not-allowed;
 }
 

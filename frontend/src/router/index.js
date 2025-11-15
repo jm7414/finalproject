@@ -48,6 +48,10 @@ import NH_main from '@/views/NH_main.vue'
 import NH_Calender from '@/views/NH_Calender.vue'
 import NH_AddSchedule from '@/views/NH_AddSchedule.vue'
 import NH_Notice from '@/views/NH_Notice.vue'
+import MakeFriends from '@/views/MakeFriends.vue'
+import CreatePlaza from '@/views/CreatePlaza.vue'
+import PlazaDetail from '@/views/PlazaDetail.vue'
+import MyPlaza from '@/views/MyPlaza.vue'
 import DesktopMain from '@/views/desktop/DesktopMain.vue'
 import DesktopLogin from '@/views/desktop/DesktopLogin.vue'
 import DesktopSchedule from '@/views/desktop/DesktopSchedule.vue'
@@ -489,20 +493,44 @@ const router = createRouter({
       path: '/nhCalender',
       name: 'NH_Calender',
       component: NH_Calender,
-      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
     },
     {
       path: '/nhAddSchedule',
       name: 'NH_AddSchedule',
       component: NH_AddSchedule,
-      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
     },
     {
       path: '/nhNotice',
       name: 'NH_Notice',
       component: NH_Notice,
-      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
-    }
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
+    },
+    {
+      path: '/makeFriends',
+      name: 'MakeFriends',
+      component: MakeFriends,
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
+    },
+    {
+      path: '/createPlaza',
+      name: 'CreatePlaza',
+      component: CreatePlaza,
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
+    },
+    {
+      path: '/plazaDetail/:plazaNo',
+      name: 'PlazaDetail',
+      component: PlazaDetail,
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
+    },
+    {
+      path: '/myPlaza',
+      name: 'MyPlaza',
+      component: MyPlaza,
+      meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
+    },
   ],
 })
 
