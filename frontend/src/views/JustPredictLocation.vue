@@ -31,17 +31,18 @@
         <!-- 토글 버튼 영역 -->
         <div class="toggle-button-wrapper">
             <div class="d-flex">
-                <button class="toggle-button" :class="{ active: selectedType === 'info' }" @click="mapOrInfo('info')">
-                    <i class="bi bi-person-fill"></i>
-                    <span class="button-text">실종자 정보</span>
-                </button>
-
                 <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
                     <i class="bi bi-map-fill"></i>
                     <span class="button-text">예상위치</span>
                 </button>
+
+                <button class="toggle-button" :class="{ active: selectedType === 'simulation' }"
+                    @click="mapOrInfo('simulation')">
+                    <i class="bi bi-person-fill"></i>
+                    <span class="button-text">시뮬레이션 결과</span>
+                </button>
             </div>
-            <div v-if="less_data.value" class="">
+            <div v-if="less_data" class="">
                 <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
                 <span>예측 위치들이 부정확할 수 있습니다.</span>
             </div>
@@ -73,7 +74,7 @@
                 <div class="timeline-markers">
                     <div class="timeline-marker" style="left: 0%">
                         <div class="marker-dot"></div>
-                        <span class="marker-label">실종</span>
+                        <span class="marker-label">현재</span>
                     </div>
                     <div class="timeline-marker" style="left: 33.33%">
                         <div class="marker-dot-1"></div>
@@ -103,7 +104,7 @@
             <div class="timeline-legend">
                 <div class="legend-item" :class="{ active: selectedMinutes <= 30 }" @click="setTime(30)">
                     <div class="legend-color" style="background: #66bb6a;"></div>
-                    <span class="legend-text">실종~30분</span>
+                    <span class="legend-text">현재~30분</span>
                 </div>
                 <div class="legend-item" :class="{ active: selectedMinutes > 30 && selectedMinutes <= 60 }"
                     @click="setTime(60)">
@@ -130,92 +131,6 @@
                     </div>
                 </div>
             </div>
-            <div v-if="selectedType === 'info'" class="missing-person-info">
-
-                <!-- 병욱 정보 불러오는중 추가 -->
-                <div v-if="personLoading" class="status-message">정보를 불러오는 중...</div>
-                <div v-else-if="personError" class="status-message error">{{ personError }}</div>
-
-
-                <div v-if="!isLoading" class="info-header-section">
-                    <div class="profile-image-wrapper">
-                        <img class="profile-image" :src="personDetail.photoPath || defaultPersonImage"
-                            :alt="personDetail.patientName" />
-                    </div>
-                    <div class="basic-info-wrapper">
-                        <div class="name-age-row">
-                            <h2 class="person-name">{{ personDetail.patientName || '정보 없음' }} ({{
-                                calculateAge(personDetail.patientBirthDate) }}세)</h2>
-                        </div>
-                        <p class="age-info">
-                            <i class="bi bi-clock"></i>
-                            {{ elapsedTimeText }}
-                        </p>
-                        <p class="missing-datetime">
-                            <i class="bi bi-calendar-event"></i>
-                            실종일시: {{ formatSimpleDateTime(missingTimeDB) }}
-                        </p>
-                        <p class="missing-location" style="font-size: 12px;">
-                            <i class="bi bi-geo-alt"></i>
-                            실종장소: {{ missingAddress.fullAddress }}
-                        </p>
-                    </div>
-                </div>
-
-                <div v-if="!isLoading" class="detail-sections">
-                    <div class="info-item glass-card">
-
-                        <div class="d-flex align-items-center gap-1">
-                            <div class="info-badge">
-                                <i class="bi bi-person-badge"></i>
-                                <span class="badge-label">신체 특징</span>
-                            </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures
-                                || '170cm 마른 체형' }}</span>
-                        </div>
-
-                        <div class="d-flex align-items-center gap-1">
-                            <div class="info-badge">
-                                <i class="bi bi-bag"></i>
-                                <span class="badge-label">착의사항</span>
-                            </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'
-                                }}</span>
-                        </div>
-
-                        <div class="d-flex align-items-center gap-1">
-                            <div class="info-badge">
-                                <i class="bi bi-exclamation-triangle"></i>
-                                <span class="badge-label">특이사항</span>
-                            </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).specialNotes ||
-                                '지팡이를 짚고 다니심' }}</span>
-                        </div>
-
-                        <div>
-                            <div class="info-badge">
-                                <i class="bi bi-people"></i>
-                                <span class="badge-label">함께하는 이웃</span>
-                            </div>
-                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount !=
-                                null) ?
-                                personDetail.searchTogetherCount : participantsCount }}명</span>
-                            <div class="d-flex justify-content-center">
-                                <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
-                                    @click="wherePeople">
-                                    <i class="bi bi-arrow-right-circle"></i>
-                                    {{ isParticipantsLayerVisible ? '함께하는 중...' : '함께하는 사람 보기' }}
-                                </button>
-
-                                <button class="btn btn-warning modern-btn report-btn" @click="goToReportPage">
-                                    <i class="bi bi-megaphone-fill"></i>
-                                    제보하기
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- 예상 위치 카드 리스트 -->
             <div v-if="selectedType === 'map'" class="prediction-list">
@@ -228,13 +143,6 @@
                             <div class="skeleton-line skeleton-line-short"></div>
                         </div>
                     </div>
-                </div>
-
-                <div v-else-if="displayedZoneToShow.length === 0" class="empty-state">
-                    <div class="empty-icon-wrapper">
-                        <i class="bi bi-search"></i>
-                    </div>
-                    <p>예상 위치 데이터를 불러오는 중...</p>
                 </div>
 
                 <div class="prediction-card" v-for="(loc, index) in displayedZoneToShow" :key="index"
@@ -304,42 +212,24 @@
                                 <p class="stat-value-modern"><span class="stat-unit"> {{ total_cluster }}개의 위치 분석
                                         결과</span>
                                 </p>
-                                <p class="stat-sublabel-modern-1">{{ personDetail.patientName }}님의 실종위치로부터 각 시간대별</p>
+                                <p class="stat-sublabel-modern-1">님의 실종위치로부터 각 시간대별</p>
                                 <p class="stat-sublabel-modern-1">최대 5개의 위치를 보여줍니다</p>
-                            </div>
-                        </div>
-                        <!-- ★★★ 수정된 stat-card: 클릭 시 모달 오픈 ★★★ -->
-                        <div class="stat-card-modern clickable" @click="openAgentSimulation">
-                            <div class="stat-icon-modern" style="--stat-color: #667eea;">
-                                <i class="bi bi-diagram-3"></i>
-                            </div>
-                            <div class="stat-content-modern">
-                                <p class="stat-label-modern">에이전트 시뮬레이션</p>
-                                <p class="stat-sublabel-modern-1">AI 에이전트 기반 경로 예측</p>
-                                <p class="stat-sublabel-modern-1">10개 주요 위치의 이동 패턴</p>
-                                <div class="click-hint">
-                                    <i class="bi bi-cursor-fill"></i>
-                                    <span>클릭하여 보기</span>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <div v-if="selectedType === 'info'" class="missing-person-info">
+            </div>
         </div>
-        <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
-        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="patientUserNo"
-            :missingLocation="missingLocation" :missingTime="missingTimeDB" @close="closeAgentSimulation" />
     </div>
 </template>
 
 <script setup>
+
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios'
-import { useParticipantLocations } from '@/composables/useParticipantLocations';
-import { useSearchStore } from '@/stores/useSearchStore';
-import AgentSimulationModal from '@/components/AgentSimulationModal.vue'
 
 // ========================================================================================
 // 카카오지도 및 API 키 설정
@@ -351,56 +241,27 @@ const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
 const route = useRoute();
 const router = useRouter();
-const searchStore = useSearchStore();
 
-// 모달
-// ★★★ 에이전트 시뮬레이션 모달 상태 추가 ★★★
-const showAgentSimulation = ref(false)
-
-// 모달 열기 함수 - 유효성 검사 추가
-const openAgentSimulation = () => {
-    // ⭐ 필수 값 유효성 검사
-    if (!patientUserNo.value) {
-        console.error('❌ patientUserNo가 없습니다:', patientUserNo.value)
-        alert('환자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-        return
-    }
-
-    if (!missingLocation.value.lat || !missingLocation.value.lon) {
-        console.error('❌ missingLocation이 없습니다:', missingLocation.value)
-        alert('실종 위치 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-        return
-    }
-
-    console.log('✅ 시뮬레이션 모달 열기:', {
-        patientUserNo: patientUserNo.value,
-        missingLocation: missingLocation.value,
-        missingTimeDB: missingTimeDB.value
-    })
-
-    showAgentSimulation.value = true
-}
-
-// 모달 닫기 함수
-const closeAgentSimulation = () => {
-    showAgentSimulation.value = false
-}
-
+// ⭐ 더보기 관련 상태
+const showAllLocations = ref(false)
 
 // ========================================================================================
-// 데이터 상태 관리 - API 응답 구조에 맞게 수정
+// 데이터 상태 관리
 // ========================================================================================
+const zone_level_1 = ref([])  // 0-30분 (500m 이내)
+const zone_level_2 = ref([])  // 30-60분 (1000m 이내)
+const zone_level_3 = ref([])  // 60-90분 (1500m 이내)
 
-// ⭐ Zone Level별 목적지 데이터 (최대 5개씩)
-const zone_level_1 = ref([])  // 500m 이내
-const zone_level_2 = ref([])  // 1000m 이내
-const zone_level_3 = ref([])  // 1500m 이내
-
-// 실종위치
 const missingLocation = ref({
     lat: null,
     lon: null
 })
+
+const displayZoneLevel = ref(1)
+const isLoading = ref(false)
+const selectedType = ref('map')
+const selectedLocation = ref(null)
+const selectedMinutes = ref(30)
 
 // 마지막 알려진 위치
 const lastKnownLocation = ref({
@@ -409,39 +270,14 @@ const lastKnownLocation = ref({
     time: null
 })
 
-// ⭐ 표시할 Zone Level 선택 (1, 2, 3)
-const displayZoneLevel = ref(1)
-
-// 로딩 상태
-const isLoading = ref(false)
-
-// 선택된 타입 (info 또는 map)
-const selectedType = ref(null)
-
-// 선택된 위치
-const selectedLocation = ref(null)
-
 // 경과 시간 (분 단위)
 const elapsedMinutes = ref(0)
 
-// ⭐ 드래그 가능한 타임라인 관련 상태
-const selectedMinutes = ref(30) // 0~90 사이의 분 단위 값
 const isDragging = ref(false)
 const timelineWrapper = ref(null)
 
-// ⭐ 더보기 관련 상태
-const showAllLocations = ref(false)
-
 // ID 관리
 const patientUserNo = ref(null)
-const missingPostId = ref(null)
-
-// 실종자 정보
-const personDetail = ref(null)
-const personLoading = ref(true)
-const personError = ref(null)
-const defaultPersonImage = '@/default-person.png'
-const participantsCount = ref(0)
 
 // 시간 변수
 const missingTimeDB = ref(null)
@@ -453,77 +289,83 @@ let fullAddress = ''
 // 유효 데이터 수
 let less_data = ref(false)
 let total_cluster = ref(null)
+
 // ========================================================================================
 // API 호출 함수 - 예측 데이터 가져오기
 // ========================================================================================
-let userNo = ref('')
-let lessData = ref(false)
 async function fetchPredictionData() {
-
     console.log(`fetchPredictionData 실행됨`)
 
-    const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
-
-    if (patientUserNo.value && !notMyPatientNo) {
-        userNo = patientUserNo.value
-    } else {
-        userNo = notMyPatientNo
-    }
+    isLoading.value = true
 
     try {
-        // GPS 데이터 가져오기
-        const gpsResponse = await axios.get(`/api/pred/${userNo}`, {
-            params: {
-                datetime: new Date(missingTimeDB.value).getTime()
-            },
+        const myPatientResponse = await axios.get('/api/user/my-patient', {
             withCredentials: true
         });
 
-        const gpsData = gpsResponse.data;
+        patientUserNo.value = myPatientResponse.data.userNo
 
-        console.log(`fetchPrediction GPS DATA ::::: ${JSON.stringify(gpsData)}`);
+        // 1. 환자 번호 확인
+        let userNo = patientUserNo.value
 
-        // 일주일간 데이터 부족시 뒤로 돌아가기 만들음
-        if (gpsData.length < 3 * 20 * 24 * 7) {
-            const lastGPSData = gpsData[gpsData.length - 1];
-            console.log(`lastGPSData => ${JSON.stringify(lastGPSData)}`)
-            if (confirm(`환자의 위치데이터가 부족하여 시뮬레이션만 볼 수 있습니다. 페이지를 이동합니다.`)) {
-                router.push({
-                    path: '/simulation',
-                    query: {
-                        userNo: userNo,
-                        lat: lastGPSData.latitude,
-                        lon: lastGPSData.longitude,
-                        missingTime: missingTimeDB.value
-                    }
-                });
-            } else {
-                router.push(`/GD`)
-            }
-
-
-            return false;
-        } else if (gpsData.length < 3 * 20 * 24 * 28) {
-            lessData.value = true;
+        if (!userNo) {
+            console.error('❌ 연결된 환자가 없습니다!.')
+            alert('연결된 환자가 없습니다 메인화면으로 돌아갑니다.')
+            router.push('/GD_main')
+            return false
         }
 
-        // ⭐ 카멜케이스 → 스네이크케이스 변환 + 초 추가
-        const gpsRecords = gpsData.map(record => {
-            let recordTime = record.recordTime;  // ⭐ camelCase
+        console.log(`✅ 환자 번호: ${userNo}`)
 
-            // 초가 없으면 추가
+        //  실종 시간 포맷팅
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        const hours = String(now.getHours()).padStart(2, '0')
+        const minutes = String(now.getMinutes()).padStart(2, '0')
+
+        const missingTime = `${year}-${month}-${day} ${hours}:${minutes}`
+
+        console.log(`📅 실종 시간: ${missingTime}`)
+
+        // 2. GPS 데이터 가져오기
+        console.log(`📡 GPS 데이터 요청 시작...`)
+        const gpsResponse = await axios.get(`/api/pred/${userNo}`, {
+            params: {
+                datetime: new Date(missingTime).getTime()
+            },
+            withCredentials: true
+        })
+
+        const gpsData = gpsResponse.data
+        console.log(`✅ GPS 데이터 수신: ${gpsData.length}개 레코드`)
+
+        // 4. 한달치 데이터 부족 시 경고
+        if (gpsData.length < 3 * 20 * 24 * 28) {
+            less_data.value = true
+            console.warn('⚠️ 한달치 데이터 미만 - 예측 정확도 낮음')
+        }
+
+        // 5. GPS 데이터 포맷 변환 (camelCase → snake_case)
+        const gpsRecords = gpsData.map(record => {
+            let recordTime = record.recordTime
+
+            // 초 단위 추가
             if (recordTime && recordTime.split(':').length === 2) {
-                recordTime = `${recordTime}:00`;
+                recordTime = `${recordTime}:00`
             }
 
             return {
                 latitude: record.latitude,
                 longitude: record.longitude,
-                record_time: recordTime  // ⭐ snake_case로 변환
-            };
-        });
+                record_time: recordTime
+            }
+        })
 
-        // Request Body 생성
+        console.log(`✅ GPS 레코드 변환 완료: ${gpsRecords.length}개`)
+
+        // 7. FastAPI 요청 Body 생성
         const requestBody = {
             user_no: userNo,
             missing_time: missingTime,
@@ -536,10 +378,12 @@ async function fetchPredictionData() {
             min_cluster_separation: 200,
             road_network_radius: 2500,
             csv_path: 'all_locations.csv'
-        };
+        }
 
+        console.log(`📦 요청 Body 생성 완료`)
 
-        // POST 요청
+        // 8. FastAPI 예측 API 호출
+        console.log(`🚀 FastAPI 예측 요청 시작...`)
         const response = await axios.post(
             `http://localhost:8000/api/predict-destinations`,
             requestBody,
@@ -549,57 +393,70 @@ async function fetchPredictionData() {
                     'Content-Type': 'application/json'
                 }
             }
-        );
+        )
 
-        const data = response.data;
+        const data = response.data
+        console.log(`✅ FastAPI 응답 수신`)
+        console.log(`   - 총 클러스터: ${data.total_clusters_found}`)
+        console.log(`   - 데이터 충분성: ${data.data_sufficiency}`)
 
-        // 데이터 충분성 체크
+        // 9. 데이터 충분성 재검증
         if (data.data_sufficiency === 'nono') {
-            alert(`데이터가 충분하지않아 예상위치가 제공되지 않습니다. 홈으로 돌아갑니다.`);
-            router.push(`/GD_main`);
+            alert(`데이터가 충분하지 않아 예상위치가 제공되지 않습니다. 홈으로 돌아갑니다.`)
+            router.push('/GD_main')
+            return false
         } else if (data.data_sufficiency === 'no') {
-            less_data.value = true;
+            less_data.value = true
         }
 
-        console.log(`총 클러스터 수 : ${data.total_clusters_found}`);
+        total_cluster.value = data.total_clusters_found
 
-        total_cluster.value = data.total_clusters_found;
+        // 10. 응답 데이터 처리 및 Zone 배열 생성
+        await processDestinationsToZones(data)
 
-        await processDestinationsToZones(data);
-
-        return true;
+        console.log(`✅ fetchPredictionData 완료`)
+        return true
 
     } catch (error) {
-        console.error('❌ 예측 데이터 로드 실패:', error);
-        personError.value = '예측 데이터를 불러올 수 없습니다.';
-        return false;
+        console.error('❌ 예측 데이터 로드 실패:', error)
+
+        if (error.response) {
+            console.error(`   - 상태 코드: ${error.response.status}`)
+            console.error(`   - 에러 메시지: ${JSON.stringify(error.response.data)}`)
+        }
+
+        alert('예측 데이터를 불러오는 중 오류가 발생했습니다.')
+
+        return false
+
     } finally {
-        isLoading.value = false;
+        isLoading.value = false
     }
 }
 
 // ========================================================================================
-// ⭐ API 응답을 Zone 배열로 변환하는 함수 + 경로 생성
+// API 응답을 Zone 배열로 변환
 // ========================================================================================
-
-
 async function processDestinationsToZones(apiResponse) {
     console.log('🔄 API 응답 처리 시작...')
 
+    // 1. 마지막 알려진 위치 설정
     if (apiResponse.last_known_location) {
         lastKnownLocation.value = apiResponse.last_known_location
         missingLocation.value.lat = apiResponse.last_known_location.latitude
         missingLocation.value.lon = apiResponse.last_known_location.longitude
+
+        console.log(`📍 실종 위치 설정: (${missingLocation.value.lat}, ${missingLocation.value.lon})`)
     }
 
     const destinationsByDistance = apiResponse.destinations_by_distance || {}
 
-    // ⭐ address1, address2를 초기 구조에 포함
+    // 2. Zone Level별 데이터 구조 생성
     zone_level_1.value = (destinationsByDistance['500m'] || []).map((dest, index) => ({
         id: dest.destination_id,
         lat: dest.latitude,
         lon: dest.longitude,
-        name: dest.name,
+        name: dest.name || '',
         visitCount: dest.visit_count,
         distance: dest.distance_meters,
         waypoints: dest.waypoints || [],
@@ -608,6 +465,7 @@ async function processDestinationsToZones(apiResponse) {
         clusterStability: dest.cluster_stability,
         routeMethod: dest.route_method,
         value: dest.preference_score,
+        // VWorld API로 채워질 필드들
         address1: '',
         address2: '',
         sido_nm: '',
@@ -622,7 +480,7 @@ async function processDestinationsToZones(apiResponse) {
         id: dest.destination_id,
         lat: dest.latitude,
         lon: dest.longitude,
-        name: dest.name,
+        name: dest.name || '',
         visitCount: dest.visit_count,
         distance: dest.distance_meters,
         waypoints: dest.waypoints || [],
@@ -645,7 +503,7 @@ async function processDestinationsToZones(apiResponse) {
         id: dest.destination_id,
         lat: dest.latitude,
         lon: dest.longitude,
-        name: dest.name,
+        name: dest.name || '',
         visitCount: dest.visit_count,
         distance: dest.distance_meters,
         waypoints: dest.waypoints || [],
@@ -664,24 +522,32 @@ async function processDestinationsToZones(apiResponse) {
         dist_m: 0
     }))
 
-    // ⭐ VWorld API 호출 (주소와 지목정보 설정)
+    console.log(`✅ Zone 데이터 생성 완료:`)
+    console.log(`   - Zone 1 (0-30분): ${zone_level_1.value.length}개`)
+    console.log(`   - Zone 2 (30-60분): ${zone_level_2.value.length}개`)
+    console.log(`   - Zone 3 (60-90분): ${zone_level_3.value.length}개`)
+
+    // 3. VWorld API로 주소 정보 가져오기
     await getAddressAndJimok()
 
-    // ⭐ VWorld API 호출 후 배열 재할당으로 Vue 반응성 강제 트리거
+    // 4. Vue 반응성 트리거
     zone_level_1.value = [...zone_level_1.value]
     zone_level_2.value = [...zone_level_2.value]
     zone_level_3.value = [...zone_level_3.value]
 
-    // ⭐ 경로 생성 (TMap API)
+    // 5. TMap 경로 생성
     await requestAllRoutes()
 
+    // 6. 지도 업데이트
     if (map) {
-        setCenter()
+        setCenter(true)
         makeMarker()
+        initCircles()
         showCirclesByZoneLevel(displayZoneLevel.value)
     }
-}
 
+    console.log('✅ processDestinationsToZones 완료')
+}
 //
 // VWorld에서 주소와 지목정보를 가져와서 화면에 표시
 //
@@ -1407,68 +1273,6 @@ let markers = []
 let polylines = []
 let centerMarker = null
 
-// ========================================================================================
-// 실종자 정보 조회
-// ========================================================================================
-
-async function fetchMissingPersonDetail() {
-    if (!missingPostId.value) {
-        console.warn('⚠️ missingPostId가 없어서 실종자 정보 조회를 건너뜁니다.')
-        personLoading.value = false
-        return
-    }
-
-    personLoading.value = true
-    personError.value = null
-
-    console.log(`실종 신고 ID로 상세 정보 조회: missingPostId=${missingPostId.value}`)
-    try {
-        const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
-            withCredentials: true
-        })
-        personDetail.value = response.data
-
-        console.log('✅ 실종자 상세 정보:', personDetail.value)
-
-        if (response.data && response.data.reportedAt) {
-            missingTimeDB.value = new Date(response.data.reportedAt).getTime()
-            console.log('변환된 timestamp:', missingTimeDB.value)
-        }
-
-    } catch (err) {
-        console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err)
-        personError.value = "상세 정보를 불러올 수 없습니다."
-    } finally {
-        personLoading.value = false
-    }
-}
-
-// 참여자 조회
-async function fetchParticipants() {
-    if (!missingPostId.value) {
-        console.warn('⚠️ missingPostId가 없어서 참여자 조회를 건너뜁니다.')
-        return
-    }
-
-    console.log(`참여자 목록 조회 시도: missingPostId=${missingPostId.value}`)
-    try {
-        const response = await axios.get(`/api/missing-persons/${missingPostId.value}/participants`, {
-            withCredentials: true
-        });
-
-        console.log('✅ 함께 찾는 사람들:', response.data);
-        if (Array.isArray(response.data)) {
-            participantsCount.value = response.data.length
-        } else if (response.data && typeof response.data === 'object') {
-            participantsCount.value = (response.data.count ?? response.data.total ?? 0)
-        } else {
-            participantsCount.value = 0
-        }
-
-    } catch (error) {
-        console.error("❌ 참여자 목록 조회 실패:", error);
-    }
-}
 
 // 주소 조회
 async function getMissingAddress() {
@@ -1547,171 +1351,34 @@ async function getMissingAddress() {
     }
 }
 
-// ID 찾기
-async function findMissingReportId() {
-    const idFromParam = route.params.id;
-
-    if (idFromParam) {
-        console.log("ID가 있습니다 (게시판 경로):", idFromParam);
-        return parseInt(idFromParam, 10);
-    }
-
-    console.log("ID가 없습니다 (홈 경로). '내 환자'의 최신 신고 ID를 찾습니다.");
-    try {
-        console.log("[ID 찾기] '내 환자' 정보를 /api/user/my-patient 에서 조회합니다.");
-        const myPatientResponse = await axios.get('/api/user/my-patient', {
-            withCredentials: true
-        });
-
-        patientUserNo.value = myPatientResponse.data.userNo
-        const myPatientId = myPatientResponse.data.userNo;
-        if (!myPatientId) {
-            throw new Error("연결된 환자 정보를 찾을 수 없습니다.");
-        }
-
-        console.log(`[ID 찾기] 환자 ID(${myPatientId})로 '최신 실종 신고'를 조회합니다.`);
-        const reportResponse = await axios.get(
-            `/api/missing-persons/patient/${myPatientId}/latest`,
-            { withCredentials: true }
-        );
-
-        return reportResponse.data.missingPostId;
-
-    } catch (err) {
-        if (err.response && err.response.status === 404) {
-            console.log("[ID 찾기] 현재 등록된 실종 신고가 없습니다. (404)");
-            personError.value = "현재 등록된 실종 신고가 없습니다.";
-        } else {
-            console.error("❌ [ID 찾기] 실패:", err.message);
-            personError.value = err.message || "정보를 불러올 수 없습니다.";
-        }
-        return null;
-    }
-}
-
-
-let notMyPatientNo
-
-// 데이터 로드
-async function fetchPatientAndMissingReport() {
-    personLoading.value = true;
-    personError.value = null;
-
-    try {
-        console.log(`[데이터 로드] ID(${missingPostId.value})로 실종자 정보를 조회합니다.`);
-        const response = await axios.get(`/api/missing-persons/${missingPostId.value}`, {
-            withCredentials: true
-        });
-
-        personDetail.value = response.data;
-        console.log('✅ 실종자 상세 정보:', personDetail.value);
-
-        notMyPatientNo = personDetail.value.patientUserNo
-        console.log(`내 환자가 아닐 경우의 값 : : : : : : ${notMyPatientNo}`)
-
-        if (response.data && response.data.reportedAt) {
-            missingTimeDB.value = new Date(response.data.reportedAt).getTime();
-        }
-
-        await fetchParticipants();
-        return true;
-
-    } catch (err) {
-        console.error("❌ 실종자 상세 정보를 불러오는 데 실패했습니다:", err);
-        personError.value = "실종 신고 정보를 불러오는 데 실패했습니다.";
-        return false;
-    } finally {
-        personLoading.value = false;
-    }
-}
-
-function formatDescription(desc) {
-    if (!desc) {
-        return {
-            physicalFeatures: '정보 없음',
-            clothing: '정보 없음',
-            specialNotes: '정보 없음'
-        };
-    }
-
-    const lines = String(desc).split('\\n');
-
-    const result = {
-        physicalFeatures: '',
-        clothing: '',
-        specialNotes: ''
-    };
-
-    lines.forEach(line => {
-        if (line.includes(':')) {
-            const [key, ...valueParts] = line.split(':');
-            const value = valueParts.join(':').trim();
-
-            if (key.includes('인상착의') || key.includes('착의사항')) {
-                result.clothing = value;
-            } else if (key.includes('신체') || key.includes('체형')) {
-                result.physicalFeatures = value;
-            } else if (key.includes('특이사항') || key.includes('특이')) {
-                result.specialNotes = value;
-            }
-        }
-    });
-
-    return result;
-}
-
 // ========================================================================================
 // 카카오맵 초기화
 // ========================================================================================
 
 onMounted(async () => {
     isLoading.value = true;
-    selectedType.value = 'info';
+    selectedType.value = 'map';
 
-    const idToLoad = await findMissingReportId();
+    await fetchPredictionData();
 
-    if (idToLoad) {
-        console.log("최종 로드할 ID:", idToLoad);
-        missingPostId.value = idToLoad;
+    try {
+        loadKakaoMap(mapContainer.value);
+        setTimeout(() => {
+            getMissingAddress()
 
-        const fetchSuccess = await fetchPatientAndMissingReport();
-        await fetchPredictionData();
-
-        if (fetchSuccess) {
-            try {
-                loadKakaoMap(mapContainer.value);
-                setTimeout(() => {
-                    getMissingAddress()
-                    calcElapsedTime()
-
-                    if (map) {
-                        // ⭐ 초기화 시에만 force=true로 중심 설정
-                        setCenter(true)
-                        makeMarker()
-                        initCircles()
-                        showCirclesByZoneLevel(displayZoneLevel.value)
-                    }
-                }, 1000);
-            } catch (e) {
-                console.error("지도 초기화 중 오류:", e);
-                personError.value = "지도 로딩 중 오류가 발생했습니다.";
-                isLoading.value = false;
+            if (map) {
+                // ⭐ 초기화 시에만 force=true로 중심 설정
+                setCenter(true)
+                makeMarker()
+                initCircles()
+                showCirclesByZoneLevel(displayZoneLevel.value)
             }
-        } else {
-            isLoading.value = false;
-        }
-    } else {
-        console.log("로드할 ID가 없습니다.");
+        }, 1000);
+    } catch (e) {
+        console.error("지도 초기화 중 오류:", e);
         isLoading.value = false;
     }
-});
 
-
-onUnmounted(() => {
-    if (isParticipantsLayerVisible.value) {
-        searchStore.stopSearch();
-        console.log("[PredictLocation] 페이지 이탈. '함께 찾기' 스위치를 끕니다.");
-    }
 });
 
 const loadKakaoMap = (container) => {
@@ -1912,37 +1579,6 @@ function selectLocation(loc, index) {
 }
 
 
-
-// 제보 페이지 이동
-function goToReportPage() {
-    console.log('제보하기 페이지로 이동합니다...');
-    router.push({ name: 'ReportCreate' });
-}
-
-const { startParticipantTracking, stopParticipantTracking } = useParticipantLocations({
-    map: map,
-    missingPostId: missingPostId
-});
-const isParticipantsLayerVisible = ref(false);
-
-function wherePeople() {
-    isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
-
-    if (isParticipantsLayerVisible.value) {
-        startParticipantTracking();
-
-        if (missingPostId.value) {
-            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value}`);
-            searchStore.startSearch(missingPostId.value);
-        }
-
-    } else {
-        stopParticipantTracking();
-        console.log("[PredictLocation] '함께 찾기' 스위치를 끕니다.");
-        searchStore.stopSearch();
-    }
-}
-
 // ========================================================================================
 // 색상 관련 헬퍼 함수
 // ========================================================================================
@@ -1977,81 +1613,6 @@ function getTimeRangeText(minutes) {
     if (min < 60) return '30-60분'
     return '60-90분'
 }
-
-// ========================================================================================
-// 유틸 함수
-// ========================================================================================
-
-const elapsedTimeText = ref('')
-
-function calcElapsedTime() {
-    try {
-        const missingTime = new Date(missingTimeDB.value)
-
-        if (isNaN(missingTime.getTime())) {
-            console.error('❌ 실종 시간이 유효하지 않습니다:', missingTimeDB.value)
-            elapsedTimeText.value = '시간 불명'
-            return
-        }
-
-        const now = new Date()
-        const diffInMs = now.getTime() - missingTime.getTime()
-        const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
-        const minutes = Math.max(0, diffInMinutes)
-
-        // 🧩 90분 이상이면 90으로 고정
-        const clampedMinutes = Math.min(minutes, 90)
-
-        if (minutes < 60) {
-            elapsedTimeText.value = `${minutes}분 전`
-        } else {
-            const hours = Math.floor(minutes / 60)
-            elapsedTimeText.value = `약 ${hours}시간 전`
-        }
-
-        console.log(`⏱️ 경과 시간: ${minutes}분 → 표시: ${elapsedTimeText.value}`)
-        setTime(clampedMinutes)
-
-    } catch (error) {
-        console.error('❌ 경과 시간 계산 중 오류:', error)
-        elapsedTimeText.value = '시간 불명'
-    }
-}
-
-function formatSimpleDateTime(dateString) {
-    if (!dateString) return '시간 정보 없음';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date)) return '날짜 형식 오류';
-
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${year}-${month}-${day} ${hours}:${minutes}`;
-    } catch (e) {
-        console.error("날짜 포맷 오류:", e, dateString);
-        return '날짜 형식 오류';
-    }
-}
-
-function calculateAge(birthDateString) {
-    if (!birthDateString) return '?';
-    try {
-        const birthDate = new Date(birthDateString);
-        if (isNaN(birthDate)) return '?';
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        return age >= 0 ? age : '?';
-    } catch (e) { return '?'; }
-}
-
 // ========================================================================================
 // 타임라인 관련
 // ========================================================================================
@@ -2375,9 +1936,9 @@ function setCenter(force = false) {
     flex-direction: column;
     width: 100%;
     max-width: 100%;
-    height: 100%;
+    height: 100vh;
     margin: 0;
-    padding-top: 50px;
+    margin-top: -18px;
     background: linear-gradient(180deg, #f8f9fd 0%, #ffffff 100%);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-y: auto;

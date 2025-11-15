@@ -9,6 +9,7 @@ import Login from '@/views/Login.vue'
 import MissingReport from '@/components/MissingReport.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
+import JustPredict from '@/views/JustPredictLocation.vue'
 import Simulation from '@/views/NoDataSimulation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
@@ -67,6 +68,7 @@ import DesktopMypageAdmin from '@/views/desktop/DesktopMypageAdmin.vue'
 import DesktopMypageSafezone from '@/views/desktop/DesktopMypageSafezone.vue'
 import DesktopMypageSafezoneRadius from '@/views/desktop/DesktopMypageSafezoneRadius.vue'
 import DesktopReport from '@/views/desktop/DesktopReport.vue'
+import JustPredictLocation from '@/views/JustPredictLocation.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -218,6 +220,12 @@ const router = createRouter({
       name: 'CommunityView',
 
       component: CommunityView,
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+    },
+    {
+      path: '/not-reported-predict/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
+      name: 'not-reported-predict',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
+      component: JustPredictLocation,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
     {
