@@ -517,25 +517,25 @@ const router = createRouter({
     },
     {
       path: '/makeFriends',
-      name: 'MakeFriends',
+      name: 'NHMakeFriends',
       component: MakeFriends,
       meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
     },
     {
       path: '/createPlaza',
-      name: 'CreatePlaza',
+      name: 'NHCreatePlaza',
       component: CreatePlaza,
       meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
     },
     {
       path: '/plazaDetail/:plazaNo',
-      name: 'PlazaDetail',
+      name: 'NHPlazaDetail',
       component: PlazaDetail,
       meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
     },
     {
       path: '/myPlaza',
-      name: 'MyPlaza',
+      name: 'NHMyPlaza',
       component: MyPlaza,
       meta: { requiresAuth: true, roles: [1, 2, 3, 4] } // 보호자(1), 환자(2) 구독환자(3) 이웃(4) 접근 가능
     },
