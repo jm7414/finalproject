@@ -39,15 +39,11 @@
                 <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
                     <i class="bi bi-map-fill"></i>
                     <span class="button-text">예상위치</span>
-                </button>  
+                </button>
             </div>
-            <div v-if="less_data" class="">
+            <div v-if="less_data.value" class="">
                 <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
                 <span>예측 위치들이 부정확할 수 있습니다.</span>
-                <!-- 추후에 수정할 예정 + 이 부분 predictLocationBackup파일에 적어놨어요!
-                    3분간격으로 28일 안되면 예측위치 부정확하다고하고 막아버림
-                    모델 결정 후 전체 수정예정
-                -->
             </div>
         </div>
 
@@ -1589,7 +1585,7 @@ async function findMissingReportId() {
             console.error("❌ [ID 찾기] 실패:", err.message);
             personError.value = err.message || "정보를 불러올 수 없습니다.";
         }
-        return false;
+        return null;
     }
 }
 
