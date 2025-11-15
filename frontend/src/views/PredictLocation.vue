@@ -39,9 +39,9 @@
                 <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
                     <i class="bi bi-map-fill"></i>
                     <span class="button-text">예상위치</span>
-                </button>
+                </button>  
             </div>
-            <div v-if="less_data.value" class="">
+            <div v-if="less_data" class="">
                 <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
                 <span>예측 위치들이 부정확할 수 있습니다.</span>
                 <!-- 추후에 수정할 예정 + 이 부분 predictLocationBackup파일에 적어놨어요!
@@ -310,18 +310,28 @@
                                 <p class="stat-sublabel-modern-1">최대 5개의 위치를 보여줍니다</p>
                             </div>
                         </div>
-                        <div class="stat-card-modern">
+                        <!-- ★★★ 수정된 stat-card: 클릭 시 모달 오픈 ★★★ -->
+                        <div class="stat-card-modern clickable" @click="openAgentSimulation">
                             <div class="stat-icon-modern" style="--stat-color: #667eea;">
-                                <i class="bi bi-geo-alt"></i>
+                                <i class="bi bi-diagram-3"></i>
                             </div>
                             <div class="stat-content-modern">
-                                <p class="stat-sublabel-modern-1">여기 모달로 띄울겁니다</p>
+                                <p class="stat-label-modern">에이전트 시뮬레이션</p>
+                                <p class="stat-sublabel-modern-1">AI 에이전트 기반 경로 예측</p>
+                                <p class="stat-sublabel-modern-1">10개 주요 위치의 이동 패턴</p>
+                                <div class="click-hint">
+                                    <i class="bi bi-cursor-fill"></i>
+                                    <span>클릭하여 보기</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
+        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="patientUserNo"
+            :missingLocation="missingLocation" :missingTime="missingTimeDB" @close="closeAgentSimulation" />
     </div>
 </template>
 
@@ -331,6 +341,7 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
 import { useSearchStore } from '@/stores/useSearchStore';
+import AgentSimulationModal from '@/components/AgentSimulationModal.vue'
 
 // ========================================================================================
 // 카카오지도 및 API 키 설정
@@ -343,6 +354,40 @@ const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 const route = useRoute();
 const router = useRouter();
 const searchStore = useSearchStore();
+
+// 모달
+// ★★★ 에이전트 시뮬레이션 모달 상태 추가 ★★★
+const showAgentSimulation = ref(false)
+
+// 모달 열기 함수 - 유효성 검사 추가
+const openAgentSimulation = () => {
+    // ⭐ 필수 값 유효성 검사
+    if (!patientUserNo.value) {
+        console.error('❌ patientUserNo가 없습니다:', patientUserNo.value)
+        alert('환자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+        return
+    }
+
+    if (!missingLocation.value.lat || !missingLocation.value.lon) {
+        console.error('❌ missingLocation이 없습니다:', missingLocation.value)
+        alert('실종 위치 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+        return
+    }
+
+    console.log('✅ 시뮬레이션 모달 열기:', {
+        patientUserNo: patientUserNo.value,
+        missingLocation: missingLocation.value,
+        missingTimeDB: missingTimeDB.value
+    })
+
+    showAgentSimulation.value = true
+}
+
+// 모달 닫기 함수
+const closeAgentSimulation = () => {
+    showAgentSimulation.value = false
+}
+
 
 // ========================================================================================
 // 데이터 상태 관리 - API 응답 구조에 맞게 수정
@@ -414,8 +459,10 @@ let total_cluster = ref(null)
 // API 호출 함수 - 예측 데이터 가져오기
 // ========================================================================================
 let userNo = ref('')
-
+let lessData = ref(false)
 async function fetchPredictionData() {
+
+    console.log(`fetchPredictionData 실행됨`)
 
     const missingTime = formatSimpleDateTime(missingTimeDB.value).toString();
 
@@ -435,6 +482,32 @@ async function fetchPredictionData() {
         });
 
         const gpsData = gpsResponse.data;
+
+        console.log(`fetchPrediction GPS DATA ::::: ${JSON.stringify(gpsData)}`);
+
+        // 일주일간 데이터 부족시 뒤로 돌아가기 만들음
+        if (gpsData.length < 3 * 20 * 24 * 7) {
+            const lastGPSData = gpsData[gpsData.length - 1];
+            console.log(`lastGPSData => ${JSON.stringify(lastGPSData)}`)
+            if (confirm(`환자의 위치데이터가 부족하여 시뮬레이션만 볼 수 있습니다. 페이지를 이동합니다.`)) {
+                router.push({
+                    path: '/simulation',
+                    query: {
+                        userNo: userNo,
+                        lat: lastGPSData.latitude,
+                        lon: lastGPSData.longitude,
+                        missingTime: missingTimeDB.value
+                    }
+                });
+            } else {
+                router.push(`/GD`)
+            }
+
+
+            return false;
+        } else if (gpsData.length < 3 * 20 * 24 * 28) {
+            lessData.value = true;
+        }
 
         // ⭐ 카멜케이스 → 스네이크케이스 변환 + 초 추가
         const gpsRecords = gpsData.map(record => {
@@ -494,7 +567,7 @@ async function fetchPredictionData() {
 
         total_cluster.value = data.total_clusters_found;
 
-        processDestinationsToZones(data);
+        await processDestinationsToZones(data);
 
         return true;
 
@@ -1514,7 +1587,7 @@ async function findMissingReportId() {
             console.error("❌ [ID 찾기] 실패:", err.message);
             personError.value = err.message || "정보를 불러올 수 없습니다.";
         }
-        return null;
+        return false;
     }
 }
 
@@ -1542,7 +1615,7 @@ async function fetchPatientAndMissingReport() {
             missingTimeDB.value = new Date(response.data.reportedAt).getTime();
         }
 
-        fetchParticipants();
+        await fetchParticipants();
         return true;
 
     } catch (err) {
@@ -2250,27 +2323,27 @@ function updateMapForTime(minutes) {
     try {
         // ⭐ Circle 반경만 업데이트 (중심이나 줌은 변경하지 않음)
         if (minutes <= 30) {
-            const radius = (minutes / 30) * 600
+            const radius = (minutes / 30) * 500
             circles.value.circle700.setRadius(radius)
             circles.value.circle1500.setRadius(0)
             circles.value.circle2100.setRadius(0)
         }
         else if (minutes <= 60) {
-            circles.value.circle700.setRadius(600)
-            const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
+            circles.value.circle700.setRadius(500)
+            const radius = 500 + ((minutes - 30) / 30) * (1000 - 500)
             circles.value.circle1500.setRadius(radius)
             circles.value.circle2100.setRadius(0)
         }
         else if (minutes <= 90) {
-            circles.value.circle700.setRadius(600)
-            circles.value.circle1500.setRadius(1300)
-            const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
+            circles.value.circle700.setRadius(500)
+            circles.value.circle1500.setRadius(1000)
+            const radius = 1000 + ((minutes - 60) / 30) * (1500 - 1000)
             circles.value.circle2100.setRadius(radius)
         }
         else {
-            circles.value.circle700.setRadius(600)
-            circles.value.circle1500.setRadius(1300)
-            circles.value.circle2100.setRadius(2000)
+            circles.value.circle700.setRadius(500)
+            circles.value.circle1500.setRadius(1000)
+            circles.value.circle2100.setRadius(1500)
         }
 
         // ⭐ 지도 중심과 줌은 변경하지 않음!
@@ -2333,7 +2406,7 @@ function setCenter(force = false) {
 }
 
 .loading-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;

@@ -132,7 +132,7 @@
       <!-- 2) 예상 위치 -->
       <div class="col-6">
         <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          @click="router.push('/predict-location')" style="height:196px;
+          @click="typeOfMissing" style="height:196px;
                        background-image:
                          linear-gradient(0deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
                          linear-gradient(135deg,#ff7b64 0%,#ff5a42 60%,#ff3f2e 100%);">
@@ -792,6 +792,33 @@ onBeforeUnmount(() => {
   // 환자 위치 추적 중지
   stopPatientLocationTracking()
 })
+
+
+///
+/// 주형 yes실종 no실종 비교해서 각 상황에 맞는 페이지로 넘겨줄게요~ 히히발싸
+///
+
+// 환자 번호를 patientUserNo.value 로 받아오면 됨!
+// 실종게시판에 있는지 없는지 판단하는 함수
+async function isReported() {
+  try {
+    const response = await fetch(`/api/missing-persons/patient/${patientUserNo.value}/latest`, {
+          method: 'GET',
+          credentials: 'include'
+        })
+      const patientData = await response.json()
+      console.log(`response NO ::::: ${JSON.stringify(patientData)}`)
+    
+  } catch (error) {
+  console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :::: ${error}`)    
+  }
+}
+
+// 버튼 클릭시 페이지 어디로갈지
+function typeOfMissing() {
+  console.log(`환자 번호는 ::::: ${patientUserNo.value}`) 
+  isReported()  
+}
 </script>
 
 <style scoped>
