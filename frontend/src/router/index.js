@@ -65,6 +65,7 @@ import DesktopMypageConnect from '@/views/desktop/DesktopMypageConnect.vue'
 import DesktopMypageAdmin from '@/views/desktop/DesktopMypageAdmin.vue'
 import DesktopMypageSafezone from '@/views/desktop/DesktopMypageSafezone.vue'
 import DesktopMypageSafezoneRadius from '@/views/desktop/DesktopMypageSafezoneRadius.vue'
+import DesktopReport from '@/views/desktop/DesktopReport.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -170,6 +171,12 @@ const router = createRouter({
       path: '/desktop/mypage/plusplan',
       name: 'desktop-mypage-plusplan',
       component: DesktopMypagePlusplan,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
+    },
+    {
+      path: '/desktop/report',
+      name: 'desktop-report',
+      component: DesktopReport,
       meta: { requiresAuth: true, roles: [1], layout: 'desktop' }
     },
     {

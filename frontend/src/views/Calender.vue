@@ -895,7 +895,7 @@ onMounted(() => {
 /* 플로팅 액션 버튼 */
 .fab {
   position: fixed;
-  bottom: 90px; /* 푸터와 적절한 간격 */
+  bottom: 110px; /* 푸터와 적절한 간격 */
   right: calc((100vw - 375px) / 2 + 20px);
   width: 56px;
   height: 56px;

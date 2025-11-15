@@ -98,7 +98,7 @@ const showSupportModal = ref(false)
 const menuItems = [
   { name: '안심존', route: '/desktop/main' },
   { name: '예상 위치', route: '/desktop/predict' },
-  { name: 'AI보고서', route: null },
+  { name: 'AI보고서', route: '/desktop/report' },
   { name: '일정', route: '/desktop/schedule' },
   { name: '커뮤니티', route: '/desktop/communityView' },
   { name: '마이페이지', route: '/desktop/mypage' }
