@@ -234,7 +234,7 @@ const ENDPOINTS = {
 const connected = ref(false)
 const err = ref('')
 
-const patient = ref({ userNo: null, name: '', avatarUrl: null })
+const patient = ref({ userNo: null, name: '', avatarUrl: null, isOnline: false, lastActivity: null })
 const missingEvent = ref(null)
 const isReportModalVisible = ref(false)
 
@@ -370,7 +370,10 @@ async function fetchPatientInfo() {
     patient.value = {
       userNo: patientData.userNo,
       name: patientData.name || '',
-      avatarUrl: patientData.profilePhoto || null
+      avatarUrl: patientData.profilePhoto || null,
+      // [시연용] isOnline과 lastActivity 강제 설정
+      isOnline: true,
+      lastActivity: new Date()
     }
     
     return patientData.userNo
@@ -740,13 +743,46 @@ const nextSchedule = computed(() => {
     .filter(s => s.scheduleDate === todayKey)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
+  // 오늘 일정이 없으면 null 반환
+  if (todayList.length === 0) return null
+
   const nowMin = now.getHours() * 60 + now.getMinutes()
-  const upcoming = todayList.find(s => timeToMin(s.startTime) >= nowMin)
+  
+  // 1. 현재 진행 중인 일정 찾기 (현재 시간이 startTime과 endTime 사이)
+  const currentSchedule = todayList.find(s => {
+    const startMin = timeToMin(s.startTime)
+    const endMin = timeToMin(s.endTime)
+    return nowMin >= startMin && nowMin <= endMin
+  })
+  
+  if (currentSchedule) {
+    // 현재 진행 중인 일정이 있으면 반환
+    const t = `${fmtTime(currentSchedule.startTime)} - ${fmtTime(currentSchedule.endTime)}`
+    const loc = formatLocation(currentSchedule.scheduleNo)
+    return { 
+      id: currentSchedule.scheduleNo, 
+      title: currentSchedule.scheduleTitle, 
+      time: t, 
+      location: loc, 
+      depart: null, 
+      arrive: null 
+    }
+  }
+  
+  // 2. 현재 진행 중인 일정이 없으면 다음 예정 일정 찾기
+  const upcoming = todayList.find(s => timeToMin(s.startTime) > nowMin)
   if (!upcoming) return null
 
   const t = `${fmtTime(upcoming.startTime)} - ${fmtTime(upcoming.endTime)}`
   const loc = formatLocation(upcoming.scheduleNo)
-  return { id: upcoming.scheduleNo, title: upcoming.scheduleTitle, time: t, location: loc, depart: null, arrive: null }
+  return { 
+    id: upcoming.scheduleNo, 
+    title: upcoming.scheduleTitle, 
+    time: t, 
+    location: loc, 
+    depart: null, 
+    arrive: null 
+  }
 })
 function openReportModal() {    // 실종 모달 함수
   if (!connected.value || !patient.value?.userNo) {
@@ -781,8 +817,13 @@ onMounted(async () => {
     // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
     
-    // 일정 데이터 로드
-    await loadScheduleData()
+    // 일정 데이터 로드 (실패해도 계속 진행)
+    try {
+      await loadScheduleData()
+    } catch (scheduleError) {
+      console.warn('일정 로드 실패:', scheduleError)
+      // 일정 로드 실패해도 계속 진행
+    }
     
     // 지도 초기화 (DOM 요소가 준비된 후)
     await initMap()
@@ -792,6 +833,20 @@ onMounted(async () => {
     
     // 환자 위치 추적 시작
     startPatientLocationTracking()
+    
+    // [시연용] 환자 위치가 없으면 고정 좌표로 설정
+    if (!patientLocation.value && patientUserNo.value) {
+      const fixedLocation = {
+        userNo: patientUserNo.value,
+        latitude: 37.244364,
+        longitude: 126.876748,
+        status: 'online',
+        timestamp: Date.now(),
+        lastUpdateTime: Date.now()
+      }
+      patientLocation.value = fixedLocation
+      updatePatientMarker(fixedLocation)
+    }
     
     // 초기 안심존 상태 확인
     await checkPatientInSafeZone()

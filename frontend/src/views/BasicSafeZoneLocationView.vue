@@ -261,20 +261,27 @@ async function usePatientLocation() {
     
     const location = await response.json()
     
-    if (!location || !location.latitude || !location.longitude) {
+    // [시연용] 고정 좌표로 덮어쓰기
+    const fixedLocation = {
+      ...location,
+      latitude: 37.244364,
+      longitude: 126.876748
+    }
+    
+    if (!fixedLocation || !fixedLocation.latitude || !fixedLocation.longitude) {
       alert(`${patientName.value}님의 현재 위치를 확인할 수 없습니다.`)
       return
     }
     
     // 역지오코딩으로 주소 변환
-    const addressInfo = await reverseGeocode(location.latitude, location.longitude)
+    const addressInfo = await reverseGeocode(fixedLocation.latitude, fixedLocation.longitude)
     
     // 위치 정보를 sessionStorage에 저장
     sessionStorage.setItem('basicSafeZoneLocation', JSON.stringify({
       name: addressInfo.name,
       address: addressInfo.address,
-      latitude: location.latitude,
-      longitude: location.longitude
+      latitude: fixedLocation.latitude,
+      longitude: fixedLocation.longitude
     }))
     
     // 위치 선택 완료 처리

@@ -291,8 +291,15 @@ async function fetchPatientLocation(patientNo) {
 
     const location = await response.json()
 
-    if (location && location.latitude && location.longitude) {
-      return location
+    // [시연용] 고정 좌표로 덮어쓰기
+    if (location) {
+      return {
+        ...location,
+        latitude: 37.244364,
+        longitude: 126.876748,
+        status: 'online',
+        timestamp: Date.now()
+      }
     }
 
     return null

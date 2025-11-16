@@ -563,19 +563,24 @@ async function loadScheduleForEdit(scheduleNo) {
 }
 
 onMounted(async () => {
+  // 일정 추가/수정이 진행 중인지 확인
+  const isInProgress = sessionStorage.getItem('isScheduleInProgress')
+  
   // 수정 모드 확인
   const editScheduleNoFromStorage = sessionStorage.getItem('editScheduleNo')
   if (editScheduleNoFromStorage) {
     isEditMode.value = true
     editScheduleNo.value = parseInt(editScheduleNoFromStorage)
-    // 일정 수정 진행 중임을 표시
-    sessionStorage.setItem('isScheduleInProgress', 'true')
-    await loadScheduleForEdit(editScheduleNo.value)
-    return
+    
+    // 진행 중이 아닌 경우에만 일정 데이터 로드 (처음 수정 모드로 진입한 경우)
+    if (!isInProgress) {
+      // 일정 수정 진행 중임을 표시
+      sessionStorage.setItem('isScheduleInProgress', 'true')
+      await loadScheduleForEdit(editScheduleNo.value)
+      return
+    }
+    // 진행 중인 경우: 경로 검색에서 새로운 정보를 설정했으므로 기존 데이터를 로드하지 않음
   }
-  
-  // 일정 추가/수정이 진행 중인지 확인
-  const isInProgress = sessionStorage.getItem('isScheduleInProgress')
   
   // 진행 중이 아닌 경우에만 폼 초기화 (새로 시작하는 경우)
   if (!isInProgress) {
@@ -610,6 +615,7 @@ onMounted(async () => {
     }
     
     // 위치 데이터 로드 (GeoFencingView에서 돌아온 경우)
+    // SearchRouteView에서 새로 설정한 scheduleLocations가 우선적으로 사용됨
     const scheduleLocations = sessionStorage.getItem('scheduleLocations')
     if (scheduleLocations) {
       try {

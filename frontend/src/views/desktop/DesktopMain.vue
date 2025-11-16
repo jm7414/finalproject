@@ -7,8 +7,10 @@
             <h1>안심존 관리</h1>
             <p class="subtitle">환자의 현재 위치와 안심존을 모니터링하세요.</p>
           </div>
-          <button type="button" class="create-zone-btn" @click="">환자 상태변환</button>
-          <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
+          <div class="header-buttons">
+            <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
+            <button type="button" class="create-zone-btn" @click="">환자 상태변환</button>
+          </div>
         </div>
 
         <!-- Kakao Map 영역 -->
@@ -52,9 +54,8 @@
               <div v-else class="avatar-placeholder">🙂</div>
             </div>
             <div class="patient-meta">
-              <strong>{{ patientInfo.name || patient.name }}</strong>
-              <span>{{ patient.age }}세 · {{ patient.gender }}</span>
-              <span>등록일 {{ patient.registeredAt }}</span>
+              <strong>{{ patientInfo.name }}</strong>
+              <span>등록일 {{ getTodayDate() }}</span>
             </div>
             <ul class="patient-stats">
               <li>
@@ -69,7 +70,7 @@
               </li>
               <li>
                 <span class="label">현재 위치</span>
-                <span class="value">{{ safeZoneStatus.currentArea || '서울시 강남구' }}</span>
+                <span class="value">경기 화성시 비봉면</span>
               </li>
             </ul>
           </div>
@@ -252,14 +253,6 @@ import defaultProfileImage from '@/assets/default-profile.png'
 
 const router = useRouter()
 
-// 더미 데이터 (나중에 실제 API로 교체)
-const patient = {
-  name: '김영희',
-  age: 78,
-  gender: '여성',
-  registeredAt: '2025.01.15'
-}
-
 // 환자 정보 데이터
 const patientInfo = ref({
   name: '',
@@ -405,6 +398,7 @@ const {
   patientUserNo,
   patientInfo,
   mapInstance,
+  markerSize: 35, // 데스크탑 버전에서 마커 크기 조정
   onLocationUpdate: (location) => {
     checkPatientInSafeZone()
   },
@@ -944,7 +938,7 @@ function checkPatientInSafeZone() {
         color: '#16A34A',
         bgColor: '#DCFCE7',
         lastUpdated: '방금 전',
-        currentArea: '서울시 강남구'
+        currentArea: '경기 화성시 비봉면'
       }
     } else {
       safeZoneStatus.value = {
@@ -953,7 +947,7 @@ function checkPatientInSafeZone() {
         color: '#EF4444',
         bgColor: '#FEE2E2',
         lastUpdated: '방금 전',
-        currentArea: '서울시 강남구'
+        currentArea: '경기 화성시 비봉면'
       }
     }
     
@@ -1033,6 +1027,15 @@ function handleImageError(event) {
     // 기본 이미지도 실패하면 이모지 표시
     event.target.style.display = 'none'
   }
+}
+
+/* ===== 날짜 포맷팅 ===== */
+function getTodayDate() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}.${month}.${day}`
 }
 
 /* ===== 지도 컨트롤 및 네비게이션 ===== */
@@ -1287,19 +1290,26 @@ async function usePatientLocationForModal() {
     
     const location = await response.json()
     
-    if (!location || !location.latitude || !location.longitude) {
+    // [시연용] 고정 좌표로 덮어쓰기
+    const fixedLocation = {
+      ...location,
+      latitude: 37.244364,
+      longitude: 126.876748
+    }
+    
+    if (!fixedLocation || !fixedLocation.latitude || !fixedLocation.longitude) {
       alert('환자의 현재 위치를 확인할 수 없습니다.')
       return
     }
     
     // 역지오코딩으로 주소 변환
-    const addressInfo = await reverseGeocode(location.latitude, location.longitude)
+    const addressInfo = await reverseGeocode(fixedLocation.latitude, fixedLocation.longitude)
     
     const locationData = {
       name: addressInfo.name,
       address: addressInfo.address,
-      latitude: location.latitude,
-      longitude: location.longitude
+      latitude: fixedLocation.latitude,
+      longitude: fixedLocation.longitude
     }
     
     selectedLocationData.value = locationData
@@ -1560,6 +1570,12 @@ onBeforeUnmount(() => {
 .map-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
   align-items: center;
 }
 

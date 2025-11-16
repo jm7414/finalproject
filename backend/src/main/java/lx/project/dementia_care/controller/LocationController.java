@@ -35,6 +35,7 @@ public class LocationController {
     /**
      * 환자 위치 조회 (보호자용)
      * GET /api/location/patient/{patientUserNo}
+     * [시연용] 항상 고정 좌표 반환
      */
     @GetMapping("/patient/{patientUserNo}")
     public ResponseEntity<LocationResponseDTO> getPatientLocation(
@@ -44,12 +45,9 @@ public class LocationController {
             // TODO: authentication에서 보호자 정보 추출하여 해당 환자에 대한 권한 확인
             // 현재는 임시로 모든 요청 허용 (나중에 보안 강화 필요)
             
+            // [시연용] 항상 고정 좌표 반환 (null 반환 없음)
             LocationResponseDTO location = locationService.getPatientLocation(patientUserNo);
-            if (location != null) {
-                return ResponseEntity.ok(location);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+            return ResponseEntity.ok(location);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

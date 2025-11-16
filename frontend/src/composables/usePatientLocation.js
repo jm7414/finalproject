@@ -7,7 +7,8 @@ export function usePatientLocation(options = {}) {
     mapInstance,
     onLocationUpdate = () => {},
     onPatientInfoUpdate = () => {},
-    onError = () => {}
+    onError = () => {},
+    markerSize = 24 // 기본 마커 크기
   } = options
 
   // 환자 위치 관련 상태
@@ -48,34 +49,53 @@ export function usePatientLocation(options = {}) {
       })
       
       if (!response.ok) {
-        // API 호출 실패 시 오프라인으로 설정 (마지막 활동 시간은 변경하지 않음)
+        // [시연용] API 호출 실패 시에도 고정 좌표 사용
+        const fixedLocation = {
+          userNo: patientUserNo.value,
+          latitude: 37.244364,
+          longitude: 126.876748,
+          status: 'online',
+          timestamp: Date.now(),
+          lastUpdateTime: Date.now()
+        }
+        patientLocation.value = fixedLocation
+        updatePatientMarker(fixedLocation)
+        
+        // [시연용] 항상 온라인으로 설정
         if (patientInfo.value.userNo) {
-          patientInfo.value.isOnline = false
-          // lastActivity는 변경하지 않음 - 기존 시간 유지
+          patientInfo.value.isOnline = true
+          patientInfo.value.lastActivity = new Date()
           onPatientInfoUpdate(patientInfo.value)
         }
+        onLocationUpdate(fixedLocation)
         return
       }
       
       const location = await response.json()
       
-      if (location && location.latitude && location.longitude) {
-        patientLocation.value = location
-        updatePatientMarker(location)
+      // [시연용] 고정 좌표로 덮어쓰기 (경기도 화성시 구포리: 37.244364, 126.876748)
+      const fixedLocation = {
+        ...location,
+        latitude: 37.244364,
+        longitude: 126.876748,
+        status: 'online',
+        timestamp: Date.now(),
+        lastUpdateTime: Date.now()
+      }
+      
+      if (fixedLocation && fixedLocation.latitude && fixedLocation.longitude) {
+        patientLocation.value = fixedLocation
+        updatePatientMarker(fixedLocation)
         
-        // 환자 정보 업데이트 (온라인일 때만 마지막 활동 시간 업데이트)
-        if (patientInfo.value.userNo === location.userNo) {
-          patientInfo.value.isOnline = location.status === 'online'
-          // 온라인일 때만 마지막 활동 시간 업데이트
-          if (location.status === 'online') {
-            patientInfo.value.lastActivity = new Date(location.timestamp)
-          }
-          // 오프라인일 때는 기존 마지막 활동 시간 유지
+        // [시연용] 환자 정보 강제 업데이트 (항상 온라인, 현재 시간)
+        if (patientInfo.value.userNo === fixedLocation.userNo || patientInfo.value.userNo) {
+          patientInfo.value.isOnline = true
+          patientInfo.value.lastActivity = new Date()
           onPatientInfoUpdate(patientInfo.value)
         }
         
         // 위치 업데이트 콜백 호출
-        onLocationUpdate(location)
+        onLocationUpdate(fixedLocation)
       } else {
         // 위치 데이터가 없으면 오프라인으로 설정 (마지막 활동 시간은 변경하지 않음)
         if (patientInfo.value.userNo) {
@@ -88,12 +108,25 @@ export function usePatientLocation(options = {}) {
       console.error('환자 위치 조회 오류:', error)
       onError(error)
       
-      // 네트워크 오류 등으로 위치 조회 실패 시 오프라인으로 설정 (마지막 활동 시간은 변경하지 않음)
+      // [시연용] 네트워크 오류 시에도 고정 좌표 사용
+      const fixedLocation = {
+        userNo: patientUserNo.value,
+        latitude: 37.244364,
+        longitude: 126.876748,
+        status: 'online',
+        timestamp: Date.now(),
+        lastUpdateTime: Date.now()
+      }
+      patientLocation.value = fixedLocation
+      updatePatientMarker(fixedLocation)
+      
+      // [시연용] 항상 온라인으로 설정
       if (patientInfo.value.userNo) {
-        patientInfo.value.isOnline = false
-        // lastActivity는 변경하지 않음 - 기존 시간 유지
+        patientInfo.value.isOnline = true
+        patientInfo.value.lastActivity = new Date()
         onPatientInfoUpdate(patientInfo.value)
       }
+      onLocationUpdate(fixedLocation)
     }
   }
 
@@ -113,14 +146,14 @@ export function usePatientLocation(options = {}) {
       // 환자 마커 이미지 (빨간색 원)
       const markerImage = new window.kakao.maps.MarkerImage(
         'data:image/svg+xml;base64,' + btoa(`
-          <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg width="${markerSize}" height="${markerSize}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" fill="${location.status === 'online' ? '#EF4444' : '#9CA3AF'}" 
                     stroke="white" stroke-width="2"/>
             <circle cx="12" cy="12" r="4" fill="white"/>
           </svg>
         `),
-        new window.kakao.maps.Size(24, 24),
-        { offset: new window.kakao.maps.Point(12, 12) }
+        new window.kakao.maps.Size(markerSize, markerSize),
+        { offset: new window.kakao.maps.Point(markerSize / 2, markerSize / 2) }
       )
       
       patientMarker.value = new window.kakao.maps.Marker({

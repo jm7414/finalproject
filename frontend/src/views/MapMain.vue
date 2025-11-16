@@ -343,14 +343,15 @@ async function fetchPatientInfo() {
       // 환자 연결 상태 업데이트
       isPatientConnected.value = true
       
-      // 환자 정보 업데이트
-      patientInfo.value = {
-        name: patient.name || '', 
-        userNo: patient.userNo, 
-        isOnline: patient.isOnline ?? false, 
-        lastActivity: patient.lastActivity || null, 
-        user_status: patient.userStatus === 1 ? 1 : 0 
-      }
+      // 환자 정보 업데이트
+      patientInfo.value = {
+        name: patient.name || '', 
+        userNo: patient.userNo, 
+        // [시연용] isOnline과 lastActivity 강제 설정
+        isOnline: true, 
+        lastActivity: new Date(), 
+        user_status: patient.userStatus === 1 ? 1 : 0 
+      }
       console.log("업데이트된 patientInfo.value:", JSON.stringify(patientInfo.value, null, 2));
       
       return patient.userNo // 환자 번호 반환

@@ -49,17 +49,21 @@ public class LocationService {
 
     /**
      * 환자 위치 조회 (임시 저장소에서)
+     * [시연용] 항상 고정 좌표 반환 (경기도 화성시 구포리: 37.244364, 126.876748)
      */
     public LocationResponseDTO getPatientLocation(Integer patientUserNo) {
-        LocationResponseDTO location = temporaryLocations.get(patientUserNo);
+        // 시연용: 항상 고정 좌표 반환
+        long currentTime = System.currentTimeMillis();
+        LocationResponseDTO location = new LocationResponseDTO();
+        location.setUserNo(patientUserNo);
+        location.setLatitude(37.244364);
+        location.setLongitude(126.876748);
+        location.setTimestamp(currentTime);
+        location.setStatus("online");
+        location.setLastUpdateTime(currentTime);
         
-        if (location != null) {
-            // 5분 이상 업데이트가 없으면 오프라인으로 표시 (오프라인 판단은 5분 유지)
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - location.getLastUpdateTime() > 5 * 60 * 1000) {
-                location.setStatus("offline");
-            }
-        }
+        log.info("[시연용] 환자 {} 위치 고정 좌표 반환: ({}, {})", 
+            patientUserNo, location.getLatitude(), location.getLongitude());
         
         return location;
     }
@@ -67,6 +71,7 @@ public class LocationService {
     /**
      * '함께하는 사람들' 위치 조회 (임시 저장소에서) - 여러 명 조회
      * (MissingPersonService에서 호출됨)
+     * [시연용] 중심 좌표 근처 고정 좌표 반환
      *
      * @param userIds '함께하는 사람'들의 user_no 리스트
      * @return 위치 정보 DTO 리스트
@@ -77,23 +82,42 @@ public class LocationService {
             return locations; // ID 리스트가 비어있으면 빈 목록 반환
         }
 
+        // 시연용: 중심 좌표 (경기도 화성시 구포리: 37.244364, 126.876748)
+        double centerLat = 37.244364;
+        double centerLng = 126.876748;
+        
+        // 중심 좌표 근처 5개의 고정 좌표 (반경 약 50-80m)
+        double[][] fixedOffsets = {
+            {0.0005, 0.0006},   // 북동쪽
+            {-0.0004, 0.0007},  // 남동쪽
+            {-0.0006, -0.0005}, // 남서쪽
+            {0.0004, -0.0006},  // 북서쪽
+            {0.0003, 0.0003}    // 북쪽
+        };
+
         long currentTime = System.currentTimeMillis();
 
-        // ID 목록을 순회하며 'temporaryLocations' 맵에서 위치를 찾음
+        // ID 목록을 순회하며 고정 좌표 할당 (최대 5명)
+        int index = 0;
         for (Integer userId : userIds) {
-            LocationResponseDTO location = temporaryLocations.get(userId);
+            if (index >= 5) break; // 최대 5명까지만
             
-            if (location != null) {
-                // ⭐ (재사용) 1명 조회 로직과 동일하게 오프라인 상태 체크
-                if (currentTime - location.getLastUpdateTime() > 5 * 60 * 1000) {
-                    location.setStatus("offline");
-                }
-                
-                // 찾은 위치를 리스트에 추가
-                locations.add(location);
-            }
-            // (location == null 인 경우: 참여는 했지만 아직 위치 전송을 안 한 사람 -> 무시)
+            LocationResponseDTO location = new LocationResponseDTO();
+            location.setUserNo(userId);
+            
+            // 고정 오프셋 적용
+            double[] offset = fixedOffsets[index % fixedOffsets.length];
+            location.setLatitude(centerLat + offset[0]);
+            location.setLongitude(centerLng + offset[1]);
+            location.setTimestamp(currentTime);
+            location.setStatus("online");
+            location.setLastUpdateTime(currentTime);
+            
+            locations.add(location);
+            index++;
         }
+        
+        log.info("[시연용] 함께하는 사람들 {}명 위치 고정 좌표 반환", locations.size());
         
         return locations;
     }
