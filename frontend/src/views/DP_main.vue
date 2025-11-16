@@ -105,8 +105,8 @@
                 <div class="position-absolute top-0 start-0 end-0" style="bottom:44px">
                   <div class="h-100 d-flex align-items-center justify-content-center">
                     <img :src="imgAi" alt="" class="img-fluid" style="width:130%;max-width:none;height:auto;object-fit:contain;
-         transform:scale(1.05) translateY(15%);
-         filter:drop-shadow(0 8px 12px rgba(0,0,0,.10));opacity:.97" />
+                    transform:scale(1.05) translateY(15%);
+                    filter:drop-shadow(0 8px 12px rgba(0,0,0,.10));opacity:.97" />
                   </div>
                 </div>
                 <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
