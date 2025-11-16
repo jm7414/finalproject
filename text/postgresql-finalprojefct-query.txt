@@ -1,25 +1,36 @@
 -- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
 -- 자식 테이블부터 부모 테이블 순서로 삭제
+
+-- Level 4 (자식)
 DROP TABLE IF EXISTS sighting_report_comments CASCADE;
+
+-- Level 3 (자식)
 DROP TABLE IF EXISTS sighting_report CASCADE;
 DROP TABLE IF EXISTS missing_alert_check CASCADE;
 DROP TABLE IF EXISTS post_comments CASCADE;
+DROP TABLE IF EXISTS post_likes CASCADE;
+DROP TABLE IF EXISTS search_Together CASCADE;
+DROP TABLE IF EXISTS route CASCADE;
+DROP TABLE IF EXISTS schedule_location CASCADE;
+
+-- Level 2 (자식)
 DROP TABLE IF EXISTS user_location CASCADE;
 DROP TABLE IF EXISTS neighbor_schedule CASCADE;
 DROP TABLE IF EXISTS plaza CASCADE;
-DROP TABLE IF EXISTS search_Together CASCADE;
 DROP TABLE IF EXISTS record CASCADE;
 DROP TABLE IF EXISTS report CASCADE;
-DROP TABLE IF EXISTS period CASCADE;
 DROP TABLE IF EXISTS missing_post CASCADE;
 DROP TABLE IF EXISTS post CASCADE;
-DROP TABLE IF EXISTS route CASCADE;
-DROP TABLE IF EXISTS schedule_location CASCADE;
 DROP TABLE IF EXISTS schedule CASCADE;
 DROP TABLE IF EXISTS safe_zone CASCADE;
-DROP TABLE IF EXISTS guardian_patient_connection CASCADE;
+DROP TABLE IFS EXISTS guardian_patient_connection CASCADE;
+
+-- Level 1 (부모)
 DROP TABLE IF EXISTS users CASCADE;
+
+-- Level 0 (최상위 부모)
 DROP TABLE IF EXISTS role CASCADE;
+DROP TABLE IF EXISTS period CASCADE;
 
 -- === 역할(role) 테이블 ===
 CREATE TABLE role (
@@ -158,17 +169,34 @@ CREATE TABLE route (
 CREATE INDEX idx_route_schedule ON route(schedule_no);
 
 -- === 게시물(post) 테이블 ===
--- [수정] user_id 컬럼명을 user_no로 변경하여 FK 일관성 확보
 CREATE TABLE post (
     post_id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     user_no INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     content TEXT NOT NULL,
-    notice_check VARCHAR(20),
     view_count INT DEFAULT 0,
     image_path VARCHAR(255),
+    -- 공지 기능으로 인한 추가 (외래키 제약 제거)
+    plaza_no INTEGER,
+    notice_type VARCHAR(20) DEFAULT '일반' CHECK (notice_type IN ('일반', '공지')),
     FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+-- 공지 기능으로 인한 추가
+CREATE INDEX idx_post_plaza_no ON post(plaza_no);
+CREATE INDEX idx_post_notice_type ON post(notice_type);
+
+-- 좋아요 테이블
+CREATE TABLE post_likes (
+    like_id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL,
+    user_no INTEGER NOT NULL,
+    FOREIGN KEY (post_id) 
+        REFERENCES post(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_no) 
+        REFERENCES users(user_no) ON DELETE CASCADE,
+    UNIQUE(post_id, user_no)
 );
 
 CREATE INDEX idx_post_user_no ON post(user_no);
@@ -271,31 +299,23 @@ CREATE TABLE sighting_report_comments (
 CREATE INDEX idx_sighting_report_comments_report_id ON sighting_report_comments(sighting_report_id);
 CREATE INDEX idx_sighting_report_comments_user_no ON sighting_report_comments(user_no);
 
--- === 이웃 일정(neighbor_schedule) 테이블 ===
-CREATE TABLE neighbor_schedule (
-    schedule_no SERIAL PRIMARY KEY,
-    schedule_title VARCHAR(200) NOT NULL,
-    content TEXT,
-    schedule_date DATE NOT NULL,
-    user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
-    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_neighbor_schedule_user ON neighbor_schedule(user_no);
-CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
-
 -- === 만남의 광장(plaza) 테이블 ===
 CREATE TABLE plaza (
-    plaza_no SERIAL PRIMARY KEY,
+    plaza_member_no SERIAL PRIMARY KEY,
+    plaza_no INTEGER NOT NULL,
     plaza_name VARCHAR(200) NOT NULL,
     member_name VARCHAR(200) NOT NULL CHECK (member_name IN ('방장','이웃')),
-    user_no INTEGER NOT NULL,  -- 이웃 사용자 ID
-    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+    user_no INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
+    
+    CONSTRAINT uq_plaza_user UNIQUE (plaza_no, user_no)
 );
 
 CREATE INDEX idx_plaza_plaza_no ON plaza(plaza_no);
-CREATE INDEX idx_plaza_plaza_name ON plaza(plaza_name);
-CREATE INDEX idx_plaza_user ON plaza(user_no);
+CREATE INDEX idx_plaza_user_no ON plaza(user_no);
+CREATE INDEX idx_plaza_name ON plaza(plaza_name);
 
 -- === period, report, record 테이블 ===
 
@@ -400,6 +420,9 @@ CREATE TABLE IF NOT EXISTS user_location (
   record_time TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT fk_user_no FOREIGN KEY(user_no) REFERENCES users(user_no) ON DELETE CASCADE
 );
+  CREATE INDEX idx_user_location_user ON user_location(user_no);
+  CREATE INDEX idx_user_location_time ON user_location(record_time DESC);
+  
 -- 주형 수정 끝
 
 -- updated_at 자동 갱신 트리거 (period / report / record 모두 적용)
@@ -424,6 +447,42 @@ DROP TRIGGER IF EXISTS tg_record_touch ON record;
 CREATE TRIGGER tg_record_touch
 BEFORE UPDATE ON record
 FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+
+-- === 이웃 친구 관계 테이블 ===
+CREATE TABLE neighbor_friends (
+    friendship_id SERIAL PRIMARY KEY,
+    user_no_1 INTEGER NOT NULL,
+    user_no_2 INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_no_1) REFERENCES users(user_no) ON DELETE CASCADE,
+    FOREIGN KEY (user_no_2) REFERENCES users(user_no) ON DELETE CASCADE,
+    
+    CONSTRAINT chk_friend_order CHECK (user_no_1 < user_no_2),
+    CONSTRAINT uq_friendship UNIQUE (user_no_1, user_no_2)
+);
+
+CREATE INDEX idx_neighbor_friends_user1 ON neighbor_friends(user_no_1);
+CREATE INDEX idx_neighbor_friends_user2 ON neighbor_friends(user_no_2);
+
+
+-- === 이웃 일정(neighbor_schedule) 테이블 ===
+CREATE TABLE neighbor_schedule (
+    schedule_no SERIAL PRIMARY KEY,
+    schedule_title VARCHAR(200) NOT NULL,
+    content TEXT,
+    schedule_date DATE NOT NULL,
+    user_no INTEGER NOT NULL,
+    -- 공지 기능으로 인한 추가 (외래키 제약 제거)
+    plaza_no INTEGER,
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_neighbor_schedule_user ON neighbor_schedule(user_no);
+CREATE INDEX idx_neighbor_schedule_date ON neighbor_schedule(schedule_date);
+-- 공지 기능으로 인한 추가
+CREATE INDEX idx_neighbor_schedule_plaza ON neighbor_schedule(plaza_no);
 
 
 -----------------------------------------------------------------

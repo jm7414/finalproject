@@ -417,6 +417,7 @@ onMounted(async () => {
 
     await fetchPredictionData()
     await initMap()
+    createTemporaryMarkers()    // 임시 마커추가 함께하기용 나중에 삭제해야 함
     initCircles()
     makeMarker()
     showCirclesByZoneLevel(displayZoneLevel.value)
@@ -465,6 +466,38 @@ watch(showAllLocations, () => {
   selectedLocation.value = null
   makeMarker()
 })
+
+/**
+ * 임시 테스트용 마커 3개를 생성합니다. 함께하기용 나중에 진짜 함께하기가 되면 삭제해야 함
+ */
+function createTemporaryMarkers() {
+  // map 객체가 초기화되었는지 확인
+  if (!map) {
+    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
+    return;
+  }
+
+  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
+
+  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
+  const mapCenter = map.getCenter(); 
+  const testPositions = [
+    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
+    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002), // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
+    new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)          // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
+  ];
+
+  // 2. 3개의 마커를 생성하여 지도에 바로 표시
+  // (이 마커들은 'markers' 배열에 추가하지 않으므로,
+  // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
+  testPositions.forEach((position, index) => {
+    new window.kakao.maps.Marker({
+        position: position,
+        map: map, // 맵 객체에 바로 표시
+        title: `테스트 마커 ${index + 1}`
+    });
+  });
+}
 
 function getRadiusByMinutes(minutes) {
   if (minutes <= 30) return Math.round((minutes / 30) * 600)
@@ -587,19 +620,19 @@ function updateMapForTime(minutes) {
   if (!circles.value.circle700 || !circles.value.circle1500 || !circles.value.circle2100) return
 
   if (minutes <= 30) {
-    const radius = (minutes / 30) * 600
+    const radius = (minutes / 30) * 500
     circles.value.circle700.setRadius(radius)
     circles.value.circle1500.setRadius(0)
     circles.value.circle2100.setRadius(0)
   } else if (minutes <= 60) {
-    circles.value.circle700.setRadius(600)
-    const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
+    circles.value.circle700.setRadius(500)
+    const radius = 500 + ((minutes - 30) / 30) * (1000 - 500)
     circles.value.circle1500.setRadius(radius)
     circles.value.circle2100.setRadius(0)
   } else {
-    circles.value.circle700.setRadius(600)
-    circles.value.circle1500.setRadius(1300)
-    const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
+    circles.value.circle700.setRadius(500)
+    circles.value.circle1500.setRadius(1000)
+    const radius = 1000 + ((minutes - 60) / 30) * (1500 - 1000)
     circles.value.circle2100.setRadius(radius)
   }
 }
@@ -1227,6 +1260,7 @@ function formatDisplayDate(date) {
 }
 
 const isReportBoardVisible = ref(false);
+
 
 const isPanelVisible = ref(false)
 const panelContent = ref('board')
