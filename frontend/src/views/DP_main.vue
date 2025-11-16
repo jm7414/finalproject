@@ -101,16 +101,17 @@
               <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
                 style="height:220px;background-image:linear-gradient(135deg,#FFE8B5 0%, #FFD27E 60%, #FFC35D 100%);
                      background-size:100% 100%;background-repeat:no-repeat;box-shadow:0 8px 20px rgba(16,24,40,.08);"
-                @click="go('/chatbot')">
+                @click="go('/NH')">
                 <div class="position-absolute top-0 start-0 end-0" style="bottom:44px">
                   <div class="h-100 d-flex align-items-center justify-content-center">
-                    <img :src="imgAi" alt="" class="img-fluid"
-                      style="max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(0,0,0,.10));opacity:.97" />
+                    <img :src="imgAi" alt="" class="img-fluid" style="width:130%;max-width:none;height:auto;object-fit:contain;
+         transform:scale(1.05) translateY(15%);
+         filter:drop-shadow(0 8px 12px rgba(0,0,0,.10));opacity:.97" />
                   </div>
                 </div>
                 <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
                   style="height:44px;color:#232323;font-size:1.25rem">
-                  AI 챗봇
+                  만남의광장
                 </div>
               </button>
             </div>
@@ -134,7 +135,7 @@ import MyInfoModal from '@/components/MyinfoModal.vue'
 import imgZone from '@/assets/images/My zone.svg'
 import imgInfo from '@/assets/images/Myinfo.svg'
 import imgGame from '@/assets/images/game.svg'
-import imgAi from '@/assets/images/Ai.svg'
+import imgAi from '@/assets/images/man1.png'
 
 const router = useRouter()
 
@@ -242,7 +243,7 @@ async function startLocationTracking() {
     // 위치 추적 시작
     locationPermissionGranted.value = true
     updateLocation() // 즉시 한 번 실행
-    
+
     // 30초마다 위치 업데이트
     locationUpdateInterval.value = setInterval(() => {
       updateLocation()
@@ -266,7 +267,7 @@ function updateLocation() {
     console.error('Geolocation이 지원되지 않습니다.')
     return
   }
-  
+
   navigator.geolocation.getCurrentPosition(
     async (position) => {
       try {
@@ -314,7 +315,7 @@ onMounted(async () => {
     if (patientUserNo.value) {
       const list = await fetchSchedules(patientUserNo.value)
       allSchedules.value = Array.isArray(list) ? list : []
-      
+
       // 환자 로그인 시 위치 추적 시작
       await startLocationTracking()
     }
