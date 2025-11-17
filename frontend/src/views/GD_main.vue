@@ -40,8 +40,10 @@
               <span class="patient-name-bold">{{ patient.name }}</span>님은
             </div>
             <div class="d-flex align-items-center gap-2">
-              <div :class="safeZoneStatus.isInside ? 'status-indicator-safe' : 'status-indicator-danger'"
-                class="status-indicator"></div>
+              <div 
+                :class="safeZoneStatus.isInside ? 'status-indicator-safe' : 'status-indicator-danger'"
+                class="status-indicator"
+              ></div>
               <div :class="safeZoneStatus.isInside ? 'text-success' : 'text-danger'" class="safety-status-text">
                 {{ safeZoneStatus.isInside ? '안전한 위치에 있습니다' : '안심존을 벗어났습니다' }}
               </div>
@@ -87,24 +89,42 @@
     </div>
 
     <!-- 가장 빠른 일정 -->
-    <h6 class="fw-bold mb-2">오늘의 일정</h6>
-    <div v-if="nextSchedule" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <div class="d-flex align-items-center gap-2">
-          <span class="d-inline-block rounded-circle" style="width:10px;height:10px;background:#6c757d"></span>
-          <span class="fw-semibold">{{ nextSchedule.title }}</span>
+    <h6 class="fw-bold mb-3" style="font-size: 1.1rem; color: #1a1a1a;">오늘의 일정</h6>
+    <div v-if="nextSchedule" class="schedule-card mb-3">
+      <div class="schedule-header">
+        <div class="schedule-title-section">
+          <div class="schedule-indicator"></div>
+          <span class="schedule-title">{{ nextSchedule.title }}</span>
         </div>
-        <span class="text-secondary">{{ nextSchedule.time }}</span>
+        <div class="schedule-time">{{ nextSchedule.time }}</div>
       </div>
-      <div class="small text-secondary mb-1">{{ nextSchedule.location || '위치 정보 없음' }}</div>
-      <div class="small text-secondary" v-if="nextSchedule.depart">예상 출발: {{ nextSchedule.depart }}</div>
-      <div class="small text-secondary" v-if="nextSchedule.arrive">예상 도착: {{ nextSchedule.arrive }}</div>
+      <div class="schedule-location">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="location-icon">
+          <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" fill="currentColor"/>
+        </svg>
+        <span>{{ nextSchedule.location || '위치 정보 없음' }}</span>
+      </div>
+      <div class="schedule-details" v-if="nextSchedule.depart || nextSchedule.arrive">
+        <div v-if="nextSchedule.depart" class="schedule-detail-item">
+          <span class="detail-label">예상 출발</span>
+          <span class="detail-value">{{ nextSchedule.depart }}</span>
+        </div>
+        <div v-if="nextSchedule.arrive" class="schedule-detail-item">
+          <span class="detail-label">예상 도착</span>
+          <span class="detail-value">{{ nextSchedule.arrive }}</span>
+        </div>
+      </div>
     </div>
-    <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
-      <div class="card-body text-center text-muted">오늘 남은 일정이 없습니다.</div>
+    <div v-else class="schedule-empty-card mb-3">
+      <div class="schedule-empty-content">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="empty-icon">
+          <path d="M19 4H5C3.89 4 3 4.9 3 6V20C3 21.1 3.89 22 5 22H19C20.1 22 21 21.1 21 20V6C21 4.9 20.1 4 19 4ZM19 20H5V9H19V20ZM19 7H5V6H19V7Z" fill="currentColor"/>
+        </svg>
+        <p class="empty-text">오늘 남은 일정이 없습니다</p>
+      </div>
     </div>
 
-    <button class="btn btn-outline-dark w-100 rounded-pill mb-3" @click="router.push('/calendar')">
+    <button class="btn schedule-detail-btn w-100 mb-3" @click="router.push('/calendar')">
       일정 자세히 보기
     </button>
 
@@ -130,7 +150,7 @@
       <!-- 2) 예상 위치 -->
       <div class="col-6">
         <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          @click="typeOfMissing" style="height:196px;
+          @click="router.push('/predict-location')" style="height:196px;
                        background-image:
                          linear-gradient(0deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
                          linear-gradient(135deg,#ff7b64 0%,#ff5a42 60%,#ff3f2e 100%);">
@@ -328,31 +348,31 @@ async function fetchPatientInfo() {
       method: 'GET',
       credentials: 'include'
     })
-
+    
     if (!response.ok) {
       connected.value = false
       throw new Error('환자 정보를 가져올 수 없습니다.')
     }
-
+    
     const patientData = await response.json()
-
+    
     // 메시지만 있는 경우 (환자가 없는 경우)
     if (patientData.message) {
       console.warn(patientData.message)
       connected.value = false
       return null
     }
-
+    
     // 환자 연결 상태 업데이트
     connected.value = true
-
+    
     // 환자 정보 업데이트
     patient.value = {
       userNo: patientData.userNo,
       name: patientData.name || '',
       avatarUrl: patientData.profilePhoto || null
     }
-
+    
     return patientData.userNo
   } catch (error) {
     console.error('환자 정보 조회 오류:', error)
@@ -386,16 +406,16 @@ async function fetchScheduleSafeZone(scheduleNo) {
       method: 'GET',
       credentials: 'include'
     })
-
+    
     if (!response.ok) {
       throw new Error('경로 정보를 가져올 수 없습니다.')
     }
-
+    
     const route = await response.json()
     if (!route.bufferCoordinates) return null
-
+    
     const bufferCoordinates = JSON.parse(route.bufferCoordinates)
-
+    
     // 기존 데이터 호환성 처리
     if (Array.isArray(bufferCoordinates)) {
       return {
@@ -403,7 +423,7 @@ async function fetchScheduleSafeZone(scheduleNo) {
         coordinates: bufferCoordinates
       }
     }
-
+    
     return bufferCoordinates
   } catch (error) {
     console.error('일정 안심존 조회 오류:', error)
@@ -418,18 +438,18 @@ async function fetchBasicSafeZone(userNo) {
       method: 'GET',
       credentials: 'include'
     })
-
+    
     if (!response.ok) {
       throw new Error('기본 안심존을 가져올 수 없습니다.')
     }
-
+    
     const result = await response.json()
-
+    
     if (result.message) {
       console.warn(result.message)
       return null
     }
-
+    
     return result.boundaryCoordinates ? JSON.parse(result.boundaryCoordinates) : null
   } catch (error) {
     console.error('기본 안심존 조회 오류:', error)
@@ -442,13 +462,13 @@ async function fetchBasicSafeZone(userNo) {
 // 지도에 경로형 안심존(버퍼 폴리곤) 그리기
 function drawScheduleSafeZone(map, bufferCoordinates) {
   if (!map || !bufferCoordinates) return
-
+  
   try {
     // 기존 안심존 제거
     if (currentSafeZone) {
       currentSafeZone.setMap(null)
     }
-
+    
     // bufferCoordinates 형식 처리
     let coordinates
     if (Array.isArray(bufferCoordinates)) {
@@ -459,11 +479,11 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       console.error('지원하지 않는 bufferCoordinates 형식:', bufferCoordinates)
       return
     }
-
-    const kakaoPath = coordinates.map(coord =>
+    
+    const kakaoPath = coordinates.map(coord => 
       new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
     )
-
+    
     // 폴리곤 생성
     currentSafeZone = new window.kakao.maps.Polygon({
       path: kakaoPath,
@@ -473,14 +493,14 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       fillColor: '#EF4444',
       fillOpacity: 0.3
     })
-
+    
     currentSafeZone.setMap(map)
-
+    
     // 안심존이 보이도록 지도 범위 조정
     const bounds = new window.kakao.maps.LatLngBounds()
     kakaoPath.forEach(latLng => bounds.extend(latLng))
     map.setBounds(bounds)
-
+    
     console.log('경로형 안심존 표시 완료')
   } catch (error) {
     console.error('경로형 안심존 표시 오류:', error)
@@ -490,33 +510,33 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
 // 지도에 기본형 안심존(원형) 그리기
 function drawBasicSafeZone(map, boundaryData) {
   if (!map || !boundaryData) return
-
+  
   try {
     // 기존 안심존 제거
     if (currentSafeZone) {
       currentSafeZone.setMap(null)
     }
-
+    
     if (boundaryData.type === 'Circle') {
       const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
       const radius = boundaryData.radius
-
+      
       // 원형 폴리곤 생성
       const circlePoints = []
       const steps = 64
       const earthRadius = 6371000
-
+      
       for (let i = 0; i < steps; i++) {
         const angle = (Math.PI * 2 * i) / steps
         const dx = radius * Math.cos(angle)
         const dy = radius * Math.sin(angle)
-
+        
         const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
         const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)
-
+        
         circlePoints.push(new window.kakao.maps.LatLng(lat, lng))
       }
-
+      
       // 폴리곤 생성
       currentSafeZone = new window.kakao.maps.Polygon({
         path: circlePoints,
@@ -526,14 +546,14 @@ function drawBasicSafeZone(map, boundaryData) {
         fillColor: '#6366f1',
         fillOpacity: 0.2
       })
-
+      
       currentSafeZone.setMap(map)
-
+      
       // 지도 레벨 조정
       const bounds = new window.kakao.maps.LatLngBounds()
       circlePoints.forEach(point => bounds.extend(point))
       map.setBounds(bounds)
-
+      
       console.log('기본형 안심존 표시 완료')
     }
   } catch (error) {
@@ -544,16 +564,16 @@ function drawBasicSafeZone(map, boundaryData) {
 // 안심존 업데이트 (현재 일정에 따라)
 async function updateSafeZone(map) {
   if (!map || !patientUserNo.value) return
-
+  
   try {
     // 1. 현재 진행 중인 일정 찾기
     const currentSchedule = getCurrentSchedule()
-
+    
     if (currentSchedule) {
       // 2. 진행 중인 일정이 있으면 해당 일정의 안심존 표시
       console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
       const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
-
+      
       if (bufferCoordinates && (
         (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) ||
         (typeof bufferCoordinates === 'object' && bufferCoordinates.coordinates && bufferCoordinates.coordinates.length > 0)
@@ -562,11 +582,11 @@ async function updateSafeZone(map) {
         return
       }
     }
-
+    
     // 3. 진행 중인 일정이 없거나 안심존이 없으면 기본 안심존 표시
     console.log('기본 안심존 표시')
     const basicSafeZone = await fetchBasicSafeZone(patientUserNo.value)
-
+    
     if (basicSafeZone) {
       drawBasicSafeZone(map, basicSafeZone)
     } else {
@@ -591,7 +611,7 @@ async function checkPatientInSafeZone() {
     }
     return
   }
-
+  
   // 환자 위치가 없는 경우
   if (!patientLocation.value) {
     safeZoneStatus.value = {
@@ -602,17 +622,17 @@ async function checkPatientInSafeZone() {
     }
     return
   }
-
+  
   try {
     const patientLat = patientLocation.value.latitude
     const patientLng = patientLocation.value.longitude
-
+    
     let isInside = false
-
+    
     // 현재 활성화된 안심존 정보 가져오기
     const currentSchedule = getCurrentSchedule()
     let safeZoneData = null
-
+    
     if (currentSchedule) {
       // 현재 일정의 안심존 데이터 가져오기
       safeZoneData = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
@@ -620,17 +640,17 @@ async function checkPatientInSafeZone() {
       // 기본 안심존 데이터 가져오기
       safeZoneData = await fetchBasicSafeZone(patientUserNo.value)
     }
-
+    
     if (safeZoneData) {
       if (currentSchedule && safeZoneData.coordinates) {
         // 경로형 안심존 (폴리곤) - 점이 폴리곤 내부에 있는지 판단
         console.log('[GD_main - 경로형 안심존] 판단 시작')
         console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
         console.log('- 안심존 데이터:', safeZoneData)
-
+        
         const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
         console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
-
+        
         isInside = isPointInPolygon(patientLat, patientLng, coordinates)
         console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
       } else if (safeZoneData.type === 'Circle') {
@@ -639,13 +659,13 @@ async function checkPatientInSafeZone() {
         const centerLat = safeZoneData.center.lat
         const centerLng = safeZoneData.center.lng
         const radius = safeZoneData.radius
-
+        
         const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
         isInside = distance <= radius
         console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m, 결과: ${isInside ? '내부' : '외부'}`)
       }
     }
-
+    
     // 안심존 상태 업데이트
     if (isInside) {
       safeZoneStatus.value = {
@@ -662,9 +682,9 @@ async function checkPatientInSafeZone() {
         bgColor: '#FEE2E2'
       }
     }
-
+    
     console.log(`안심존 상태: ${isInside ? '안전' : '벗어남'} (환자 위치: ${patientLat}, ${patientLng})`)
-
+    
   } catch (error) {
     console.error('안심존 상태 확인 오류:', error)
     safeZoneStatus.value = {
@@ -683,10 +703,10 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000 // 지구 반지름 (미터)
   const dLat = (lat2 - lat1) * Math.PI / 180
   const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    Math.sin(dLng/2) * Math.sin(dLng/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
   return R * c
 }
 
@@ -698,7 +718,7 @@ function isPointInPolygon(lat, lng, polygon) {
     const yi = polygon[i].latitude
     const xj = polygon[j].longitude
     const yj = polygon[j].latitude
-
+    
     // Ray casting: 점의 y좌표(위도)가 선분의 y좌표 범위 안에 있고,
     // 점의 x좌표(경도)가 교차점의 x좌표보다 왼쪽에 있으면 교차
     if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
@@ -760,22 +780,22 @@ onMounted(async () => {
   try {
     // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
-
+    
     // 일정 데이터 로드
     await loadScheduleData()
-
+    
     // 지도 초기화 (DOM 요소가 준비된 후)
     await initMap()
-
+    
     // 안심존 표시
     await updateSafeZone(mapInstance.value)
-
+    
     // 환자 위치 추적 시작
     startPatientLocationTracking()
-
+    
     // 초기 안심존 상태 확인
     await checkPatientInSafeZone()
-
+    
     // 실종 이벤트 확인
     if (patientUserNo.value) {
       await getActiveMissing(patientUserNo.value)
@@ -790,50 +810,6 @@ onBeforeUnmount(() => {
   // 환자 위치 추적 중지
   stopPatientLocationTracking()
 })
-
-
-///
-/// 주형 yes실종 no실종 비교해서 각 상황에 맞는 페이지로 넘겨줄게요~ 히히발싸
-///
-
-// 환자 번호를 patientUserNo.value 로 받아오면 됨!
-// 실종게시판에 있는지 없는지 판단하는 함수
-async function isReported() {
-  try {
-    const response = await fetch(`/api/missing-persons/patient/${patientUserNo.value}/latest`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-
-    if (response.status === 200) {
-      return 200 
-    } else if (response.status === 204) {
-      // 데이터가 없을 때 (No Content)
-      console.log('조회할 실종 신고가 없습니다.')
-      return 204 
-    } else if (response.status === 404) {
-      // 해당 환자를 찾을 수 없을 때
-      console.log('해당 환자 정보를 찾을 수 없습니다.')
-      return 404  
-    }
-  } catch (error) {
-    console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :: ${error}`)
-    return null
-  }
-}
-
-// 버튼 클릭시 페이지 어디로갈지
-async function typeOfMissing() {
-  const status = await isReported() 
-
-  if (status === 204 || status === 404) { 
-    router.push('/not-reported-predict')
-  } else if (status === 200) {
-    router.push('/predict-location')
-  } else {
-    alert('확인 중 오류가 발생했습니다.')
-  }
-}
 </script>
 
 <style scoped>
@@ -931,5 +907,156 @@ async function typeOfMissing() {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background-color: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(4px);
+}
+
+/* 오늘의 일정 카드 스타일 */
+.schedule-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.schedule-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.schedule-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.schedule-indicator {
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.schedule-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+}
+
+.schedule-time {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #6366f1;
+  white-space: nowrap;
+  margin-left: 12px;
+  letter-spacing: -0.2px;
+}
+
+.schedule-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-bottom: 12px;
+  padding-left: 16px;
+}
+
+.location-icon {
+  color: #6366f1;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.schedule-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.schedule-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.detail-label {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.detail-value {
+  color: #374151;
+  font-weight: 500;
+}
+
+/* 일정 없음 카드 */
+.schedule-empty-card {
+  background: #f9fafb;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  padding: 40px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.schedule-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.empty-icon {
+  color: #d1d5db;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* 일정 자세히 보기 버튼 */
+.schedule-detail-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transition: all 0.3s ease;
+  letter-spacing: -0.2px;
+}
+
+.schedule-detail-btn:hover {
+  background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+  color: #ffffff;
+}
+
+.schedule-detail-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 </style>
