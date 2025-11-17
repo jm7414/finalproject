@@ -73,6 +73,7 @@ import DesktopMypageSafezone from '@/views/desktop/DesktopMypageSafezone.vue'
 import DesktopMypageSafezoneRadius from '@/views/desktop/DesktopMypageSafezoneRadius.vue'
 import DesktopReport from '@/views/desktop/DesktopReport.vue'
 import JustPredictLocation from '@/views/JustPredictLocation.vue'
+import ChatBot from '@/views/ChatBot.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -190,7 +191,13 @@ const router = createRouter({
       path: '/NH',
       name: 'NH',
       component: NH_main,
-      meta: { requiresAuth: true, roles: [1, 4] } // 보호자(1), 이웃(4) 접근 가능
+      meta: { requiresAuth: true, roles: [2, 3, 4] } // 보호자(1), 이웃(4) 접근 가능
+    },
+    {
+      path: '/chat',
+      name: 'chat',
+      component: ChatBot,
+      meta: { requiresAuth: true, roles: [2, 3, 4] } // 보호자(1), 이웃(4) 접근 가능
     },
     {
       path: '/SignUp',

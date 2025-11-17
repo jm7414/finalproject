@@ -2,6 +2,8 @@
 -- 자식 테이블부터 부모 테이블 순서로 삭제
 
 DROP TABLE IF EXISTS sighting_report_comments CASCADE;
+
+-- Level 3 (자식)
 DROP TABLE IF EXISTS sighting_report CASCADE;
 DROP TABLE IF EXISTS missing_alert_check CASCADE;
 DROP TABLE IF EXISTS user_location CASCADE;
@@ -11,18 +13,21 @@ DROP TABLE IF EXISTS post_comments CASCADE;
 DROP TABLE IF EXISTS post_likes CASCADE;
 DROP TABLE IF EXISTS post CASCADE;
 DROP TABLE IF EXISTS plaza CASCADE;
-DROP TABLE IF EXISTS search_Together CASCADE;
 DROP TABLE IF EXISTS record CASCADE;
 DROP TABLE IF EXISTS report CASCADE;
-DROP TABLE IF EXISTS period CASCADE;
 DROP TABLE IF EXISTS missing_post CASCADE;
 DROP TABLE IF EXISTS route CASCADE;
 DROP TABLE IF EXISTS schedule_location CASCADE;
 DROP TABLE IF EXISTS schedule CASCADE;
 DROP TABLE IF EXISTS safe_zone CASCADE;
-DROP TABLE IF EXISTS guardian_patient_connection CASCADE;
+DROP TABLE IFS EXISTS guardian_patient_connection CASCADE;
+
+-- Level 1 (부모)
 DROP TABLE IF EXISTS users CASCADE;
+
+-- Level 0 (최상위 부모)
 DROP TABLE IF EXISTS role CASCADE;
+DROP TABLE IF EXISTS period CASCADE;
 
 -- === 역할(role) 테이블 ===
 CREATE TABLE role (
@@ -168,6 +173,9 @@ CREATE TABLE post (
     content TEXT NOT NULL,
     view_count INT DEFAULT 0,
     image_path VARCHAR(255),
+    -- 공지 기능으로 인한 추가 (외래키 제약 제거)
+    plaza_no INTEGER,
+    notice_type VARCHAR(20) DEFAULT '일반' CHECK (notice_type IN ('일반', '공지')),
     -- 공지 기능으로 인한 추가 (외래키 제약 제거)
     plaza_no INTEGER,
     notice_type VARCHAR(20) DEFAULT '일반' CHECK (notice_type IN ('일반', '공지')),
