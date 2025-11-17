@@ -8,15 +8,8 @@
                 <div class="period-toggle mb-3">
                     <div class="toggle-track" ref="toggleTrack">
                         <div class="toggle-thumb" :style="thumbStyle"></div>
-                        <button
-                            v-for="p in periodOrder"
-                            :key="p"
-                            type="button"
-                            class="toggle-btn"
-                            :class="{ active: period === p }"
-                            @click="setPeriod(p)"
-                            ref="toggleBtns"
-                        >
+                        <button v-for="p in periodOrder" :key="p" type="button" class="toggle-btn"
+                            :class="{ active: period === p }" @click="setPeriod(p)" ref="toggleBtns">
                             {{ periodShortLabel(p) }}
                         </button>
                     </div>
@@ -37,7 +30,7 @@
                 <div class="row g-2 align-items-end period-inputs mt-3">
                     <!-- DAY -->
                     <template v-if="period === 'day'">
-                        <div class="col-12 small text-secondary">
+                        <div class="col-12 small text">
                             오늘 상태를 자동으로 업데이트해요. (약 {{ Math.round(POLL_MS / 1000) }}초 간격)
                         </div>
                     </template>
@@ -46,14 +39,11 @@
                     <template v-else-if="period === 'week'">
                         <div class="col-12 mb-2">
                             <label class="form-label form-label-sm mb-1">한 주 중 아무 날이나 선택해 주세요</label>
-                            <input
-                                type="date"
-                                class="form-control form-control-sm pill-input-single"
-                                v-model="inputs.anyDayInWeek"
-                            />
+                            <input type="date" class="form-control form-control-sm pill-input-single"
+                                v-model="inputs.anyDayInWeek" />
                         </div>
                         <div class="col-12">
-                            <div class="small text-secondary">주간 범위</div>
+                            <div class="small text">주간 범위</div>
                             <div class="fs-6 fw-semibold">{{ weekRangeLabelText }}</div>
                         </div>
                     </template>
@@ -62,11 +52,8 @@
                     <template v-else-if="period === 'month'">
                         <div class="col-12">
                             <label class="form-label form-label-sm mb-1">연·월 선택</label>
-                            <input
-                                type="month"
-                                class="form-control form-control-sm pill-input-single"
-                                v-model="monthModel"
-                            />
+                            <input type="month" class="form-control form-control-sm pill-input-single"
+                                v-model="monthModel" />
                         </div>
                     </template>
 
@@ -75,25 +62,19 @@
                         <div class="col-12">
                             <label class="form-label form-label-sm mb-1">연도 선택</label>
                             <div class="year-toggle">
-                                <button
-                                    v-for="y in yearOptions"
-                                    :key="y"
-                                    type="button"
-                                    class="btn btn-sm year-btn"
-                                    :class="{ active: inputs.year === y }"
-                                    @click="setYear(y)"
-                                >
+                                <button v-for="y in yearOptions" :key="y" type="button" class="btn btn-sm year-btn"
+                                    :class="{ active: inputs.year === y }" @click="setYear(y)">
                                     {{ y }}년
                                 </button>
                             </div>
-                            <div class="form-text small text-secondary mt-1">
+                            <div class="form-text small text mt-1">
                                 선택한 연도 전체 기록
                             </div>
                         </div>
                     </template>
                 </div>
 
-                <div v-if="rangeLabel && period !== 'day'" class="text-secondary small mt-2">
+                <div v-if="rangeLabel && period !== 'day'" class="text small mt-2">
                     기간: {{ rangeLabel }}
                 </div>
             </div>
@@ -104,28 +85,22 @@
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-1">
                     <div class="fw-semibold">AI 리포트를 준비하고 있어요</div>
-                    <div class="small text-secondary">{{ yearPercent }}%</div>
+                    <div class="small text">{{ yearPercent }}%</div>
                 </div>
 
                 <div class="progress my-2" style="height:8px;">
-                    <div
-                        class="progress-bar progress-bar-striped progress-bar-animated"
-                        role="progressbar"
-                        :style="{ width: yearPercent + '%' }"
-                    ></div>
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                        :style="{ width: yearPercent + '%' }"></div>
                 </div>
 
                 <ul class="list-unstyled mt-3 mb-0 small">
                     <li v-for="(s, i) in yearSteps" :key="i" class="d-flex align-items-start mb-2">
-                        <span
-                            class="step-dot me-2"
-                            :class="{
-                                done: i < yearStepIndex,
-                                active: i === yearStepIndex
-                            }"
-                        ></span>
+                        <span class="step-dot me-2" :class="{
+                            done: i < yearStepIndex,
+                            active: i === yearStepIndex
+                        }"></span>
                         <div class="flex-grow-1">
-                            <span :class="{ 'text-secondary': i > yearStepIndex }">
+                            <span :class="{ 'text': i > yearStepIndex }">
                                 {{ s.label }}<span v-if="i === yearStepIndex" class="dots">{{ dots }}</span>
                             </span>
                             <div v-if="i === yearStepIndex" class="shimmer mt-1"></div>
@@ -157,38 +132,60 @@
             </div>
         </div>
 
-        <!-- 오늘 기분 -->
+        <!-- 오늘 기록 -->
         <div v-if="!loading && !error && period === 'day'" class="card border-0 shadow-sm mb-3">
-            <div class="card-body d-flex flex-column align-items-center justify-content-center" style="min-height:180px;">
-                <div class="fw-semibold mb-2">오늘 기분</div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center"
+                style="min-height:180px;">
+                <div class="fw-semibold mb-2">오늘의 기록</div>
 
                 <div class="today-emoji">
-                    <template v-if="dailyResp && (dailyResp.coveredDays === 0 || dailyResp.level === 'none')">😴</template>
+                    <template
+                        v-if="dailyResp && (dailyResp.coveredDays === 0 || dailyResp.level === 'none')">😴</template>
                     <template v-else-if="dailyResp && dailyResp.emoji">
                         {{ dailyResp.emoji }}
                     </template>
                     <template v-else>😴</template>
                 </div>
 
-                <div v-if="dailyMessage" class="mt-3 text-center small text-secondary">
+                <div v-if="!dailyResp || dailyResp.coveredDays === 0 || dailyResp.level === 'none'"
+                    class="mt-2 text-center small text">
+                    오늘의 기록을 하지 않으셨어요.
+                </div>
+
+                <div v-if="dailyMessage" class="mt-3 text-center small text">
                     {{ dailyMessage }}
                 </div>
 
-                <div class="small text-secondary mt-2" v-if="lastFetchedAt">
+
+                <div class="small text mt-2" v-if="lastFetchedAt">
                     마지막 업데이트: {{ lastFetchedAt }}
+                </div>
+
+                <!-- ✅ 이번 주 기록 현황 스트립 -->
+                <div v-if="weekStatus.length" class="week-strip">
+                    <div class="week-strip-title">이번 주 기록 현황</div>
+                    <div class="week-strip-row">
+                        <div v-for="d in weekStatus" :key="d.date" class="week-pill" :class="{ today: d.isToday }">
+                            <div class="week-pill-label">{{ d.label }}</div>
+                            <div class="week-pill-icon"
+                                :class="d.hasRecord === true ? 'ok' : d.hasRecord === false ? 'no' : ''">
+                                <span v-if="d.hasRecord === null">-</span>
+                                <span v-else-if="d.hasRecord">✔</span>
+                                <span v-else>✕</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- CARE-5 레이더 (주/월) -->
-        <div
-            class="card border-0 shadow-sm mb-3"
-            v-if="!loading && !insufficient.flag && (period === 'week' || period === 'month')"
-        >
+        <div class="card border-0 shadow-sm mb-3"
+            v-if="!loading && !insufficient.flag && (period === 'week' || period === 'month')">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="fw-semibold">CARE-5 레이더</div>
-                    <div class="small text-secondary">0–20점</div>
+                    <div class="small text">0–20점</div>
                 </div>
                 <template v-if="hasScores && !allZero">
                     <div class="radar-wrap">
@@ -196,7 +193,7 @@
                     </div>
                 </template>
                 <template v-else>
-                    <div class="text-secondary small py-4 text-center">
+                    <div class="text small py-4 text-center">
                         표시할 점수가 없어요. 기간/데이터를 확인하세요.
                     </div>
                 </template>
@@ -208,7 +205,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="fw-semibold">연간 추이 (월별 총점)</div>
-                    <div class="small text-secondary">40–70점</div>
+                    <div class="small text">40–70점</div>
                 </div>
                 <template v-if="yearTotals && yearTotals.length">
                     <div class="line-wrap">
@@ -216,7 +213,7 @@
                     </div>
                 </template>
                 <template v-else>
-                    <div class="text-secondary small py-4 text-center">
+                    <div class="text small py-4 text-center">
                         연간 데이터가 없어요.
                     </div>
                 </template>
@@ -228,7 +225,7 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-secondary small">
+                        <div class="text small">
                             {{ report.range?.label || '' }} ({{ periodLabel(report.periodType || period) }})
                         </div>
                         <div class="fw-semibold fs-5 mt-1">AI 점수</div>
@@ -246,10 +243,8 @@
         </template>
 
         <!-- 항목별 자세히 보기 -->
-        <div
-            class="card border-0 shadow-sm mb-3"
-            v-if="!loading && !insufficient.flag && hybridDetailItems.length && period !== 'day'"
-        >
+        <div class="card border-0 shadow-sm mb-3"
+            v-if="!loading && !insufficient.flag && hybridDetailItems.length && period !== 'day'">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="fw-semibold">
@@ -260,7 +255,7 @@
                         </span>
                         <span v-else class="badge text-bg-danger ms-2">생성 실패</span>
                     </div>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" @click="detailOpen = !detailOpen">
+                    <button class="btn btn-sm btn-outline" type="button" @click="detailOpen = !detailOpen">
                         {{ detailOpen ? '닫기' : '열기' }}
                     </button>
                 </div>
@@ -272,33 +267,27 @@
                                 <div class="d-flex justify-content-between">
                                     <div class="fw-semibold">
                                         {{ item.label }}
-                                        <span
-                                            class="badge ms-1"
-                                            :class="item.source === 'ai' ? 'text-bg-light' : 'text-bg-secondary'"
-                                        >
+                                        <span class="badge ms-1"
+                                            :class="item.source === 'ai' ? 'text-bg-light' : 'text-bg'">
                                             {{ item.source === 'ai' ? 'AI' : '가이드' }}
                                         </span>
                                     </div>
-                                    <div class="text-secondary">
+                                    <div class="text">
                                         {{ item.value }} / 20
                                     </div>
                                 </div>
 
                                 <div class="progress my-1" style="height:6px;">
-                                    <div
-                                        class="progress-bar"
-                                        role="progressbar"
-                                        :style="{
-                                            width: Math.round((item.value || 0) / 20 * 100) + '%',
-                                            backgroundColor: team
-                                        }"
-                                    />
+                                    <div class="progress-bar" role="progressbar" :style="{
+                                        width: Math.round((item.value || 0) / 20 * 100) + '%',
+                                        backgroundColor: team
+                                    }" />
                                 </div>
 
-                                <div class="text-secondary" v-if="validText(item.text)">
+                                <div class="text-" v-if="validText(item.text)">
                                     {{ item.text }}
                                 </div>
-                                <div class="text-secondary" v-else>(설명 없음)</div>
+                                <div class="text" v-else>(설명 없음)</div>
                             </li>
                         </ul>
                     </div>
@@ -515,9 +504,9 @@ function todayStr() {
     return fmtLocal(new Date())
 }
 function fmtLocal(d) {
-    const y = d.getFullYear(),
-        m = pad2(d.getMonth() + 1),
-        day = pad2(d.getDate())
+    const y = d.getFullYear()
+    const m = pad2(d.getMonth() + 1)
+    const day = pad2(d.getDate())
     return `${y}-${m}-${day}`
 }
 function addDays(d, n) {
@@ -740,6 +729,60 @@ function inferLevel(score) {
     return 'low'
 }
 
+/* ✅ 이번 주 기록 상태 */
+const weekStatus = ref([])
+
+function buildWeekSkeleton() {
+    const today = todayStr()
+    const { start, end } = weekRange(today) // [start, nextMon)
+    const days = []
+    const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
+
+    let d = new Date(start + 'T00:00:00')
+    const endD = new Date(end + 'T00:00:00')
+
+    while (d < endD) {
+        const iso = fmtLocal(d)
+        const idx = d.getDay()
+        days.push({
+            date: iso,
+            label: weekdayLabels[idx],
+            hasRecord: null,
+            isToday: iso === today
+        })
+        d = addDays(d, 1)
+    }
+    weekStatus.value = days
+}
+
+async function fetchWeekRecordStatus() {
+    if (!userId.value) return
+    // 매번 "이번 주" 기준으로 다시 계산
+    buildWeekSkeleton()
+    const uid = userId.value
+
+    await Promise.all(
+        weekStatus.value.map(async d => {
+            try {
+                const res = await fetch(
+                    `/api/record/user/${uid}?date=${d.date}`,
+                    { credentials: 'include' }
+                )
+                if (!res.ok) {
+                    d.hasRecord = false
+                    return
+                }
+                const data = await res.json()
+                d.hasRecord = !!data
+            } catch {
+                d.hasRecord = false
+            }
+        })
+    )
+    // 반응성 강제 갱신
+    weekStatus.value = [...weekStatus.value]
+}
+
 /* 차트 렌더링 */
 async function renderRadar() {
     const ctx = radarRef.value?.getContext?.('2d')
@@ -880,7 +923,7 @@ function computeRange() {
 async function fetchTodayMoodOnce() {
     if (!userId.value) return
     try {
-        const { date } = computeRange()
+        const { date } = computeRange() // day일 때 date만 사용
         const { data } = await axios.get('/api/ai/report', {
             params: { userId: userId.value, period: 'daily', date }
         })
@@ -888,6 +931,9 @@ async function fetchTodayMoodOnce() {
         lastFetchedAt.value = nowTimeLabel()
     } catch (e) {
         console.error(e)
+    } finally {
+        // ✅ 오늘 기분 불러올 때 이번 주 기록 현황도 같이 갱신
+        await fetchWeekRecordStatus()
     }
 }
 
@@ -1271,8 +1317,66 @@ onBeforeUnmount(() => {
 
 /* 오늘 기분 이모지 */
 .today-emoji {
-    font-size: 72px;
+    font-size: 100px;
     line-height: 1;
+}
+
+/* ✅ 이번 주 기록 스트립 */
+.week-strip {
+    margin-top: 18px;
+    padding-top: 10px;
+    border-top: 1px dashed #e1e4f3;
+    width: 100%;
+}
+
+.week-strip-title {
+    font-size: 0.78rem;
+    color: #7b8098;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
+.week-strip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+}
+
+.week-pill {
+    flex: 1;
+    border-radius: 999px;
+    padding: 4px 0 6px;
+    background: #f5f6ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    color: #5d6280;
+}
+
+.week-pill.today {
+    background: linear-gradient(135deg, #657ae2, #9aa7ff);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(101, 122, 226, 0.4);
+}
+
+.week-pill-label {
+    line-height: 1.1;
+}
+
+.week-pill-icon {
+    margin-top: 2px;
+    font-size: 0.8rem;
+}
+
+.week-pill-icon.ok {
+    color: #2fbd6a;
+}
+
+.week-pill-icon.no {
+    color: #c6cadf;
 }
 
 /* 차트 영역 */
@@ -1376,7 +1480,8 @@ onBeforeUnmount(() => {
 }
 
 .tip-body {
-    font-size: 0.75rem; /* 제목보다 약 2pt 정도 작게 */
+    font-size: 0.75rem;
+    /* 제목보다 약 2pt 정도 작게 */
     color: #4b4f68;
     line-height: 1.5;
 }
