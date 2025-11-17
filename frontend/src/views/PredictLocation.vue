@@ -162,11 +162,6 @@
                             <i class="bi bi-geo-alt"></i>
                             실종장소: {{ missingAddress?.fullAddress || '주소 로딩 중...' }}
                         </p>
-
-                        <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
-                            <i class="bi bi-geo-alt"></i>
-                            실종장소: {{ missingAddress.fullAddress }}
-                        </p>
                     </div>
                 </div>
 

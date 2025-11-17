@@ -29,6 +29,9 @@ pip install hdbscan
 7. shapely
 pip install shapely==2.0.7
 ---
+8. mesa
+ pip install mesa==2.1.5
+ pip install mesa-geo==0.6.0
 
 이렇게 다 했으면 이제 FastAPI.py파일을 열어봤을 때 아무런 노란색 밑줄이 없을거에요
 그렇다면 이제 서버를 실행시켜봅시다.

@@ -1,6 +1,5 @@
 package lx.project.dementia_care.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -12,13 +11,7 @@ import java.util.Map;
 @Component
 public class GoogleAiClient {
 	private static final String MODEL = "gemini-2.0-flash";
-	private static final String BASE = "generativelanguage.googleapis.com";
-
-	// 환경변수에서 API 키 가져오기 (필수 - Git에 올라가면 Gemini에서 키 차단)
-	// 개발 환경: 로컬 .env 파일 또는 환경변수로 설정
-	// 프로덕션: GitHub Secrets 또는 서버 환경변수로 설정
-	@Value("${GEMINI_API_KEY}")
-	private String apiKey;
+	private static final String BASE = "https://generativelanguage.googleapis.com";
 
 	private String resolveApiKey() {
 		return "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -35,7 +28,7 @@ public class GoogleAiClient {
 
 	public String generateText(String prompt) {
 		String apiKey = resolveApiKey();
-		String url = "https://" + BASE + "/v1beta/models/" + MODEL + ":generateContent?key=" + apiKey;
+		String url = BASE + "/v1beta/models/" + MODEL + ":generateContent?key=" + apiKey;
 
 		var body = Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
 		var headers = new HttpHeaders();
