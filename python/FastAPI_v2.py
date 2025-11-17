@@ -72,7 +72,7 @@ class PredictionRequest(BaseModel):
     missing_time: str  # "YYYY-MM-DD HH:MM"
     gps_data: List[GPSRecord]
     analysis_days: Optional[int] = 120
-    time_window_hours: Optional[int] = 3
+    time_window_hours: Optional[int] = 5
     session_gap: Optional[int] = 30
     min_cluster_size: Optional[int] = 10
     max_search_radius: Optional[int] = 2000
@@ -355,7 +355,7 @@ async def generate_road_snapped_waypoints(G, tree_data, gps_data, start_lat, sta
     )
 
 
-def filter_by_similar_time(gps_data, target_time, time_window_hours=3):
+def filter_by_similar_time(gps_data, target_time, time_window_hours=5):
     """시간대별 필터링"""
     target_hour = target_time.hour
     
@@ -994,7 +994,7 @@ async def predict_destinations(request: PredictionRequest):
     
     # 시간대 필터링
     print(f"⏰ 시간대 필터링 (±{request.time_window_hours}시간)...")
-    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=request.time_window_hours)
+    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=6) #request.time_window_hours)
     print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
     
     if len(time_filtered_gps) < 100:
@@ -1023,7 +1023,7 @@ async def predict_destinations(request: PredictionRequest):
         time_filtered_gps,
         last_known_coords=(last_lat, last_lon),
         max_search_radius_m=request.max_search_radius,
-        min_visits=5,
+        min_visits=15,
         session_gap_minutes=request.session_gap,
         min_cluster_size=request.min_cluster_size
     )
