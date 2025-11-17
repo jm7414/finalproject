@@ -1,0 +1,327 @@
+-- === 기존 테이블이 존재할 경우 삭제 (FK 관계 고려하여 역순으로) ===
+-- 자식 테이블부터 부모 테이블 순서로 삭제
+DROP TABLE IF EXISTS search_Together CASCADE;
+DROP TABLE IF EXISTS record CASCADE;
+DROP TABLE IF EXISTS report CASCADE;
+DROP TABLE IF EXISTS period CASCADE;
+DROP TABLE IF EXISTS missing_post CASCADE;
+DROP TABLE IF EXISTS post_comments CASCADE;
+DROP TABLE IF EXISTS post CASCADE;
+DROP TABLE IF EXISTS route CASCADE;
+DROP TABLE IF EXISTS schedule_location CASCADE;
+DROP TABLE IF EXISTS schedule CASCADE;
+DROP TABLE IF EXISTS safe_zone CASCADE;
+DROP TABLE IF EXISTS guardian_patient_connection CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS role CASCADE;
+
+-- === 역할(role) 테이블 ===
+CREATE TABLE role (
+    role_no SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL
+);
+
+INSERT INTO role (role_name) VALUES 
+    ('보호자'),
+    ('환자'),
+    ('구독자'),
+    ('이웃');
+
+-- === 유저(users) 테이블 ===
+CREATE TABLE users (
+    user_no SERIAL PRIMARY KEY,
+    user_id VARCHAR(50) UNIQUE NOT NULL,
+    user_pw VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    birth_date DATE,
+    phone_number VARCHAR(20),
+    invitation_code VARCHAR(8) UNIQUE,
+    subscription_status INTEGER DEFAULT 0 CHECK (subscription_status IN (0,1)),
+    user_status INTEGER DEFAULT 0 CHECK (user_status IN (0,1)),
+    profile_photo TEXT,
+    role_no INTEGER NOT NULL,
+    FOREIGN KEY (role_no) REFERENCES role(role_no) ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_users_invitation_code ON users(invitation_code);
+CREATE INDEX idx_users_role_no ON users(role_no);
+
+--보호자환자 연결테이블--
+-------------------------------------------------
+CREATE TABLE guardian_patient_connection (
+    connection_no   SERIAL PRIMARY KEY,
+    patient_no      INTEGER NOT NULL,
+    guardian1_no    INTEGER NOT NULL,
+    guardian2_no    INTEGER,
+    guardian3_no    INTEGER,
+   subscribe_starttime TIMESTAMPTZ,
+    subscribe_endtime TIMESTAMPTZ,
+
+    FOREIGN KEY (patient_no)   REFERENCES users(user_no) ON DELETE CASCADE,
+    FOREIGN KEY (guardian1_no) REFERENCES users(user_no) ON DELETE RESTRICT,
+    FOREIGN KEY (guardian2_no) REFERENCES users(user_no) ON DELETE SET NULL,
+    FOREIGN KEY (guardian3_no) REFERENCES users(user_no) ON DELETE SET NULL,
+
+    UNIQUE(patient_no),
+
+    CHECK (guardian1_no <> patient_no),
+    CHECK (guardian2_no IS NULL OR guardian2_no <> patient_no),
+    CHECK (guardian3_no IS NULL OR guardian3_no <> patient_no),
+
+    CHECK (guardian2_no IS NULL OR guardian2_no IS DISTINCT FROM guardian1_no),
+    CHECK (guardian3_no IS NULL OR guardian3_no IS DISTINCT FROM guardian1_no),
+    CHECK (guardian2_no IS NULL OR guardian3_no IS NULL OR guardian2_no IS DISTINCT FROM guardian3_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_connection_subscribe_endtime
+  ON guardian_patient_connection(subscribe_endtime);
+
+CREATE INDEX IF NOT EXISTS idx_connection_patient
+  ON guardian_patient_connection(patient_no);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian1
+  ON guardian_patient_connection(guardian1_no) WHERE guardian1_no IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian2
+  ON guardian_patient_connection(guardian2_no) WHERE guardian2_no IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gpc_guardian3
+  ON guardian_patient_connection(guardian3_no) WHERE guardian3_no IS NOT NULL;
+-----------------------------------------------------
+
+-- === 안심존(safe_zone) 테이블 ===
+CREATE TABLE safe_zone (
+    safe_zone_no SERIAL PRIMARY KEY,
+    zone_type VARCHAR(20) NOT NULL CHECK (zone_type IN ('기본형','경로형')),
+    boundary_coordinates JSON NOT NULL,
+    user_no INTEGER NOT NULL,
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_safe_zone_user ON safe_zone(user_no);
+CREATE INDEX idx_safe_zone_type ON safe_zone(zone_type);
+
+-- === 일정(schedule) 테이블 ===
+CREATE TABLE schedule (
+    schedule_no SERIAL PRIMARY KEY,
+    schedule_title VARCHAR(200) NOT NULL,
+    content TEXT,
+    schedule_date DATE NOT NULL,
+    start_time TIME(0),
+    end_time TIME(0),
+    user_no INTEGER NOT NULL,
+    FOREIGN KEY (user_no) REFERENCES users(user_no) ON DELETE CASCADE,
+    CHECK (end_time > start_time)
+);
+
+CREATE INDEX idx_schedule_user ON schedule(user_no);
+CREATE INDEX idx_schedule_date ON schedule(schedule_date);
+
+-- === 일정 위치(schedule_location) 테이블 ===
+CREATE TABLE schedule_location (
+    location_no SERIAL PRIMARY KEY,
+    location_name VARCHAR(200) NOT NULL,
+    latitude DECIMAL(10,8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude DECIMAL(11,8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+    sequence_order INTEGER NOT NULL CHECK (sequence_order > 0),
+    schedule_no INTEGER NOT NULL,
+    FOREIGN KEY (schedule_no) REFERENCES schedule(schedule_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_location_schedule ON schedule_location(schedule_no);
+CREATE INDEX idx_location_sequence ON schedule_location(schedule_no, sequence_order);
+
+-- === 경로(route) 테이블 ===
+CREATE TABLE route (
+    route_no SERIAL PRIMARY KEY,
+    route_coordinates JSON NOT NULL,
+    buffer_coordinates JSON NOT NULL,
+    schedule_no INTEGER NOT NULL,
+    FOREIGN KEY (schedule_no) REFERENCES schedule(schedule_no) ON DELETE CASCADE,
+    UNIQUE(schedule_no)
+);
+
+CREATE INDEX idx_route_schedule ON route(schedule_no);
+
+-- === 게시물(post) 테이블 ===
+CREATE TABLE post (
+    post_id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    content TEXT NOT NULL,
+    view_count INT DEFAULT 0,
+    image_path VARCHAR(255),
+    FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_post_user_id ON post(user_id);
+CREATE INDEX idx_post_created_at ON post(created_at);
+CREATE INDEX idx_post_view_count ON post(view_count);
+
+-- === 댓글 테이블 ===
+CREATE TABLE post_comments (
+	comment_id SERIAL PRIMARY KEY,
+	POST_id INTEGER NOT NULL,
+	user_id INTEGER NOT NULL,
+	content TEXT NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- === 실종자 게시물(missing_post) 테이블 ===
+CREATE TABLE missing_post (
+    missing_post_id SERIAL PRIMARY KEY,
+    patient_user_no INTEGER NOT NULL,
+    reporter_user_no INTEGER NOT NULL,
+    photo_path VARCHAR(255),
+    description TEXT,
+    reported_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) NOT NULL DEFAULT '실종',
+    FOREIGN KEY (patient_user_no) REFERENCES users(user_no) ON DELETE CASCADE,
+    FOREIGN KEY (reporter_user_no) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_missing_post_patient ON missing_post(patient_user_no);
+CREATE INDEX idx_missing_post_reporter ON missing_post(reporter_user_no);
+CREATE INDEX idx_missing_post_reported_at ON missing_post(reported_at);
+CREATE INDEX idx_missing_post_status ON missing_post(status);
+
+-- === 함께 찾기(search_Together) 테이블 ===
+CREATE TABLE search_Together (
+    missing_post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (missing_post_id, user_id),
+    FOREIGN KEY (missing_post_id) REFERENCES missing_post(missing_post_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_no) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_search_together_missing_post ON search_Together(missing_post_id);
+CREATE INDEX idx_search_together_user ON search_Together(user_id);
+
+-- === period, report, record 테이블 ===
+
+CREATE TABLE IF NOT EXISTS period (
+  period_id    SERIAL PRIMARY KEY,
+  period_type  VARCHAR(16) NOT NULL,
+  period_key   VARCHAR(32) NOT NULL,
+  start_date   DATE NOT NULL,
+  end_date     DATE NOT NULL,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_period_type_key UNIQUE (period_type, period_key),
+  CONSTRAINT ck_period_type_lower CHECK (period_type IN ('year','month','week','custom'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_period_type_key ON period (period_type, period_key);
+
+CREATE OR REPLACE FUNCTION trg_lower_period_type() RETURNS trigger AS $$
+BEGIN
+  IF NEW.period_type IS NOT NULL THEN
+    NEW.period_type := lower(NEW.period_type);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tg_period_lower ON period;
+CREATE TRIGGER tg_period_lower
+BEFORE INSERT OR UPDATE ON period
+FOR EACH ROW EXECUTE FUNCTION trg_lower_period_type();
+
+CREATE TABLE IF NOT EXISTS report (
+  report_id     SERIAL PRIMARY KEY,
+  period_id     INT NOT NULL,
+  patient_id    INT NOT NULL,
+  content       TEXT NOT NULL,
+  period_type   VARCHAR(16) NOT NULL DEFAULT 'year',
+  period_key    VARCHAR(32) NOT NULL DEFAULT '',
+  version       INT NOT NULL DEFAULT 1,
+  generated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  generated_by  VARCHAR(50) DEFAULT 'gemini',
+  locked        BOOLEAN NOT NULL DEFAULT TRUE,
+  source_hash   TEXT,
+  metrics       JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sections      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  chart_prefs   JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_report_period  FOREIGN KEY(period_id)  REFERENCES period(period_id) ON DELETE CASCADE,
+  CONSTRAINT fk_report_patient FOREIGN KEY(patient_id) REFERENCES users(user_no)    ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_report_patient_tk
+  ON report (patient_id, period_type, period_key);
+
+CREATE INDEX IF NOT EXISTS idx_report_period ON report(period_id);
+CREATE INDEX IF NOT EXISTS idx_report_patient_time ON report(patient_id, generated_at DESC);
+
+DROP TRIGGER IF EXISTS tg_report_lower ON report;
+CREATE TRIGGER tg_report_lower
+BEFORE INSERT OR UPDATE ON report
+FOR EACH ROW EXECUTE FUNCTION trg_lower_period_type();
+
+CREATE TABLE IF NOT EXISTS record (
+  record_id   SERIAL PRIMARY KEY,
+  user_id     INT NOT NULL,
+  record_date DATE NOT NULL,
+  content     JSONB NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_record_user FOREIGN KEY(user_id) REFERENCES users(user_no) ON DELETE CASCADE,
+  CONSTRAINT uq_record_user_date UNIQUE (user_id, record_date)
+);
+
+CREATE OR REPLACE FUNCTION trg_touch_updated_at() RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tg_period_touch ON period;
+CREATE TRIGGER tg_period_touch
+BEFORE UPDATE ON period
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+DROP TRIGGER IF EXISTS tg_report_touch ON report;
+CREATE TRIGGER tg_report_touch
+BEFORE UPDATE ON report
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+DROP TRIGGER IF EXISTS tg_record_touch ON record;
+CREATE TRIGGER tg_record_touch
+BEFORE UPDATE ON record
+FOR EACH ROW EXECUTE FUNCTION trg_touch_updated_at();
+
+-- === 샘플 데이터 삽입 ===
+INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_code, subscription_status, user_status, role_no) VALUES
+('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 0, 1),
+('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 0, 1),
+('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 0, 1),
+('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 1, 3),
+('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 0, 1),
+('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 0, 2);
+
+INSERT INTO post (title, user_id, content, view_count, image_path) VALUES
+(
+    '치매에 좋은 음식 (DB 테스트)',
+    1,
+    '뇌 건강에 좋은 음식으로는 등 푸른 생선, 견과류, 베리류 등이 있습니다.',
+    14,
+    '/uploads/images/sample_food_image.jpg'
+);
+
+INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, description) VALUES
+(
+    1,
+    4,
+    '/images/missing_grandma.jpg',
+    '성함: 서지현 (78세)\n실종일시: 2025년 10월 9일 오전 9시경\n실종장소: 안산시 단원구 중앙동 인근\n인상착의: 연한 회색 가디건, 검정색 바지, 흰색 운동화 착용.'
+);
+
+INSERT INTO search_Together (missing_post_id, user_id) VALUES
+(1, 2);
+
+INSERT INTO guardian_patient_connection (patient_no, guardian1_no, guardian2_no, guardian3_no) VALUES
+(4, 1, 2, 3),
+(6, 5, NULL, NULL);
