@@ -508,7 +508,7 @@ async function fetchPredictionData() {
             router.push({
                 path: '/simulation',
                 query: {
-                    userNo: patientUserNo.value,
+                    userNo: 1,
                     lat: lastGPSData.latitude,
                     lon: lastGPSData.longitude,
                     missingTime: missingTimeDB.value
