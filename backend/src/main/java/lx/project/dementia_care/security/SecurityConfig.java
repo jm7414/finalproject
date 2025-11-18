@@ -83,6 +83,10 @@ public class SecurityConfig {
                         // 위치 업데이트 API (환자/구독자 전용)
                         .requestMatchers(HttpMethod.POST, "/api/location/update").hasAnyRole("PATIENT", "SUBSCRIBER")
 
+                        // 지현 추가: 이웃 위치 업데이트 API (이웃/보호자 전용) / 환자에서 이웃으로 들어갔을때 안돼서 추가한 사항
+                        .requestMatchers(HttpMethod.POST, "/NH/api/neighbor/location/update")
+                        .hasAnyRole("NEIGHBOR", "GUARDIAN")
+
                         // 위치 조회 API (보호자/구독자 전용)
                         .requestMatchers(HttpMethod.GET, "/api/location/patient/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
 
@@ -95,7 +99,7 @@ public class SecurityConfig {
                         // 이웃 페이지 (보호자와 이웃 접근 가능)
                         .requestMatchers("/NH").hasAnyRole("GUARDIAN", "NEIGHBOR")
                         
-                        // ✅ 수정: 이웃 API (보호자와 이웃 모두 접근 가능)
+                        // 이웃 API (보호자와 이웃 모두 접근 가능)
                         .requestMatchers("/NH/api/**").hasAnyRole("GUARDIAN", "NEIGHBOR")
 
                         // 본인정보 수정 API 권한

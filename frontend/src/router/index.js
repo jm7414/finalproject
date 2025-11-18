@@ -243,7 +243,7 @@ const router = createRouter({
       path: '/predict-location/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'predict-location',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: PredictLocation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 전용
     },
     {
       path: '/simulation',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
