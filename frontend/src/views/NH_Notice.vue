@@ -10,13 +10,13 @@
 
         <div class="missing-button" 
              :class="{ active: activeTab === 'Missing' }" 
-             @click="goToMissing">
+             @click="changeTab('Missing')">
           <span class="event-button">실종</span>
         </div>
 
         <div class="main-div-9" 
              :class="{ active: activeTab === 'Event' }" 
-             @click="goToEvent">
+             @click="changeTab('Event')">
           <span class="main-div-a">이벤트</span>
         </div>
       </div>
@@ -37,35 +37,34 @@
         />
       </div>
 
+      <!-- 실종 탭 -->
       <CommunityMissing v-if="activeTab === 'Missing'" />
-      <CommunityEvent v-if="activeTab === 'Event'" />
+      
+      <!-- 이벤트 탭 -->
+      <NH_CommunityEvent v-if="activeTab === 'Event'" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
 import NH_NoticeBoard from '@/components/NH_NoticeBoard.vue';
 import NH_NoticeWrite from '@/components/NH_NoticeWrite.vue';
 import CommunityMissing from '@/components/CommunityMissing.vue';
-import CommunityEvent from '@/components/CommunityEvent.vue';
+import NH_CommunityEvent from '@/components/NH_CommunityEvent.vue';
 import axios from 'axios';
 
-const router = useRouter();
-
-// Props (제거 - plazaId, userId는 내부에서 조회)
 // 기본으로 보여줄 탭(채널)을 'Post'로 설정
 const activeTab = ref('Post');
 const noticeView = ref('list'); // 공지 탭 내부 상태: 'list' 또는 'write'
-const isPlazaMaster = ref(false); // 공지 기능으로 인한 추가
+const isPlazaMaster = ref(false);
 
 // 마운트 시 방장 정보 조회
 onMounted(async () => {
   await fetchMyPlazaRole();
 });
 
-// 공지 기능으로 인한 추가: 내 역할 조회
+// 내 역할 조회
 async function fetchMyPlazaRole() {
   try {
     const response = await axios.get('/NH/api/neighbor/plazas/my/role');
@@ -75,10 +74,12 @@ async function fetchMyPlazaRole() {
   }
 }
 
-// 탭(채널)을 변경하는 함수
+// 탭(채널)을 변경하는 함수 - 라우팅 제거
 function changeTab(tabName) {
   activeTab.value = tabName;
-  noticeView.value = 'list'; // 탭 변경 시 공지 리스트로 초기화
+  if (tabName === 'Post') {
+    noticeView.value = 'list'; // 공지 탭으로 돌아갈 때 리스트로 초기화
+  }
 }
 
 // 공지 작성 페이지로 이동
@@ -95,22 +96,7 @@ function goToNoticeList() {
 function handleNoticeCreated() {
   goToNoticeList();
 }
-
-// 실종자 페이지로 이동
-function goToMissing() {
-  router.push({
-    name: 'CommunityMissing'
-  });
-}
-
-// 이벤트 페이지로 이동
-function goToEvent() {
-  router.push({
-    name: 'CommunityEvent'
-  });
-}
 </script>
-
 
 <style scoped>
 /* 전체 레이아웃 */
@@ -122,6 +108,7 @@ function goToEvent() {
   display: flex;
   flex-direction: column;
 }
+
 .main-nav {
   width: 100%;
   max-width: 700px;
@@ -131,10 +118,12 @@ function goToEvent() {
   border-top: 1px solid #e5e5e5;
   border-bottom: 1px solid #e5e5e5;
 }
+
 .main-div-8 {
   display: flex;
   min-height: 46px;
 }
+
 .main-button, .missing-button, .main-div-9 {
   flex: 1;
   position: relative;
@@ -145,6 +134,7 @@ function goToEvent() {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .post-button, .event-button, .main-div-a {
   font-family: Inter, var(--default-font-family);
   font-size: 14px;
@@ -159,6 +149,7 @@ function goToEvent() {
 .main-div-9.active {
   border-bottom-color: #a7cc10;
 }
+
 .main-button.active .post-button,
 .missing-button.active .event-button,
 .main-div-9.active .main-div-a {

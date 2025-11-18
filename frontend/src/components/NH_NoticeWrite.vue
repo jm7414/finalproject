@@ -1,3 +1,41 @@
+  <template>
+    <div class="page-container">
+      <div class="form-wrapper">
+        <section class="form-section">
+          <label for="title-input">제목</label>
+          <input 
+            id="title-input" 
+            type="text" 
+            class="title-input" 
+            placeholder="제목을 입력해주세요"
+            v-model="title"
+          >
+        </section>
+  
+        <section class="form-section">
+          <label for="content-textarea">내용</label>
+          <div class="textarea-container">
+            <textarea 
+              id="content-textarea"
+              class="content-textarea"
+              placeholder="내용을 입력해주세요"
+              v-model="content"
+              maxlength="1000"
+            ></textarea>
+            <span class="char-counter">{{ contentLength }} / 1000자</span>
+          </div>
+        </section>
+      </div>
+  
+      <div class="footer-buttons">
+        <button @click="submitNotice" class="submit-btn" :disabled="loading">
+          {{ loading ? '작성 중...' : '공지 작성하기' }}
+        </button>
+        <button @click="cancel" class="cancel-btn">취소하기</button>
+      </div>
+    </div>
+  </template>
+  
 <script setup>
 import { ref, computed } from 'vue';
 import axios from 'axios';
@@ -50,48 +88,11 @@ function cancel() {
 }
 </script>
 
-<template>
-  <div class="page-container">
-    <div class="form-wrapper">
-      <section class="form-section">
-        <label for="title-input">제목</label>
-        <input 
-          id="title-input" 
-          type="text" 
-          class="title-input" 
-          placeholder="제목을 입력해주세요"
-          v-model="title"
-        >
-      </section>
-
-      <section class="form-section">
-        <label for="content-textarea">내용</label>
-        <div class="textarea-container">
-          <textarea 
-            id="content-textarea"
-            class="content-textarea"
-            placeholder="내용을 입력해주세요"
-            v-model="content"
-            maxlength="1000"
-          ></textarea>
-          <span class="char-counter">{{ contentLength }} / 1000자</span>
-        </div>
-      </section>
-    </div>
-
-    <div class="footer-buttons">
-      <button @click="submitNotice" class="submit-btn" :disabled="loading">
-        {{ loading ? '작성 중...' : '공지 작성하기' }}
-      </button>
-      <button @click="cancel" class="cancel-btn">취소하기</button>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .page-container {
   width: 100%;
-  margin-top: 70px;
+  margin-top: 0px;
   background: #FAFAFA;
   font-family: 'Inter', sans-serif;
   height: calc(100vh - 90px - 90px);
