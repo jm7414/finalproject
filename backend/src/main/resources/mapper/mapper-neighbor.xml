@@ -236,7 +236,7 @@
     <!-- 광장 공지 목록 조회 -->
     <select id="getPlazaNotices" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaNoticeDTO">
         SELECT 
-            p.post_id AS postId,
+            p.post_id AS noticeNo,
             p.title AS title,
             p.content AS content,
             p.user_no AS authorUserNo,
@@ -246,7 +246,7 @@
         FROM post p
         JOIN users u ON p.user_no = u.user_no
         WHERE p.plaza_no = #{plazaNo}
-          AND p.notice_type = '공지'
+        AND p.notice_type = '공지'
         ORDER BY p.created_at DESC
     </select>
 
@@ -274,11 +274,18 @@
 
     <!-- 공지 상세 조회 -->
     <select id="getPlazaNoticeById" parameterType="int" resultType="lx.project.dementia_care.dto.PlazaNoticeDTO">
-        SELECT post_id AS noticeNo, title, content, user_no AS authorUserNo, created_at AS createdAt, view_count AS viewCount
+        SELECT 
+            post_id AS noticeNo, 
+            title, 
+            content, 
+            user_no AS authorUserNo, 
+            created_at AS createdAt, 
+            view_count AS viewCount
         FROM post
         WHERE post_id = #{noticeNo}
         AND notice_type = '공지'
     </select>
+
 
     <!-- ==================== 일정 기능으로 인한 추가 ==================== -->
 
