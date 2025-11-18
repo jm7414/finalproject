@@ -164,10 +164,10 @@
                             실종장소: {{ missingAddress?.fullAddress || '주소 로딩 중...' }}
                         </p>
 
-                        <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
+                        <!-- <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
                             실종장소: {{ missingAddress.fullAddress }}
-                        </p>
+                        </p> -->
                     </div>
                 </div>
 
@@ -1311,6 +1311,39 @@ watch(showAllLocations, (newValue) => {
     }
 })
 
+
+/**
+ * 임시 테스트용 마커 3개를 생성합니다. 함께하기용 나중에 진짜 함께하기가 되면 삭제해야 함
+ */
+function createTemporaryMarkers() {
+  // map 객체가 초기화되었는지 확인
+  if (!map) {
+    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
+    return;
+  }
+
+  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
+
+  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
+  const mapCenter = map.getCenter(); 
+  const testPositions = [
+    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
+    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002),  // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
+    new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)    // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
+  ];
+
+  // 2. 3개의 마커를 생성하여 지도에 바로 표시
+  // (이 마커들은 'markers' 배열에 추가하지 않으므로,
+  // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
+  testPositions.forEach((position, index) => {
+    new window.kakao.maps.Marker({
+        position: position,
+        map: map, // 맵 객체에 바로 표시
+        title: `테스트 마커 ${index + 1}`
+    });
+  });
+}
+
 /**
  * Haversine 공식을 사용하여 두 좌표 간의 거리를 미터 단위로 계산
  * @param {number} lat1 - 시작점 위도
@@ -1699,6 +1732,7 @@ onMounted(async () => {
                     if (map) {
                         // ⭐ 초기화 시에만 force=true로 중심 설정
                         setCenter(true)
+                        // createTemporaryMarkers()    // 임시 마커추가 함께하기용
                         makeMarker()
                         initCircles()
                         showCirclesByZoneLevel(displayZoneLevel.value)

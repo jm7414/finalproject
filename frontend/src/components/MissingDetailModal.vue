@@ -160,7 +160,7 @@ const defaultPersonImage = '/default-person.png';
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* 다른 요소들 위에 표시 */
+  z-index: 1050;; /* 다른 요소들 위에 표시 */
 }
 
 /* 모달 컨텐츠 영역 */
@@ -170,7 +170,7 @@ const defaultPersonImage = '/default-person.png';
   border-radius: 12px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   width: 90%; /* 화면 너비의 90% */
-  max-width: 450px; /* 최대 너비 제한 */
+  max-width: 350px; /* 최대 너비 제한 */
   height: 80%; /* 최대 높이 제한 (화면 높이의 85%) */
   display: flex;
   flex-direction: column;
@@ -207,7 +207,8 @@ const defaultPersonImage = '/default-person.png';
 .modal-body {
   overflow-y: auto; /* 내용 길면 스크롤 */
   margin-bottom: 10px;
-
+  flex: 1;
+  min-height: 0;
 }
 
 /* 모달 내 정보 섹션 (CommunityMissingDetail/PredictLocation 스타일 재사용) */

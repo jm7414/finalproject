@@ -43,7 +43,7 @@
         JOIN
             users u ON p.user_no = u.user_no         
         WHERE
-            p.notice_check IS NULL OR p.notice_check != '공지'
+            p.notice_type IS NULL OR p.notice_type != '공지'
         ORDER BY
             p.post_id DESC
     </select>
@@ -85,7 +85,7 @@
         JOIN
             users u ON p.user_no = u.user_no         
         WHERE
-            p.notice_check = '공지'
+            p.notice_type = '공지'
         ORDER BY
             p.created_at DESC
     </select>
@@ -94,7 +94,7 @@
         <selectKey keyProperty="postId" resultType="int" order="AFTER">
             SELECT CURRVAL('post_post_id_seq')
         </selectKey>
-        INSERT INTO post (title, content, user_no, image_path, notice_check)         
+        INSERT INTO post (title, content, user_no, image_path, notice_type)         
         VALUES (
             #{title}, 
             #{content}, 
@@ -127,7 +127,7 @@
         UPDATE post
         SET view_count = view_count + 1
         WHERE post_id = #{postId}
-        AND (notice_check IS NULL OR notice_check != '공지')
+        AND (notice_type IS NULL OR notice_type != '공지')
     </update>
 
     <select id="checkLike" resultType="int">
