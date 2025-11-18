@@ -87,24 +87,48 @@
     </div>
 
     <!-- 가장 빠른 일정 -->
-    <h6 class="fw-bold mb-2">오늘의 일정</h6>
-    <div v-if="nextSchedule" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <div class="d-flex align-items-center gap-2">
-          <span class="d-inline-block rounded-circle" style="width:10px;height:10px;background:#6c757d"></span>
-          <span class="fw-semibold">{{ nextSchedule.title }}</span>
+    <h6 class="fw-bold mb-3" style="font-size: 1.1rem; color: #1a1a1a;">오늘의 일정</h6>
+    <div v-if="nextSchedule" class="schedule-card mb-3">
+      <div class="schedule-header">
+        <div class="schedule-title-section">
+          <div class="schedule-indicator"></div>
+          <span class="schedule-title">{{ nextSchedule.title }}</span>
         </div>
-        <span class="text-secondary">{{ nextSchedule.time }}</span>
+        <div class="schedule-time">{{ nextSchedule.time }}</div>
       </div>
-      <div class="small text-secondary mb-1">{{ nextSchedule.location || '위치 정보 없음' }}</div>
-      <div class="small text-secondary" v-if="nextSchedule.depart">예상 출발: {{ nextSchedule.depart }}</div>
-      <div class="small text-secondary" v-if="nextSchedule.arrive">예상 도착: {{ nextSchedule.arrive }}</div>
+      <div class="schedule-location">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+          class="location-icon">
+          <path
+            d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"
+            fill="currentColor" />
+        </svg>
+        <span>{{ nextSchedule.location || '위치 정보 없음' }}</span>
+      </div>
+      <div class="schedule-details" v-if="nextSchedule.depart || nextSchedule.arrive">
+        <div v-if="nextSchedule.depart" class="schedule-detail-item">
+          <span class="detail-label">예상 출발</span>
+          <span class="detail-value">{{ nextSchedule.depart }}</span>
+        </div>
+        <div v-if="nextSchedule.arrive" class="schedule-detail-item">
+          <span class="detail-label">예상 도착</span>
+          <span class="detail-value">{{ nextSchedule.arrive }}</span>
+        </div>
+      </div>
     </div>
-    <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
-      <div class="card-body text-center text-muted">오늘 남은 일정이 없습니다.</div>
+    <div v-else class="schedule-empty-card mb-3">
+      <div class="schedule-empty-content">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+          class="empty-icon">
+          <path
+            d="M19 4H5C3.89 4 3 4.9 3 6V20C3 21.1 3.89 22 5 22H19C20.1 22 21 21.1 21 20V6C21 4.9 20.1 4 19 4ZM19 20H5V9H19V20ZM19 7H5V6H19V7Z"
+            fill="currentColor" />
+        </svg>
+        <p class="empty-text">오늘 남은 일정이 없습니다</p>
+      </div>
     </div>
 
-    <button class="btn btn-outline-dark w-100 rounded-pill mb-3" @click="router.push('/calendar')">
+    <button class="btn schedule-detail-btn w-100 mb-3" @click="router.push('/calendar')">
       일정 자세히 보기
     </button>
 
@@ -142,6 +166,7 @@
           <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
             style="height:40px">예상 위치</div>
         </button>
+        <ConfirmModal ref="modal" />
       </div>
 
       <!-- 3) AI 보고서 -->
@@ -791,48 +816,43 @@ onBeforeUnmount(() => {
   stopPatientLocationTracking()
 })
 
+///
+/// 주형 yes실종 no실종 비교해서 각 상황에 맞는 페이지를 모달로 넘겨줌
+///
 
-///
-/// 주형 yes실종 no실종 비교해서 각 상황에 맞는 페이지로 넘겨줄게요~ 히히발싸
-///
+import ConfirmModal from '../components/predict_split_Modal.vue'
+const modal = ref(null)
 
 // 환자 번호를 patientUserNo.value 로 받아오면 됨!
 // 실종게시판에 있는지 없는지 판단하는 함수
 async function isReported() {
   try {
-    const response = await fetch(`/api/missing-persons/patient/${patientUserNo.value}/latest`, {
+    const response = await fetch(`/api/user/my-patient`, {
       method: 'GET',
       credentials: 'include'
     })
+    const patientData = await response.json()
 
-    if (response.status === 200) {
-      return 200 
-    } else if (response.status === 204) {
-      // 데이터가 없을 때 (No Content)
-      console.log('조회할 실종 신고가 없습니다.')
-      return 204 
-    } else if (response.status === 404) {
-      // 해당 환자를 찾을 수 없을 때
-      console.log('해당 환자 정보를 찾을 수 없습니다.')
-      return 404  
+    if (patientData.userStatus == 1) {
+      router.push(`/predict-location`)
+    } else {
+      const confirmed = await modal.value.show(
+        '실종상태가 아니므로 환자의 현위치를 중심으로 예상위치와 시뮬레이션이 제공됩니다. 이동하시겠습니까?'
+      )
+
+      if (confirmed) {
+        router.push('not-reported-predict')
+      }
     }
   } catch (error) {
-    console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :: ${error}`)
-    return null
+    console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :::: ${error}`)
   }
 }
 
 // 버튼 클릭시 페이지 어디로갈지
-async function typeOfMissing() {
-  const status = await isReported() 
-
-  if (status === 204 || status === 404) { 
-    router.push('/not-reported-predict')
-  } else if (status === 200) {
-    router.push('/predict-location')
-  } else {
-    alert('확인 중 오류가 발생했습니다.')
-  }
+function typeOfMissing() {
+  console.log(`환자 번호는 ::::: ${patientUserNo.value}`)
+  isReported()
 }
 </script>
 
@@ -931,5 +951,156 @@ async function typeOfMissing() {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background-color: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(4px);
+}
+
+/* 오늘의 일정 카드 스타일 */
+.schedule-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.schedule-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.schedule-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.schedule-indicator {
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.schedule-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+}
+
+.schedule-time {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #6366f1;
+  white-space: nowrap;
+  margin-left: 12px;
+  letter-spacing: -0.2px;
+}
+
+.schedule-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-bottom: 12px;
+  padding-left: 16px;
+}
+
+.location-icon {
+  color: #6366f1;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.schedule-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.schedule-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.detail-label {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.detail-value {
+  color: #374151;
+  font-weight: 500;
+}
+
+/* 일정 없음 카드 */
+.schedule-empty-card {
+  background: #f9fafb;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  padding: 40px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.schedule-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.empty-icon {
+  color: #d1d5db;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* 일정 자세히 보기 버튼 */
+.schedule-detail-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transition: all 0.3s ease;
+  letter-spacing: -0.2px;
+}
+
+.schedule-detail-btn:hover {
+  background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+  color: #ffffff;
+}
+
+.schedule-detail-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 </style>

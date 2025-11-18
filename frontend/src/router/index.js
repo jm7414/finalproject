@@ -9,7 +9,6 @@ import Login from '@/views/Login.vue'
 import MissingReport from '@/components/MissingReport.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
-import JustPredict from '@/views/JustPredictLocation.vue'
 import Simulation from '@/views/NoDataSimulation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
@@ -244,19 +243,19 @@ const router = createRouter({
       path: '/not-reported-predict/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'not-reported-predict',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: JustPredictLocation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 및 이웃 (이웃에서도 실종자 게시판으로 들어오게 설정)
     },
     {
       path: '/predict-location/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'predict-location',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: PredictLocation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 및 이웃 (이웃에서도 실종자 게시판으로 들어오게 설정)
     },
     {
       path: '/simulation',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'simulation',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: Simulation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용 _이웃추가
     },
     {
       path: '/CommunityMissing',

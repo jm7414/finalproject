@@ -28,6 +28,32 @@ from mesa.time import RandomActivation
 from mesa_geo import GeoSpace, GeoAgent
 from shapely.geometry import Point
 import random
+# ⭐⭐ 아두이노 센서에 필요한 라이브러리
+import serial
+import threading
+
+# 아두이노 센서 추가부분 이거는 안꽂혀있어도 괜찮음
+try:
+    ser = serial.Serial('COM3', 9600, timeout=1)
+    thread = threading.Thread(target=monitor_sensor, daemon=True)
+    thread.start()
+    print("✅ 아두이노 센서 모니터링 시작")
+except serial.SerialException as e:
+    print(f"⚠️ 아두이노 연결 실패: {e}")
+    ser = None
+    pir_state = -1  # 센서 비활성 상태
+
+def monitor_sensor():
+    global pir_state
+    while True:
+        if ser.in_waiting > 0:
+            line = ser.readline().decode('utf-8').strip()
+            if line in ['0', '1']:
+                val = int(line)
+                if val == 1 and pir_state == 0:
+                    print("Movement detected! Triggering event.")
+                    # 여기서 원하는 API 호출 또는 동작 실행 가능
+                pir_state = val
 
 # =============================================================================
 # Configuration
@@ -72,7 +98,7 @@ class PredictionRequest(BaseModel):
     missing_time: str  # "YYYY-MM-DD HH:MM"
     gps_data: List[GPSRecord]
     analysis_days: Optional[int] = 120
-    time_window_hours: Optional[int] = 3
+    time_window_hours: Optional[int] = 5
     session_gap: Optional[int] = 30
     min_cluster_size: Optional[int] = 10
     max_search_radius: Optional[int] = 2000
@@ -355,7 +381,7 @@ async def generate_road_snapped_waypoints(G, tree_data, gps_data, start_lat, sta
     )
 
 
-def filter_by_similar_time(gps_data, target_time, time_window_hours=3):
+def filter_by_similar_time(gps_data, target_time, time_window_hours=5):
     """시간대별 필터링"""
     target_hour = target_time.hour
     
@@ -528,7 +554,7 @@ class RealisticPatientAgent(GeoAgent):
     """에이전트 클래스"""
     
     def __init__(self, unique_id, model, shape, crs, start_node, 
-                 max_time_minutes=30, turn_preference='right'):
+                 max_time_minutes=90, turn_preference='right'):
         super().__init__(unique_id=unique_id, model=model, geometry=shape, crs=crs)
         self.start_node = start_node
         self.current_node = start_node
@@ -695,9 +721,6 @@ class RealisticPatientAgent(GeoAgent):
             return None, None
 
     def step(self):
-        if self.stopped or self.elapsed_time_seconds >= self.max_time_seconds:
-            self.stopped = True
-            return
         
         if self.stay_duration > 0:
             time_step = 10.0
@@ -761,7 +784,7 @@ class RealisticPatientAgent(GeoAgent):
 class DementiaWanderingModel(Model):
     """시뮬레이션 모델"""
     
-    def __init__(self, graph, start_node, max_time_minutes=30, 
+    def __init__(self, graph, start_node, max_time_minutes=90, 
                  turn_preference='right', n_agents=200):
         super().__init__()
         self.graph = graph
@@ -795,7 +818,7 @@ def run_simulation_for_scenario(latitude, longitude, time_minutes, distance_m, t
     print(f"시뮬레이션 시작: {time_minutes}분, {distance_m}m")
     
     center_point = (latitude, longitude)
-    G = ox.graph_from_point(center_point, dist=distance_m, network_type='walk')
+    G = ox.graph_from_point(center_point, dist=3000, network_type='walk')
     
     start_node = ox.nearest_nodes(G, longitude, latitude)
     
@@ -863,10 +886,7 @@ def extract_top10_data(model, time_minutes):
         })
     
     # 애니메이션 프레임 생성
-    max_steps = max(
-        max(pos['step'] for pos in rep['path']) 
-        for rep in representative_agents
-    )
+    max_steps = time_minutes * 6
     
     animation_frames = []
     for step in range(max_steps + 1):
@@ -994,7 +1014,206 @@ async def predict_destinations(request: PredictionRequest):
     
     # 시간대 필터링
     print(f"⏰ 시간대 필터링 (±{request.time_window_hours}시간)...")
-    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=request.time_window_hours)
+    time_filtered_gps = filter_by_similar_time(gps_data, target_time, request.time_window_hours)
+    print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
+    
+    if len(time_filtered_gps) < 100:
+        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=3)
+        print(f"   범위 확대: {len(time_filtered_gps)}개")
+    
+    if len(time_filtered_gps) < 50:
+        time_filtered_gps = gps_data
+        print(f"   전체 사용: {len(time_filtered_gps)}개")
+    
+    # 도로망 다운로드
+    print(f"🌐 도로망 로딩...")
+    G = await get_road_network(last_lat, last_lon, radius_m=request.road_network_radius)
+    
+    # BallTree 구축
+    tree_data = None
+    if G is not None:
+        print(f"🔧 BallTree 구축...")
+        tree_data = build_balltree(G)
+        print(f"✅ BallTree 준비")
+    
+    # 클러스터링
+    print(f"🔎 클러스터링...")
+    
+    all_clusters = await find_frequent_locations_with_sessions(
+        time_filtered_gps,
+        last_known_coords=(last_lat, last_lon),
+        max_search_radius_m=request.max_search_radius,
+        min_visits=10,
+        session_gap_minutes=request.session_gap,
+        min_cluster_size=request.min_cluster_size
+    )
+    
+    print(f"✅ 클러스터: {len(all_clusters)}개")
+    
+    if not all_clusters:
+        raise HTTPException(status_code=404, detail="클러스터 없음")
+    
+    # 거리별 분류
+    clusters_by_distance = {"500m": [], "1000m": [], "1500m": []}
+    
+    for cluster_lat, cluster_lon, visit_sessions, total_records, stability in all_clusters:
+        distance = haversine_distance(last_lat, last_lon, cluster_lat, cluster_lon)
+        
+        if distance < 50:
+            continue
+        
+        cluster_data = (cluster_lat, cluster_lon, visit_sessions, total_records, stability, distance)
+        
+        if distance <= 500:
+            clusters_by_distance["500m"].append(cluster_data)
+        elif distance <= 1000:
+            clusters_by_distance["1000m"].append(cluster_data)
+        elif distance <= 1500:
+            clusters_by_distance["1500m"].append(cluster_data)
+    
+    print(f"\n📊 거리별 분포: 500m({len(clusters_by_distance['500m'])}), "
+          f"1000m({len(clusters_by_distance['1000m'])}), 1500m({len(clusters_by_distance['1500m'])})")
+    
+    # 각 범위 처리
+    destinations_by_distance = {}
+    
+    for range_key in ["500m", "1000m", "1500m"]:
+        print(f"\n🎯 {range_key}...")
+        
+        selected_clusters = select_diverse_clusters(
+            clusters_by_distance[range_key],
+            max_count=5,
+            min_separation_m=request.min_cluster_separation
+        )
+        
+        destinations = []
+        
+        for cluster_lat, cluster_lon, visit_sessions, total_records, stability, distance in selected_clusters:
+            waypoints, preference_score, route_method = await generate_road_snapped_waypoints(
+                G,
+                tree_data,
+                time_filtered_gps,
+                last_lat, last_lon,
+                cluster_lat, cluster_lon
+            )
+            
+            print(f"  - {distance:.0f}m, 방문 {visit_sessions}회, {route_method}, waypoints: {len(waypoints)}개")
+            
+            poi_name = None
+            if not pois_df.empty:
+                for _, poi in pois_df.iterrows():
+                    if haversine_distance(cluster_lat, cluster_lon, poi['lat'], poi['lon']) < 100:
+                        poi_name = poi['name']
+                        break
+            
+            destination = {
+                "destination_id": len(destinations) + 1,
+                "latitude": float(round(cluster_lat, 6)),
+                "longitude": float(round(cluster_lon, 6)),
+                "visit_count": int(visit_sessions),
+                "total_gps_records": int(total_records),
+                "distance_meters": float(round(distance, 1)),
+                "cluster_stability": float(round(stability, 3)),
+                "waypoints": waypoints,
+                "preference_score": float(round(preference_score, 3)),
+                "route_method": route_method
+            }
+            
+            if poi_name:
+                destination["name"] = poi_name
+            
+            destinations.append(destination)
+        
+        destinations_by_distance[range_key] = destinations
+    
+    print(f"\n✅ 예측 완료!\n")
+    
+    response_data = {
+        "user_no": request.user_no,
+        "missing_time": target_time.isoformat(),
+        "last_known_location": {
+            "latitude": float(last_lat),
+            "longitude": float(last_lon),
+            "time": last_time.isoformat()
+        },
+        "analysis_period_days": request.analysis_days,
+        "session_gap_minutes": request.session_gap,
+        "time_filtered_records": len(time_filtered_gps),
+        "total_clusters_found": len(all_clusters),
+        "destinations_by_distance": destinations_by_distance,
+        "data_sufficiency": data_sufficiency,
+        "total_gps_records": len(gps_data)
+    }
+    
+    return response_data
+
+@app.post("/api/predict-destinations/test", response_model=PredictionResponse)
+async def predict_destinations(request: PredictionRequest):
+    """
+    실종자 목적지 예측
+    
+    Spring Boot에서 GPS 데이터를 직접 받아서 처리
+    """
+    
+    print(f"\n{'='*60}")
+    print(f"[예측 요청] user={request.user_no}, time={request.missing_time}")
+    print(f"수신 GPS: {len(request.gps_data)}개")
+    print(f"{'='*60}")
+    
+    # 시간 파싱
+    try:
+        target_time = datetime.strptime(request.missing_time, "%Y-%m-%d %H:%M")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="시간 형식 오류 (YYYY-MM-DD HH:MM)")
+    
+    # GPS 데이터 검증
+    if not request.gps_data:
+        raise HTTPException(status_code=404, detail="GPS 데이터 없음")
+    
+    # GPS 데이터 파싱
+    gps_data = []
+    for record in request.gps_data:
+        try:
+            record_time = datetime.strptime(record.record_time, "%Y-%m-%d %H:%M:%S")
+            gps_data.append((record.latitude, record.longitude, record_time))
+        except ValueError:
+            continue  # 잘못된 데이터 스킵
+    
+    if not gps_data:
+        raise HTTPException(status_code=400, detail="유효한 GPS 데이터 없음")
+    
+    print(f"✅ 파싱된 GPS: {len(gps_data)}개")
+    
+    # POI 로드
+    try:
+        pois_df = pd.read_csv(request.csv_path)
+        print(f"✅ POI: {len(pois_df)}개")
+    except:
+        pois_df = pd.DataFrame()
+        print(f"⚠️ POI 파일 없음")
+    
+    # 데이터 충분성 판단
+    EXPECTED_28DAYS = 3 * 20 * 24 * 28
+    EXPECTED_7DAYS = 3 * 20 * 24 * 7
+    
+    if len(gps_data) < EXPECTED_7DAYS:
+        data_sufficiency = "nono"
+    elif len(gps_data) < EXPECTED_28DAYS:
+        data_sufficiency = "no"
+    else:
+        data_sufficiency = "yes"
+    
+    print(f"📊 데이터 충분성: {data_sufficiency}")
+    
+    # 마지막 위치 추출
+    sorted_gps = sorted(gps_data, key=lambda x: x[2])
+    last_lat, last_lon, last_time = sorted_gps[-1]
+    
+    print(f"📍 마지막 위치: ({last_lat:.6f}, {last_lon:.6f})")
+    
+    # 시간대 필터링
+    print(f"⏰ 시간대 필터링 (±{request.time_window_hours}시간)...")
+    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=6)
     print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
     
     if len(time_filtered_gps) < 100:
@@ -1023,15 +1242,12 @@ async def predict_destinations(request: PredictionRequest):
         time_filtered_gps,
         last_known_coords=(last_lat, last_lon),
         max_search_radius_m=request.max_search_radius,
-        min_visits=5,
+        min_visits=3,
         session_gap_minutes=request.session_gap,
         min_cluster_size=request.min_cluster_size
     )
     
     print(f"✅ 클러스터: {len(all_clusters)}개")
-    
-    if not all_clusters:
-        raise HTTPException(status_code=404, detail="클러스터 없음")
     
     # 거리별 분류
     clusters_by_distance = {"500m": [], "1000m": [], "1500m": []}
@@ -1238,7 +1454,13 @@ async def health_check():
             "⭐ Realistic road-following paths"
         ]
     }
+    
+    
 
+## /sensor로 들어오면 이걸 계속 보내줌
+@app.get('/sensor')
+def get_sensor_value():
+    return {"pir": pir_state}
 
 # =============================================================================
 # Main
