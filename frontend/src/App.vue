@@ -167,6 +167,7 @@ const isGeoFencingPage = computed(() => {
 const showMobileHeader = computed(() => {
   if (isDesktopLayout.value) return false
   return !(isAddSchedulePage.value ||
+    isDPMainPage.value ||
     isMapMainPage.value ||
     isLoginPage.value ||
     isSignUpPage.value ||
