@@ -39,7 +39,7 @@
                 <button class="toggle-button" :class="{ active: selectedType === 'map' }" @click="mapOrInfo('map')">
                     <i class="bi bi-map-fill"></i>
                     <span class="button-text">예상위치</span>
-                </button>  
+                </button>
             </div>
             <div v-if="less_data" class="">
                 <p>관리하고있는 환자에 대한 데이터가 부족해요.</p>
@@ -148,7 +148,8 @@
                     </div>
                     <div class="basic-info-wrapper">
                         <div class="name-age-row">
-                            <h2 class="person-name">{{ personDetail.patientName || '정보 없음' }} ({{ calculateAge(personDetail.patientBirthDate) }}세)</h2>
+                            <h2 class="person-name">{{ personDetail.patientName || '정보 없음' }} ({{
+                                calculateAge(personDetail.patientBirthDate) }}세)</h2>
                         </div>
                         <p class="age-info">
                             <i class="bi bi-clock"></i>
@@ -178,7 +179,8 @@
                                 <i class="bi bi-person-badge"></i>
                                 <span class="badge-label">신체 특징</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures || '170cm 마른 체형' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures
+                                || '170cm 마른 체형' }}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -186,7 +188,8 @@
                                 <i class="bi bi-bag"></i>
                                 <span class="badge-label">착의사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '정보없음'}}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing ||
+                                '정보없음'}}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -194,7 +197,8 @@
                                 <i class="bi bi-exclamation-triangle"></i>
                                 <span class="badge-label">특이사항</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).specialNotes || '지팡이를 짚고 다니심' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).specialNotes ||
+                                '지팡이를 짚고 다니심' }}</span>
                         </div>
 
                         <div>
@@ -202,7 +206,8 @@
                                 <i class="bi bi-people"></i>
                                 <span class="badge-label">함께하는 이웃</span>
                             </div>
-                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount != null) ? personDetail.searchTogetherCount : participantsCount }}명</span>
+                            <span class="info-content ml-1">{{ (personDetail && personDetail.searchTogetherCount !=
+                                null) ? personDetail.searchTogetherCount : participantsCount }}명</span>
                             <div class="d-flex justify-content-center">
                                 <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
                                     @click="wherePeople">
@@ -275,7 +280,8 @@
                         </div>
                         <p class="location-distance">
                         <div>
-                            <i class="bi bi-geo-alt-fill"></i>실종지로부터 {{ loc.dist_m }}m · {{ getTimeRangeText(((loc.dist_m) / 20).toFixed(0)) }}
+                            <i class="bi bi-geo-alt-fill"></i>실종지로부터 {{ loc.dist_m }}m · {{
+                                getTimeRangeText(((loc.dist_m) / 20).toFixed(0)) }}
                         </div>
                         </p>
                     </div>
@@ -332,6 +338,7 @@
         <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
         <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="patientUserNo"
             :missingLocation="missingLocation" :missingTime="missingTimeDB" @close="closeAgentSimulation" />
+        <ConfirmModal ref="modal" />
     </div>
 </template>
 
@@ -342,6 +349,8 @@ import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
 import { useSearchStore } from '@/stores/useSearchStore';
 import AgentSimulationModal from '@/components/AgentSimulationModal.vue'
+import ConfirmModal from '../components/predict_split_Modal.vue'
+const modal = ref(null)
 
 // ========================================================================================
 // 카카오지도 및 API 키 설정
@@ -485,26 +494,27 @@ async function fetchPredictionData() {
 
         console.log(`fetchPrediction GPS DATA ::::: ${JSON.stringify(gpsData)}`);
 
+
         // 일주일간 데이터 부족시 뒤로 돌아가기 만들음
         if (gpsData.length < 3 * 20 * 24 * 7) {
             const lastGPSData = gpsData[gpsData.length - 1];
             console.log(`lastGPSData => ${JSON.stringify(lastGPSData)}`)
-            if (confirm(`환자의 위치데이터가 부족하여 시뮬레이션만 볼 수 있습니다. 페이지를 이동합니다.`)) {
-                router.push({
-                    path: '/simulation',
-                    query: {
-                        userNo: userNo,
-                        lat: lastGPSData.latitude,
-                        lon: lastGPSData.longitude,
-                        missingTime: missingTimeDB.value
-                    }
-                });
-            } else {
-                router.push(`/GD`)
-            }
 
+            const confirmed = await modal.value.show(
+                '환자의 위치데이터가 부족하여 시뮬레이션만 제공됩니다',
+                { showCancel: false }
+            )
 
-            return false;
+            router.push({
+                path: '/simulation',
+                query: {
+                    userNo: patientUserNo.value,
+                    lat: lastGPSData.latitude,
+                    lon: lastGPSData.longitude,
+                    missingTime: missingTimeDB.value
+                }
+            });
+            return
         } else if (gpsData.length < 3 * 20 * 24 * 28) {
             lessData.value = true;
         }
@@ -1934,10 +1944,10 @@ function goToReportPage() {
     console.log(`현재 실종 ID (${missingPostId.value})를 사용하여 제보 목록(SightingReport)으로 이동합니다.`);
 
     // 4. 라우터 설정('/SightingReport/:id')에 맞게 'params'로 ID 전달
-    router.push({ 
+    router.push({
         name: 'SightingReportBoard',
         // 라우터의 path가 ':id'이므로, params의 key도 'id'여야 합니다.
-        params: { id: missingPostId.value } 
+        params: { id: missingPostId.value }
     });
 }
 
