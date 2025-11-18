@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,6 +34,19 @@ public class SecurityConfig {
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
+
+    // 환경변수에서 도메인 가져오기, 없으면 localhost:5173 사용 (개발용)
+    @Value("${DOMAIN:localhost:5173}")
+    private String domain;
+
+    // Frontend URL 생성
+    private String getFrontendUrl() {
+        if (domain.contains("localhost")) {
+            return "https://" + domain;
+        } else {
+            return "https://" + domain;
+        }
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -143,10 +157,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
+        // 환경변수에서 도메인 가져오기, 없으면 localhost 사용
+        String frontendUrl = getFrontendUrl();
+        String productionDomain = domain.contains("localhost") ? "https://lx12mammamia.xyz" : "https://" + domain;
+        String productionDomainWww = domain.contains("localhost") ? "https://www.lx12mammamia.xyz" : "https://www." + domain;
+        
         corsConfiguration.setAllowedOrigins(Arrays.asList(
-                "https://localhost:5173",
-                "https://lx12mammamia.xyz",
-                "https://www.lx12mammamia.xyz"));
+                frontendUrl,
+                productionDomain,
+                productionDomainWww));
         corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
         corsConfiguration.setAllowedHeaders(
                 Arrays.asList("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));

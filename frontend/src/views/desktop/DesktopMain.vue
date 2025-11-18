@@ -7,7 +7,7 @@
             <h1>안심존 관리</h1>
             <p class="subtitle">환자의 현재 위치와 안심존을 모니터링하세요.</p>
           </div>
-          <button type="button" class="create-zone-btn" @click="">환자 상태변환</button>
+          <button type="button" class="create-zone-btn" @click="handleStatusChangeClick">환자 상태변환</button>
           <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
         </div>
 
@@ -252,6 +252,13 @@ import defaultProfileImage from '@/assets/default-profile.png'
 
 const router = useRouter()
 
+const props = defineProps({
+  patientInfo: {
+    type: Object, // patientInfo의 타입은 객체입니다.
+    required: true // (또는 default: () => ({}))
+  }
+});
+
 // 더미 데이터 (나중에 실제 API로 교체)
 const patient = {
   name: '김영희',
@@ -415,6 +422,30 @@ const {
     console.error('환자 위치 추적 오류:', error)
   }
 })
+
+const isResolveModalVisible = ref(false);
+function handleStatusChangeClick() {
+  if (!props.patientInfo?.userNo) {
+    alert("환자 정보가 없습니다.");
+    return;
+  }
+
+  // 기능 9: 환자 상태(user_status) 값에 따라 분기
+if (props.patientInfo.user_status === 0) {
+    // 이 로그를 추가하여 userNo 값 확인
+    console.log(`실종 신고 페이지(/MissingReport/:id)로 이동 시도. 전달할 ID:`, props.patientInfo.userNo);
+
+    // userNo 값이 유효한 숫자인지 확인 후 push
+    if (props.patientInfo.userNo !== null && props.patientInfo.userNo !== undefined) {
+      router.push({ name: 'MissingReport', params: { id: props.patientInfo.userNo } });
+    } else {
+      console.error('환자 ID(userNo)가 유효하지 않아 페이지 이동 불가');
+      alert('환자 정보가 올바르지 않아 신고 페이지로 이동할 수 없습니다.');
+    }
+  } else {
+    isResolveModalVisible.value = true;
+  }
+}
 
 /* ===== 안심존 데이터 관리 ===== */
 async function fetchScheduleSafeZone(scheduleNo) {

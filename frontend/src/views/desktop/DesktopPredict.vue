@@ -39,10 +39,41 @@
         </div>
       </div>
       <button class="report-board-btn" @click="openReportBoard">
-        <i class="bi bi-chat-square-text"></i>
         제보 게시판 보기
       </button>
     </div>
+
+  <aside class="right-area-panel" :class="{ visible: isReportBoardVisible }">
+    <header class="right-area-header">
+      <h2>제보 게시판</h2>
+      <button @click="closeReportBoard" class="close-btn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </header>
+    <div class="right-area-content">
+      <SightingReportBoard vD-if="isReportBoardVisible" :id="missingPostId" />
+    </div>
+  </aside>
+
+  <aside class="right-area-panel" :class="{ visible: isPanelVisible }"> <header class="right-area-header">
+      <h2>{{ panelContent === 'board' ? '제보 게시판' : '제보 등록' }}</h2>
+      <button @click="closeReportBoard" class="close-btn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </header>
+    <div class="right-area-content">
+      
+      <SightingReportBoard 
+        v-if="panelContent === 'board'" 
+        :id="missingPostId" 
+        @open-write="showWriteForm" />
+      
+      <SightingReportWrite 
+        v-if="panelContent === 'write'"
+        :id="missingPostId" @close-write="showBoard" />
+      
+    </div>
+  </aside>
 
     <div v-if="loadError" class="error-banner">
       <i class="bi bi-exclamation-triangle"></i>
@@ -229,6 +260,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SightingReportBoard from '../SightingReportBoard.vue'
+import SightingReportWrite from '../../components/SightingReportWrite.vue'
 
 const route = useRoute()
 const missingPostId = ref(null) // 게시판용 ID 변수
@@ -385,6 +417,7 @@ onMounted(async () => {
 
     await fetchPredictionData()
     await initMap()
+    createTemporaryMarkers()    // 임시 마커추가 함께하기용 나중에 삭제해야 함
     initCircles()
     makeMarker()
     showCirclesByZoneLevel(displayZoneLevel.value)
@@ -433,6 +466,38 @@ watch(showAllLocations, () => {
   selectedLocation.value = null
   makeMarker()
 })
+
+/**
+ * 임시 테스트용 마커 3개를 생성합니다. 함께하기용 나중에 진짜 함께하기가 되면 삭제해야 함
+ */
+function createTemporaryMarkers() {
+  // map 객체가 초기화되었는지 확인
+  if (!map) {
+    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
+    return;
+  }
+
+  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
+
+  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
+  const mapCenter = map.getCenter(); 
+  const testPositions = [
+    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
+    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002), // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
+    new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)          // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
+  ];
+
+  // 2. 3개의 마커를 생성하여 지도에 바로 표시
+  // (이 마커들은 'markers' 배열에 추가하지 않으므로,
+  // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
+  testPositions.forEach((position, index) => {
+    new window.kakao.maps.Marker({
+        position: position,
+        map: map, // 맵 객체에 바로 표시
+        title: `테스트 마커 ${index + 1}`
+    });
+  });
+}
 
 function getRadiusByMinutes(minutes) {
   if (minutes <= 30) return Math.round((minutes / 30) * 600)
@@ -555,19 +620,19 @@ function updateMapForTime(minutes) {
   if (!circles.value.circle700 || !circles.value.circle1500 || !circles.value.circle2100) return
 
   if (minutes <= 30) {
-    const radius = (minutes / 30) * 600
+    const radius = (minutes / 30) * 500
     circles.value.circle700.setRadius(radius)
     circles.value.circle1500.setRadius(0)
     circles.value.circle2100.setRadius(0)
   } else if (minutes <= 60) {
-    circles.value.circle700.setRadius(600)
-    const radius = 600 + ((minutes - 30) / 30) * (1300 - 600)
+    circles.value.circle700.setRadius(500)
+    const radius = 500 + ((minutes - 30) / 30) * (1000 - 500)
     circles.value.circle1500.setRadius(radius)
     circles.value.circle2100.setRadius(0)
   } else {
-    circles.value.circle700.setRadius(600)
-    circles.value.circle1500.setRadius(1300)
-    const radius = 1300 + ((minutes - 60) / 30) * (2000 - 1300)
+    circles.value.circle700.setRadius(500)
+    circles.value.circle1500.setRadius(1000)
+    const radius = 1000 + ((minutes - 60) / 30) * (1500 - 1000)
     circles.value.circle2100.setRadius(radius)
   }
 }
@@ -1194,17 +1259,32 @@ function formatDisplayDate(date) {
   return `${year}.${month}.${day} ${hours}:${minutes}`
 }
 
+const isReportBoardVisible = ref(false);
+
+
+const isPanelVisible = ref(false)
+const panelContent = ref('board')
+
 function openReportBoard() {
-  if (!missingPostId.value) {
-    alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
-    return;
-  }
-  isReportBoardVisible.value = true;
-}
-function closeReportBoard() {
-  isReportBoardVisible.value = false;
+  if (!missingPostId.value) {
+    alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
+    return;
+  }
+  panelContent.value = 'board' // 내용물을 'board'로 설정
+  isPanelVisible.value = true // 패널 열기
 }
 
+function closeReportBoard() {
+  isPanelVisible.value = false // 패널 닫기
+}
+
+function showWriteForm() {
+  panelContent.value = 'write' // 내용물을 'write'로 교체
+}
+
+function showBoard() {
+  panelContent.value = 'board' // 내용물을 'board'로 복귀
+}
 </script>
 
 <style scoped>
@@ -1931,6 +2011,96 @@ function closeReportBoard() {
   .map-view {
     height: 480px;
   }
+}
+.report-board-btn {
+  padding: 10px 16px;
+  background-color: #4F46E5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  margin-left: auto;
+  align-self: center;
+}
+.report-board-btn:hover {
+  background-color: #4338CA;
+}
+
+/* predict-header가 버튼을 포함하도록 수정 */
+.desktop-predict .predict-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+
+/* 배경 (Backdrop) 스타일 */
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* 슬라이드 패널 (Aside) 스타일 */
+.right-area-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 450px;
+  height: 100vh;
+  background-color: #ffffff;
+  z-index: 1050;
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+  transform: translateX(100%);
+  transition: transform 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+.right-area-panel.visible {
+  transform: translateX(0);
+}
+
+.right-area-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.right-area-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.right-area-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  background-color: #f9fafb;
 }
 </style>
 

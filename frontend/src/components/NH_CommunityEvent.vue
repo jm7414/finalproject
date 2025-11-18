@@ -63,7 +63,6 @@ const filteredEvents = computed(() => {
   return events.value.filter(event => event.category === activeFilter.value);
 });
 
-// ▼▼▼ [추가] URL로 이동하는 함수 ▼▼▼
 function goToUrl(url) {
   if (url) {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -149,6 +148,7 @@ function goToUrl(url) {
   padding: 12px 16px;
   border-bottom: 1px solid #E5E5E5;
 }
+
 .filter-btn {
   padding: 8px 16px;
   border: none;
@@ -159,8 +159,10 @@ function goToUrl(url) {
   color: #404040;
   transition: all 0.2s ease;
 }
+
+/* 아보카도 색상으로 변경 */
 .filter-btn.active {
-  background: #8E97FD;
+  background: #a7cc10; /* 기존 #8E97FD에서 변경 */
   color: #FFFFFF;
   font-weight: bold;
 }
@@ -174,10 +176,9 @@ function goToUrl(url) {
   background-color: #FAFAFA;
 }
 
-/* ▼▼▼ [수정] cursor: pointer 추가 ▼▼▼ */
 .event-card-link {
   color: inherit;
-  cursor: pointer; /* 클릭 가능하다는 것을 알려주기 위해 커서 모양 변경 */
+  cursor: pointer;
 }
 
 /* 카드 공통 스타일 */
@@ -190,7 +191,6 @@ function goToUrl(url) {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* ▼▼▼ [수정] !important 제거하고 원래대로 복구 ▼▼▼ */
 .event-card:hover {
   transform: translateY(-4px);
   box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
@@ -203,12 +203,15 @@ function goToUrl(url) {
   object-fit: cover;
   background-color: #D4D4D4;
 }
+
 .large-type .card-content {
   padding: 16px;
 }
+
 .large-type .card-footer {
   margin-top: 16px;
 }
+
 .large-type .details-link {
   font-size: 14px;
   color: #525252;
@@ -221,6 +224,7 @@ function goToUrl(url) {
   padding: 16px;
   gap: 16px;
 }
+
 .side-type .card-img-side {
   width: 64px;
   height: 64px;
@@ -229,19 +233,23 @@ function goToUrl(url) {
   background-color: #D4D4D4;
   flex-shrink: 0;
 }
+
 .side-type .card-content {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
+
 .side-type .card-footer {
   margin-top: auto;
   padding-top: 8px;
 }
+
 .side-type .info {
   font-size: 12px;
   color: #737373;
 }
+
 .side-type .action-link {
   font-size: 12px;
   color: #525252;
@@ -255,6 +263,7 @@ function goToUrl(url) {
   align-items: center;
   margin-bottom: 8px;
 }
+
 .category-tag {
   padding: 4px 8px;
   background: #F5F5F5;
@@ -263,16 +272,19 @@ function goToUrl(url) {
   color: #262626;
   font-weight: 500;
 }
+
 .date {
   font-size: 12px;
   color: #737373;
 }
+
 .title {
   font-size: 16px;
   font-weight: bold;
   color: #171717;
   margin: 0 0 8px 0;
 }
+
 .description {
   font-size: 14px;
   color: #525252;
@@ -283,6 +295,7 @@ function goToUrl(url) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
 .card-footer {
   display: flex;
   justify-content: space-between;

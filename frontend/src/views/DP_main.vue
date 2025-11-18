@@ -1,17 +1,17 @@
 <!-- src/views/PatientHome.vue -->
 <template>
   <div class="dp-main-page bg-light">
-    <div class="container-sm py-3" style="max-width:414px">
+    <div class="container-sm py-3" style="max-width:414px; margin-top: -20px;">
       <!-- 메인 카드 -->
       <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-3">
-          <!-- 인사 -->
-          <h3 class="fw-bold mb-3" style="letter-spacing:-.2px">
-            {{ userName || '사용자' }} 님 안녕하세요!
-          </h3>
+        <div class="card-body p-3" style="">
+          <!-- 날짜 시간을 추가 -->
+          <p class="fs-3 fw-bold mb-1 text-center">{{ currentDate }}</p> 
+          <p class="fs-1 fw-bold mb-4 text-center">{{ currentClock }}</p>
+
 
           <!-- 오늘 일정 카드 -->
-          <div class="border rounded-4 shadow-sm p-3 mb-3 bg-white position-relative" style="min-height:106px">
+          <div class="border rounded-4 shadow-sm p-3 mb-4 bg-white position-relative" style="min-height:106px;">
             <div v-if="loading" class="text-secondary small">일정을 불러오는 중...</div>
 
             <template v-else>
@@ -105,8 +105,8 @@
                 <div class="position-absolute top-0 start-0 end-0" style="bottom:44px">
                   <div class="h-100 d-flex align-items-center justify-content-center">
                     <img :src="imgAi" alt="" class="img-fluid" style="width:130%;max-width:none;height:auto;object-fit:contain;
-         transform:scale(1.05) translateY(15%);
-         filter:drop-shadow(0 8px 12px rgba(0,0,0,.10));opacity:.97" />
+                    transform:scale(1.05) translateY(15%);
+                    filter:drop-shadow(0 8px 12px rgba(0,0,0,.10));opacity:.97" />
                   </div>
                 </div>
                 <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold"
@@ -325,12 +325,46 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  updateTime();
+  timeInterval = setInterval(updateTime, 1000);
+
 })
 
 // 페이지 떠날 때 위치 추적 중지
 onBeforeUnmount(() => {
   stopLocationTracking()
+
+  if (timeInterval) {
+    clearInterval(timeInterval);
+  }
+
 })
+
+const currentDate = ref('');
+const currentClock = ref('');
+let timeInterval = null;
+
+function updateTime() {
+  const now = new Date();
+  
+  const month = now.getMonth() + 1;
+  const date = now.getDate();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const ampm = hours >= 12 ? '오후' : '오전';
+  let displayHours = hours % 12;
+  if (displayHours === 0) {
+    displayHours = 12;
+  }
+  const paddedHours = String(displayHours).padStart(2, '0');
+  const paddedMinutes = String(minutes).padStart(2, '0');
+
+  // "11월 16일 오후 07시 08분" 형식
+  currentDate.value = `${month}월 ${date}일`;
+  currentClock.value = `${ampm} ${paddedHours}시 ${paddedMinutes}분`;
+}
+
 </script>
 
 <style scoped>
