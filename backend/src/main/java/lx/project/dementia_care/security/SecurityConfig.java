@@ -66,8 +66,8 @@ public class SecurityConfig {
                         // 일정 생성/수정/삭제 API (보호자/구독자 전용)
                         .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
 
-                        // 위치 업데이트 API (환자/구독자 전용)
-                        .requestMatchers(HttpMethod.POST, "/api/location/update").hasAnyRole("PATIENT", "SUBSCRIBER")
+                        // 위치 업데이트 API (환자/구독자 전용) + 함께찾는사람 때문에 가디언도 추가 함
+                        .requestMatchers(HttpMethod.POST, "/api/location/update").hasAnyRole("GUARDIAN", "PATIENT", "SUBSCRIBER")
 
                         // 위치 조회 API (보호자/구독자 전용)
                         .requestMatchers(HttpMethod.GET, "/api/location/patient/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")

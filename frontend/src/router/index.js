@@ -70,6 +70,7 @@ import DesktopMypagePlusplan from '@/views/desktop/DesktopMypagePlusplan.vue'
 import DesktopMypageConnect from '@/views/desktop/DesktopMypageConnect.vue'
 import DesktopMypageAdmin from '@/views/desktop/DesktopMypageAdmin.vue'
 import DesktopMypageSafezone from '@/views/desktop/DesktopMypageSafezone.vue'
+import DesktopMissingReport from '@/components/desktop/DesktopMissingReport.vue'
 import DesktopMypageSafezoneRadius from '@/views/desktop/DesktopMypageSafezoneRadius.vue'
 import DesktopReport from '@/views/desktop/DesktopReport.vue'
 import JustPredictLocation from '@/views/JustPredictLocation.vue'
@@ -132,6 +133,12 @@ const router = createRouter({
       name: 'desktop-predict',
       component: DesktopPredict,
       meta: { requiresAuth: true, roles: [1], layout: 'desktop' } // '?''를 추가해서 id를 선택적으로 받음
+    },
+    {
+      path: '/desktop/missingreport/:id',
+      name: 'desktop-missingreport',
+      component: DesktopMissingReport,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' } // 보호자 전용
     },
     {
       path: '/desktop/mypage',
@@ -231,7 +238,7 @@ const router = createRouter({
       name: 'CommunityView',
 
       component: CommunityView,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 3, 4] } // 보호자 전용
     },
     {
       path: '/not-reported-predict/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
@@ -384,9 +391,6 @@ const router = createRouter({
       component: Report,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-
-
-
     {
       path: '/loan',
       name: 'loan',

@@ -26,7 +26,7 @@
         <result property="userId" column="user_no"/>
     </resultMap>
 
-        <select id="findAllPosts" resultMap="PostListResultMap">
+    <select id="findAllPosts" resultMap="PostListResultMap">
         SELECT
             p.post_id,
             p.title,
@@ -43,7 +43,7 @@
         JOIN
             users u ON p.user_no = u.user_no         
         WHERE
-            p.notice_check IS NULL OR p.notice_check != '공지'
+            p.notice_type IS NULL OR p.notice_type != '공지'
         ORDER BY
             p.post_id DESC
     </select>
@@ -68,7 +68,7 @@
             p.post_id = #{postId}
     </select>
 
-        <select id="findNotices" resultMap="PostListResultMap">
+    <select id="findNotices" resultMap="PostListResultMap">
         SELECT
             p.post_id,
             p.title,
@@ -85,31 +85,31 @@
         JOIN
             users u ON p.user_no = u.user_no         
         WHERE
-            p.notice_check = '공지'
+            p.notice_type = '공지'
         ORDER BY
             p.created_at DESC
     </select>
 
-        <insert id="createPost" parameterType="lx.project.dementia_care.dto.PostRequestDto">
+    <insert id="createPost" parameterType="lx.project.dementia_care.dto.PostRequestDto">
         <selectKey keyProperty="postId" resultType="int" order="AFTER">
             SELECT CURRVAL('post_post_id_seq')
         </selectKey>
-        INSERT INTO post (title, content, user_no, image_path, notice_check)         
+        INSERT INTO post (title, content, user_no, image_path, notice_type)         
         VALUES (
             #{title}, 
             #{content}, 
             #{userId},             
             #{image},
-            <if test="noticeCheck == '공지'">
+            <if test="noticeType == '공지'">
                 '공지'
             </if>
-            <if test="noticeCheck == null or noticeCheck == ''">
+            <if test="noticeType == null or noticeType == ''">
                 NULL
             </if>
         )
     </insert>
 
-        <update id="updatePost">
+    <update id="updatePost">
         UPDATE post
         SET
             title = #{dto.title},
@@ -127,7 +127,7 @@
         UPDATE post
         SET view_count = view_count + 1
         WHERE post_id = #{postId}
-        AND (notice_check IS NULL OR notice_check != '공지')
+        AND (notice_type IS NULL OR notice_type != '공지')
     </update>
 
     <select id="checkLike" resultType="int">
