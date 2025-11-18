@@ -195,9 +195,9 @@ const router = createRouter({
     },
     {
       path: '/chat',
-      name: 'chat',
+      name: 'NH_chat',
       component: ChatBot,
-      meta: { requiresAuth: true, roles: [2, 3, 4] } // 보호자(1), 이웃(4) 접근 가능
+      meta: { requiresAuth: true, roles: [2, 3, 4] } // 이웃(4) 접근 가능
     },
     {
       path: '/SignUp',
