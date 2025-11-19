@@ -91,6 +91,11 @@
       </div>
     </div>
 
+   <!-- AI 챗봇 버튼 -->
+<button class="fab-ai" @click="router.push('/chat')">
+  <span class="fab-ai-label">AI챗봇</span>
+</button>
+
     <!-- 내정보 수정 모달 -->
     <NH_ModifyProfileModal :show="showEditProfileModal" @close="showEditProfileModal = false"
       @saved="reloadUserProfile" />
@@ -418,5 +423,37 @@ onUnmounted(() => {
   color: #8fb80e;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(167, 204, 16, 0.2);
+}
+.fab-ai {
+  position: fixed;
+  bottom: 150px;
+  right: calc((100vw - 414px) / 2 + 16px);  /* 카드 오른쪽 안쪽 */
+  width: 64px;                           /* 동그라미 크기 */
+  height: 64px;                          /* 동그라미 크기 */
+  border-radius: 50%; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #A7CC10;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  z-index: 9999;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.fab-ai-label {
+  white-space: nowrap;
+}
+
+.fab-ai:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+  opacity: 0.96;
 }
 </style>
