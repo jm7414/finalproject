@@ -7,6 +7,7 @@
     </svg>
     공지 작성
   </button>
+  
   <div>
     <div v-if="loading" class="loading-state">
       공지를 불러오는 중입니다...
@@ -22,7 +23,7 @@
       </div>
 
       <div v-else class="post-list">
-        <div v-for="notice in notices" :key="notice.postId" class="post-card">
+        <div v-for="notice in notices" :key="notice.noticeNo" class="post-card">
           <div class="card-header">
             <div class="author-info">
               <div class="author-details">
@@ -30,9 +31,28 @@
                 <span class="post-time">{{ formatTimeAgo(notice.createdAt) }}</span>
               </div>
             </div>
-            <button v-if="isPlazaMaster" class="options-button" @click.stop="deleteNotice(notice.postId)">
-              ⋮
-            </button>
+            
+            <div v-if="isPlazaMaster" class="options-wrapper">
+              <button 
+                class="options-button" 
+                @click.stop="toggleMenu(notice.noticeNo)"
+              >
+                ⋮
+              </button>
+              
+              <!-- 핵심: style 바인딩으로 직접 제어 -->
+              <div 
+                class="dropdown-menu"
+                :style="{ display: openMenuId === notice.noticeNo ? 'block' : 'none' }"
+              >
+                <button @click.stop="editNotice(notice)" class="menu-item">
+                  <span>✏️</span> 수정
+                </button>
+                <button @click.stop="deleteNotice(notice.noticeNo)" class="menu-item delete">
+                  <span>🗑️</span> 삭제
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="card-body">
@@ -46,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -56,14 +76,22 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['write-notice'])
+const emit = defineEmits(['write-notice', 'edit-notice'])
 
 const notices = ref([])
 const loading = ref(true)
 const error = ref(null)
+const openMenuId = ref(null)
 
 onMounted(() => {
   fetchNotices()
+  setTimeout(() => {
+    document.addEventListener('click', handleDocumentClick)
+  }, 0)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
 })
 
 async function fetchNotices() {
@@ -72,6 +100,7 @@ async function fetchNotices() {
   try {
     const response = await axios.get('/NH/api/neighbor/notices')
     notices.value = response.data
+    console.log('Notices loaded:', notices.value)
   } catch (err) {
     console.error("공지 목록을 불러오는 데 실패했습니다:", err)
     error.value = "데이터를 불러올 수 없습니다."
@@ -80,15 +109,53 @@ async function fetchNotices() {
   }
 }
 
-async function deleteNotice(postId) {
-  if (!confirm('이 공지를 삭제하시겠습니까?')) return;
+function toggleMenu(noticeNo) {
+  console.log('Toggle clicked:', noticeNo, 'Type:', typeof noticeNo)
+  console.log('Current openMenuId:', openMenuId.value, 'Type:', typeof openMenuId.value)
+  
+  // 타입 불일치 방지: 명시적으로 같은 타입으로 변환
+  const menuId = Number(noticeNo)
+  
+  if (openMenuId.value === menuId) {
+    openMenuId.value = null
+  } else {
+    openMenuId.value = menuId
+  }
+  
+  console.log('New openMenuId:', openMenuId.value)
+}
+
+function handleDocumentClick(event) {
+  if (event.target.closest('.options-wrapper')) {
+    return
+  }
+  
+  if (openMenuId.value !== null) {
+    openMenuId.value = null
+  }
+}
+
+function editNotice(notice) {
+  openMenuId.value = null
+  emit('edit-notice', notice)
+}
+
+async function deleteNotice(noticeNo) {
+  openMenuId.value = null
+  
+  if (!confirm('이 공지를 삭제하시겠습니까?')) return
 
   try {
-    await axios.delete(`/NH/api/neighbor/notices/${postId}`)
+    await axios.delete(`/NH/api/neighbor/notices/${noticeNo}`)
     await fetchNotices()
+    alert('공지가 삭제되었습니다.')
   } catch (error) {
     console.error('공지 삭제 실패:', error)
-    alert('공지 삭제에 실패했습니다.')
+    if (error.response && error.response.status === 403) {
+      alert('방장만 공지를 삭제할 수 있습니다.')
+    } else {
+      alert('공지 삭제에 실패했습니다.')
+    }
   }
 }
 
@@ -136,8 +203,8 @@ function formatTimeAgo(dateString) {
   border-radius: 12px;
   box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
   padding: 16px;
-  cursor: pointer;
   transition: transform 0.2s ease;
+  position: relative;
 }
 
 .post-card:hover {
@@ -149,6 +216,7 @@ function formatTimeAgo(dateString) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  position: relative;
 }
 
 .author-info {
@@ -173,6 +241,11 @@ function formatTimeAgo(dateString) {
   color: #888;
 }
 
+.options-wrapper {
+  position: relative;
+  z-index: 100;
+}
+
 .options-button {
   background: none;
   border: none;
@@ -180,6 +253,60 @@ function formatTimeAgo(dateString) {
   font-weight: bold;
   color: #aaa;
   cursor: pointer;
+  padding: 8px;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.options-button:hover {
+  color: #666;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 120px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.menu-item:hover {
+  background: #f5f5f5;
+}
+
+.menu-item.delete {
+  color: #dc2626;
+}
+
+.menu-item.delete:hover {
+  background: #fee;
+}
+
+.menu-item span {
+  font-size: 16px;
 }
 
 .card-body {
@@ -215,19 +342,16 @@ function formatTimeAgo(dateString) {
   margin: 0 auto;
   margin-top: 32px;
   padding: 12px 60px;
-  /* 좌우 여백 늘림 */
   background: #a7cc10;
   color: #fff;
   border: none;
   border-radius: 8px;
-  /* 덜 둥글게 */
   font-size: 16px;
   font-weight: 700;
   box-shadow: 0px 2px 8px rgba(167, 204, 16, 0.13);
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s;
 }
-
 
 .write-notice-btn:hover {
   background: #8fb00d;

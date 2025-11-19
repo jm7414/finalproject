@@ -6,6 +6,7 @@
   <div v-else class="mobile-shell">
     <div class="app-layout">
       <AppHeader v-if="showMobileHeader" />
+      <NeighborHeader v-if="isNeighborPage" /> <!-- ← 이 줄 추가 -->
       <main class="main-content" :class="mobileMainContentClass">
         <RouterView />
       </main>
@@ -15,28 +16,17 @@
   </div>
 
   <!-- 안심존 이탈 알림 모달 -->
-  <SafeZoneAlertModal 
-    :show="showSafeZoneAlert"
-    :patient-name="alertPatientName"
-    @close="closeSafeZoneAlert"
-  />
+  <SafeZoneAlertModal :show="showSafeZoneAlert" :patient-name="alertPatientName" @close="closeSafeZoneAlert" />
 
-<ConfirmModal 
-    :show="showMissingAlert"
-    title="긴급 실종 알림"
-    :message="alertMessage"
-    confirmText="지금 확인하기"
-    cancelText="나중에 확인하기"
-    @close="handleCloseAlert"
-    @confirm="handleConfirmAndNavigate"
-    @cancel="handleCloseAlert"
-  />
+  <ConfirmModal :show="showMissingAlert" title="긴급 실종 알림" :message="alertMessage" confirmText="지금 확인하기"
+    cancelText="나중에 확인하기" @close="handleCloseAlert" @confirm="handleConfirmAndNavigate" @cancel="handleCloseAlert" />
 
 </template>
 
 <script setup>
 import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
+import NeighborHeader from './components/NeighborHeader.vue';
 import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
@@ -58,7 +48,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter();
 
 function handleConfirmAndNavigate() {
-  handleConfirmAlert(); 
+  handleConfirmAlert();
   router.push({ path: '/communityView', query: { tab: 'Missing' } });
 }
 
@@ -174,6 +164,7 @@ const showMobileHeader = computed(() => {
     isDpMypage.value ||
     isDpSchedule.value ||
     isDpConnect.value ||
+    isNeighborPage.value ||
     isGame.value)
 })
 
@@ -499,10 +490,10 @@ async function checkSafeZoneStatus(patientNo, patientLocation) {
       console.log('[경로형 안심존] 판단 시작')
       console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
       console.log('- 안심존 데이터:', safeZoneData)
-      
+
       const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
       console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
-      
+
       isInside = isPointInPolygon(patientLat, patientLng, coordinates)
       console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
     } else if (safeZoneData.type === 'Circle') {
@@ -695,7 +686,7 @@ watch(route, async (newRoute, oldRoute) => {
 
       currentUser.value = await getCurrentUser();
       startAlertPolling(currentUser.value?.role);
-      
+
     }, 500)
     prevRoute.value = newRoute
     return

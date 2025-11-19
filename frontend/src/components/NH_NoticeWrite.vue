@@ -1,53 +1,71 @@
-  <template>
-    <div class="page-container">
-      <div class="form-wrapper">
-        <section class="form-section">
-          <label for="title-input">제목</label>
-          <input 
-            id="title-input" 
-            type="text" 
-            class="title-input" 
-            placeholder="제목을 입력해주세요"
-            v-model="title"
-          >
-        </section>
-  
-        <section class="form-section">
-          <label for="content-textarea">내용</label>
-          <div class="textarea-container">
-            <textarea 
-              id="content-textarea"
-              class="content-textarea"
-              placeholder="내용을 입력해주세요"
-              v-model="content"
-              maxlength="1000"
-            ></textarea>
-            <span class="char-counter">{{ contentLength }} / 1000자</span>
-          </div>
-        </section>
-      </div>
-  
-      <div class="footer-buttons">
-        <button @click="submitNotice" class="submit-btn" :disabled="loading">
-          {{ loading ? '작성 중...' : '공지 작성하기' }}
-        </button>
-        <button @click="cancel" class="cancel-btn">취소하기</button>
-      </div>
+<template>
+  <div class="page-container">
+    <div class="form-wrapper">
+      <section class="form-section">
+        <label for="title-input">제목</label>
+        <input 
+          id="title-input" 
+          type="text" 
+          class="title-input" 
+          placeholder="제목을 입력해주세요"
+          v-model="title"
+        >
+      </section>
+
+      <section class="form-section">
+        <label for="content-textarea">내용</label>
+        <div class="textarea-container">
+          <textarea 
+            id="content-textarea"
+            class="content-textarea"
+            placeholder="내용을 입력해주세요"
+            v-model="content"
+            maxlength="1000"
+          ></textarea>
+          <span class="char-counter">{{ contentLength }} / 1000자</span>
+        </div>
+      </section>
     </div>
-  </template>
-  
+
+    <div class="footer-buttons">
+      <button @click="submitNotice" class="submit-btn" :disabled="loading">
+        {{ loading ? (isEdit ? '수정 중...' : '작성 중...') : (isEdit ? '공지 수정하기' : '공지 작성하기') }}
+      </button>
+      <button @click="cancel" class="cancel-btn">취소하기</button>
+    </div>
+  </div>
+</template>
+
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
-const emit = defineEmits(['notice-created', 'cancel']);
+const props = defineProps({
+  notice: {
+    type: Object,
+    default: null
+  },
+  isEdit: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const emit = defineEmits(['notice-created', 'notice-updated', 'cancel']);
 
 const title = ref('');
 const content = ref('');
 const contentLength = computed(() => content.value.length);
 const loading = ref(false);
 
-// 공지 기능으로 인한 수정: 새로운 API 사용
+// 수정 모드일 때 기존 데이터 로드
+onMounted(() => {
+  if (props.isEdit && props.notice) {
+    title.value = props.notice.title || '';
+    content.value = props.notice.content || '';
+  }
+});
+
 async function submitNotice() {
   if (!title.value.trim() || !content.value.trim()) {
     alert('제목과 내용을 모두 입력해주세요.');
@@ -57,18 +75,28 @@ async function submitNotice() {
   loading.value = true;
 
   try {
-    await axios.post('/NH/api/neighbor/notices', {
-      title: title.value,
-      content: content.value
-    });
-
-    alert('공지가 성공적으로 작성되었습니다!');
-    emit('notice-created');
+    if (props.isEdit) {
+      // 수정 모드
+      await axios.put(`/NH/api/neighbor/notices/${props.notice.noticeNo}`, {
+        title: title.value,
+        content: content.value
+      });
+      alert('공지가 성공적으로 수정되었습니다!');
+      emit('notice-updated');
+    } else {
+      // 작성 모드
+      await axios.post('/NH/api/neighbor/notices', {
+        title: title.value,
+        content: content.value
+      });
+      alert('공지가 성공적으로 작성되었습니다!');
+      emit('notice-created');
+    }
   } catch (error) {
-    console.error('공지 작성 중 오류가 발생했습니다:', error);
+    console.error('공지 처리 중 오류가 발생했습니다:', error);
     
     if (error.response && error.response.status === 403) {
-      alert('방장만 공지를 작성할 수 있습니다.');
+      alert('방장만 공지를 작성/수정할 수 있습니다.');
     } else {
       alert('작업에 실패했습니다. 다시 시도해주세요.');
     }
@@ -79,7 +107,11 @@ async function submitNotice() {
 
 function cancel() {
   if (title.value || content.value) {
-    if (confirm('작성 중인 공지를 포기하시겠습니까?')) {
+    const message = props.isEdit 
+      ? '공지 작성을 취소 하시겠습니까?' 
+      : '공지 작성을 취소 하시겠습니까?';
+    
+    if (confirm(message)) {
       emit('cancel');
     }
   } else {
@@ -87,7 +119,6 @@ function cancel() {
   }
 }
 </script>
-
 
 <style scoped>
 .page-container {
@@ -112,13 +143,11 @@ function cancel() {
 .form-section {
   margin-bottom: 24px;
 }
+
 .form-section label {
   display: block;
   font-weight: 600;
   margin-bottom: 8px;
-}
-
-.form-section label {
   font-size: 14px;
   color: #404040;
   font-weight: 500;
@@ -132,11 +161,13 @@ function cancel() {
   padding: 0 12px;
   font-size: 14px;
 }
+
 .title-input::placeholder {
   color: #ADAEBC;
 }
+
 .title-input:focus {
-  outline: 2px solid #a7cc10; /* 아보카도 색상 */
+  outline: 2px solid #a7cc10;
   border-color: #a7cc10;
 }
 
@@ -153,11 +184,13 @@ function cancel() {
   font-size: 14px;
   resize: none;
 }
+
 .content-textarea::placeholder {
   color: #ADAEBC;
 }
+
 .content-textarea:focus {
-  outline: 2px solid #a7cc10; /* 아보카도 색상 */
+  outline: 2px solid #a7cc10;
   border-color: #a7cc10;
 }
 
@@ -187,18 +220,19 @@ function cancel() {
   border: none;
   cursor: pointer;
   transition: opacity 0.2s;
-}   
+}
+
 .submit-btn:hover, .cancel-btn:hover {
   opacity: 0.8;
 }
 
-/* 아보카도 색상으로 변경 */
 .submit-btn {
-  background: #a7cc10; /* 아보카도 색상 */
+  background: #a7cc10;
   color: #FFFFFF;
 }
+
 .submit-btn:disabled {
-  background: #d4e487; /* 아보카도 색상 비활성화 */
+  background: #d4e487;
   cursor: not-allowed;
 }
 
