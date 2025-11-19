@@ -298,7 +298,7 @@
                         시뮬레이션 분석 정보
                     </h3>
                     <div class="stats-grid">
-                        <div class="stat-card-modern">
+                        <div class="stat-card-modern-si">
                             <div class="stat-icon-modern" style="--stat-color: #667eea;">
                                 <i class="bi bi-diagram-3"></i>
                             </div>
@@ -2362,6 +2362,8 @@ onUnmounted(() => {
 
 .simulation-timeline-info {
     display: flex;
+    flex: 1;
+    width: 100%;
     justify-content: center;
     align-items: center;
     gap: 6px;
@@ -2372,7 +2374,7 @@ onUnmounted(() => {
 }
 
 .simulation-timeline-slider {
-    widthwidth: 100%;
+    width: 100%;
     height: 6px;
     border-radius: 3px;
     background: #e0e0e0;
@@ -3039,7 +3041,9 @@ onUnmounted(() => {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-self: flex-end;
+    top: 8px;
+    left: 23px;
 }
 
 .probability-text {
@@ -3088,7 +3092,24 @@ onUnmounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: all 0.3s ease;
-    width: 350px;
+    width: 320px;
+    position: relative;
+    right: 20px;
+    height: 150px;
+}
+
+.stat-card-modern-si {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    width: 320px;
     position: relative;
     right: 20px;
     height: 150px;
@@ -3169,6 +3190,7 @@ onUnmounted(() => {
     background: #ffffff;
     border: 2px solid #e8ebf2;
     border-radius: 16px;
+    width: 100%;
     padding: 16px;
     margin-bottom: 12px;
     cursor: pointer;
@@ -3187,7 +3209,7 @@ onUnmounted(() => {
     gap: 12px;
     flex: 1;
     padding: 0 16px 0 0;
-    width: 350px;
+    width: 100%;
     min-width: 0;
 }
 
@@ -3213,8 +3235,7 @@ onUnmounted(() => {
     color: #191f28;
     margin: 0;
     line-height: 1.4;
-    word-break: keep-all;
-    overflow: hidden;
+    word-break: break-all;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
