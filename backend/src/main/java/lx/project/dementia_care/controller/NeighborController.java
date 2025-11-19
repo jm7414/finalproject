@@ -51,8 +51,9 @@ public class NeighborController {
 
     // ==================== 친구 관리 ====================
 
-    @PostMapping("/friends/{friendUserNo}")
-    public ResponseEntity<?> addFriend(@PathVariable Integer friendUserNo) {
+    // 지현 수정: userNo 대신 userId로 친구 추가
+    @PostMapping("/friends/{friendUserId}")
+    public ResponseEntity<?> addFriend(@PathVariable String friendUserId) {
         try {
             UserVO loginUser = getLoginUser();
             if (loginUser == null) {
@@ -60,8 +61,8 @@ public class NeighborController {
                         .body(Map.of("message", "로그인이 필요합니다."));
             }
 
-            Integer myUserNo = loginUser.getUserNo();
-            neighborService.addFriend(myUserNo, friendUserNo);
+            String myUserId = loginUser.getUserId();
+            neighborService.addFriendByUserId(myUserId, friendUserId);
 
             return ResponseEntity.ok(Map.of("message", "친구가 추가되었습니다."));
         } catch (RuntimeException e) {
@@ -74,8 +75,9 @@ public class NeighborController {
         }
     }
 
-    @DeleteMapping("/friends/{friendUserNo}")
-    public ResponseEntity<?> removeFriend(@PathVariable Integer friendUserNo) {
+    // 지현 수정: userNo 대신 userId로 친구 삭제
+    @DeleteMapping("/friends/{friendUserId}")
+    public ResponseEntity<?> removeFriend(@PathVariable String friendUserId) {
         try {
             UserVO loginUser = getLoginUser();
             if (loginUser == null) {
@@ -83,8 +85,8 @@ public class NeighborController {
                         .body(Map.of("message", "로그인이 필요합니다."));
             }
 
-            Integer myUserNo = loginUser.getUserNo();
-            neighborService.removeFriend(myUserNo, friendUserNo);
+            String myUserId = loginUser.getUserId();
+            neighborService.removeFriendByUserId(myUserId, friendUserId);
 
             return ResponseEntity.ok(Map.of("message", "친구가 삭제되었습니다."));
         } catch (RuntimeException e) {
@@ -218,10 +220,11 @@ public class NeighborController {
         }
     }
 
-    @PostMapping("/plazas/{plazaNo}/invite/{friendUserNo}")
+    // 지현 수정: 친구 관계 체크 제거, userId로 초대
+    @PostMapping("/plazas/{plazaNo}/invite/{inviteUserId}")
     public ResponseEntity<?> inviteToPlaza(
             @PathVariable Integer plazaNo,
-            @PathVariable Integer friendUserNo) {
+            @PathVariable String inviteUserId) {
         try {
             UserVO loginUser = getLoginUser();
             if (loginUser == null) {
@@ -230,9 +233,9 @@ public class NeighborController {
             }
 
             Integer ownerUserNo = loginUser.getUserNo();
-            neighborService.inviteToPlaza(plazaNo, ownerUserNo, friendUserNo);
+            neighborService.inviteToPlazaByUserId(plazaNo, ownerUserNo, inviteUserId);
 
-            return ResponseEntity.ok(Map.of("message", "친구가 초대되었습니다."));
+            return ResponseEntity.ok(Map.of("message", "사용자가 초대되었습니다."));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
@@ -343,10 +346,6 @@ public class NeighborController {
         }
     }
 
-    /**
-     * 공지 수정 (방장만)
-     * PUT /NH/api/neighbor/notices/{noticeNo}
-     */
     @PutMapping("/notices/{noticeNo}")
     public ResponseEntity<?> updateNotice(@PathVariable Integer noticeNo, @RequestBody Map<String, String> request) {
         try {
@@ -376,10 +375,6 @@ public class NeighborController {
         }
     }
 
-    /**
-     * 공지 삭제 (방장만)
-     * DELETE /NH/api/neighbor/notices/{noticeNo}
-     */
     @DeleteMapping("/notices/{noticeNo}")
     public ResponseEntity<?> deleteNotice(@PathVariable Integer noticeNo) {
         try {

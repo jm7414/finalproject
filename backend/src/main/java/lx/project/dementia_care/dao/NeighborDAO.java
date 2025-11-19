@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import lx.project.dementia_care.dto.ActiveMemberDTO;
 import lx.project.dementia_care.dto.MyPlazaDTO;
 import lx.project.dementia_care.dto.PlazaMemberDTO;
-// 공지 기능으로 인한 추가
 import lx.project.dementia_care.dto.PlazaNoticeDTO;
 import lx.project.dementia_care.dto.PlazaScheduleDTO;
 import lx.project.dementia_care.vo.NeighborFriendVO;
@@ -65,6 +64,14 @@ public class NeighborDAO {
      */
     public List<NeighborFriendVO> getMyFriends(Integer userNo) {
         return sqlSession.selectList(NAMESPACE + ".getMyFriends", userNo);
+    }
+
+    // 지현 수정: userId로 userNo 조회 메서드 추가
+    /**
+     * userId로 userNo 조회
+     */
+    public Integer getUserNoByUserId(String userId) {
+        return sqlSession.selectOne(NAMESPACE + ".getUserNoByUserId", userId);
     }
 
     // ==================== 광장 관리 ====================
@@ -217,17 +224,23 @@ public class NeighborDAO {
         sqlSession.insert(NAMESPACE + ".insertPlazaNotice", params);
     }
 
-    // 공지 수정
+    /**
+     * 공지 수정
+     */
     public void updatePlazaNotice(Map<String, Object> params) {
         sqlSession.update(NAMESPACE + ".updatePlazaNotice", params);
     }
 
-    // 공지 삭제
+    /**
+     * 공지 삭제
+     */
     public void deletePlazaNotice(Integer noticeNo) {
         sqlSession.delete(NAMESPACE + ".deletePlazaNotice", noticeNo);
     }
 
-    // 공지 상세 조회
+    /**
+     * 공지 상세 조회
+     */
     public PlazaNoticeDTO getPlazaNoticeById(Integer noticeNo) {
         return sqlSession.selectOne(NAMESPACE + ".getPlazaNoticeById", noticeNo);
     }
