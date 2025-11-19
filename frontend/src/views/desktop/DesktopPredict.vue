@@ -564,7 +564,10 @@ async function initMap() {
     ),
     level: 5
   })
-
+  if (map && setMap) {  // 함께찾기용 map 주입
+        console.log("✅ [Desktop] 지도 생성 완료 -> useParticipantLocations에 주입");
+        setMap(map); 
+    }
   if (missingLocation.value.lat && missingLocation.value.lon) {
     centerMarker = new window.kakao.maps.Marker({
       position: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
@@ -691,7 +694,9 @@ async function fetchLatestMissingInfo(patientNo) {
     })
 
     if (response?.data?.reportedAt) {
+       const fetchedId = response.data.id || response.data.missingPostId; // 이 줄이랑 리턴에 있는 missingPostId 없으면 missingPostId없을때는 함께찾기 작동 안함
       return {
+        missingPostId: fetchedId,
         missingTime: response.data.reportedAt,
         missingLatitude: response.data.latitude || null,
         missingLongitude: response.data.longitude || null
@@ -2047,7 +2052,7 @@ function showBoard() {
 }
 .report-board-btn {
   padding: 10px 16px;
-  background-color: #4F46E5;
+  background-color: #667eea;
   color: white;
   border: none;
   border-radius: 8px;
@@ -2135,5 +2140,27 @@ function showBoard() {
   padding: 1.5rem;
   background-color: #f9fafb;
 }
+
+.modern-btn {
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: #667eea;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+
+.modern-btn:active {
+    transform: translateY(0);
+}
+
 </style>
 
