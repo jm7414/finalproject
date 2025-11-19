@@ -13,25 +13,39 @@
 
     <!-- 요약 버튼 그룹 -->
     <div class="summary-buttons">
-      <!-- 지원금 -->
+      <!-- 치매 / 노인 관련 지원금 -->
       <div class="summary-btn receive-money">
         <div class="summary-left">
           <div class="summary-label">받을 수 있는 지원금</div>
-          <h1 class="summary-count">0건</h1>
+          <h1 class="summary-count">
+            {{ benefitSeoulCount }}건
+          </h1>
+          <div class="summary-sub">
+            서울 노인·치매 {{ benefitSeoulCount }}건 / 전국 {{ benefitTotalCount }}건
+          </div>
         </div>
         <div class="summary-right">
-          <button class="summary-action">확인하기 →</button>
+          <button class="summary-action" @click="goBenefit">
+            확인하기 →
+          </button>
         </div>
       </div>
 
-      <!-- 대출 -->
+      <!-- 가능한 대출 (노인 대상 + 전체 대출 표시) -->
       <div class="summary-btn receive-loan">
         <div class="summary-left">
           <div class="summary-label">가능한 대출</div>
-          <h1 class="summary-count">0건</h1>
+          <h1 class="summary-count">
+            {{ elderLoanCount }}건
+          </h1>
+          <div class="summary-sub">
+            노인 대상 {{ elderLoanCount }}건 / 전체 {{ loanTotalCount }}건
+          </div>
         </div>
         <div class="summary-right">
-          <button class="summary-action">확인하기 →</button>
+          <button class="summary-action" @click="goLoan">
+            확인하기 →
+          </button>
         </div>
       </div>
     </div>
@@ -63,6 +77,11 @@
         <button class="func-link" @click="goHospitalCare">찾아보기 →</button>
       </div>
     </div>
+
+    <!-- (선택) 에러 표시 -->
+    <div v-if="errorMessage" class="error-box">
+      {{ errorMessage }}
+    </div>
   </div>
 </template>
 
@@ -70,23 +89,31 @@
 import { useRouter } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import MoneyMarker from '@/components/MoneyMarker.vue' 
-import BohumMarker from '@/components/BohumMarker.vue' 
-import SangDamMarker from '@/components/SangDamMarker.vue' 
+
+import MoneyMarker from '@/components/MoneyMarker.vue'
+import BohumMarker from '@/components/BohumMarker.vue'
+import SangDamMarker from '@/components/SangDamMarker.vue'
 import HospitalMarker from '@/components/HospitalMarker.vue'
-import ProfileMarker from '@/components/ProfileMarker.vue' 
+import ProfileMarker from '@/components/ProfileMarker.vue'
 
 const router = useRouter()
 
-// ✅ 추가: 사용자 정보 저장
+// ✅ 사용자 정보
 const userData = ref(null)
-
-// ✅ 수정: computed에서 userData 사용
 const userName = computed(() => {
   return userData.value?.name || 'User'
 })
 
-// ✅ 추가: 사용자 정보 로드 함수
+// ✅ 종합지원 관련 상태
+const benefitSeoulCount = ref(0)
+const benefitTotalCount = ref(0)
+const elderLoanCount = ref(0)
+const loanTotalCount = ref(0)
+const errorMessage = ref('')
+
+const localGovNm = ref('서울특별시 구로구')
+
+// ✅ 사용자 정보 로드
 const loadUserData = async () => {
   try {
     const response = await axios.get('/api/user/me')
@@ -100,33 +127,134 @@ const loadUserData = async () => {
   }
 }
 
-// ✅ 추가: 컴포넌트 마운트 시 데이터 로드
+const loadWelfareSummary = async () => {
+  try {
+    errorMessage.value = ''
+
+    const res = await axios.get('/api/support/welfare', {
+      params: {
+        pageNo: 1,
+        numOfRows: 1000
+      }
+    })
+
+    const apiResult = res.data
+
+    if (!apiResult || apiResult.upstreamStatus !== 200 || !apiResult.xml) {
+      console.warn('복지서비스 응답 이상:', apiResult)
+      benefitSeoulCount.value = 0
+      benefitTotalCount.value = 0
+      elderLoanCount.value = 0
+      loanTotalCount.value = 0
+      errorMessage.value = '지자체 복지서비스 정보를 불러오지 못했습니다.'
+      return
+    }
+
+    let json
+    try {
+      json = typeof apiResult.xml === 'string'
+        ? JSON.parse(apiResult.xml)
+        : apiResult.xml
+    } catch (parseErr) {
+      console.error('복지서비스 JSON 파싱 실패:', parseErr, apiResult.xml)
+      benefitSeoulCount.value = 0
+      benefitTotalCount.value = 0
+      elderLoanCount.value = 0
+      loanTotalCount.value = 0
+      errorMessage.value = '복지서비스 데이터 형식이 올바르지 않습니다.'
+      return
+    }
+
+    const list = json.servList || []
+
+    // 지원금 키워드
+    const dementiaKeywords = ['치매', '인지', '노인', '65세', '돌봄', '요양', '보호자', '간병']
+
+    const isDementiaSupport = (item) => {
+      const name = item.servNm || ''
+      const summary = item.servDgst || ''
+      const target = item.trgterIndvdlNm || ''
+      const text = `${name} ${summary} ${target}`
+      return dementiaKeywords.some(k => text.includes(k))
+    }
+
+    const dementiaList = list.filter(isDementiaSupport)
+    const dementiaSeoulList = dementiaList.filter(item => {
+      const dept = item.bizChrDeptNm || ''
+      return dept.includes('서울특별시')
+    })
+
+    // 대출 키워드
+    const loanKeywords = ['대출', '융자', '이자지원', '이자 지원', '보증', '전세자금', '주택구입']
+    const elderKeywords = ['노인', '어르신', '고령', '65세', '노령', '장기요양', '기초연금']
+
+    const isLoanService = (item) => {
+      const name = item.servNm || ''
+      const summary = item.servDgst || ''
+      const text = `${name} ${summary}`
+      return loanKeywords.some(k => text.includes(k))
+    }
+
+    const isElderService = (item) => {
+      const name = item.servNm || ''
+      const summary = item.servDgst || ''
+      const target = item.trgterIndvdlNm || ''
+      const text = `${name} ${summary} ${target}`
+      return elderKeywords.some(k => text.includes(k))
+    }
+
+    const loanCandidates = list.filter(isLoanService)
+    const elderLoanCandidates = loanCandidates.filter(isElderService)
+
+    benefitTotalCount.value = dementiaList.length
+    benefitSeoulCount.value = dementiaSeoulList.length
+    loanTotalCount.value = loanCandidates.length
+    elderLoanCount.value = elderLoanCandidates.length
+
+  } catch (err) {
+    console.error('지자체 복지서비스 요약 조회 실패:', err)
+    errorMessage.value = '지자체 복지서비스 정보를 불러오지 못했습니다.'
+    benefitSeoulCount.value = 0
+    benefitTotalCount.value = 0
+    elderLoanCount.value = 0
+    loanTotalCount.value = 0
+  }
+}
+
 onMounted(() => {
   loadUserData()
+  loadWelfareSummary()
 })
 
-function goBenefit() {
-  router.push('/benefit')
+function goBenefit () {
+  router.push({
+    path: '/benefit',
+    query: {
+      localGovNm: localGovNm.value
+    }
+  })
 }
-function goLoan() {
+
+function goLoan () {
   router.push('/loan')
 }
-function goHeartCare() {
+
+function goHeartCare () {
   router.push('/heartCare')
 }
-function goHospitalCare() {
+
+function goHospitalCare () {
   router.push('/hospitalCare')
 }
 </script>
 
 <style scoped>
 .dashboard {
-  max-width: 500px;
+
+  max-height: 720px;
   margin: 0 auto;
-  margin-top: -15px;
-  padding: 16px;
+  padding: 16px 16px 96px; /* 아래 여유 */
   background: #f7f8fa;
-  max-height: 650px;
 }
 
 /* 상단 카드 */
@@ -136,7 +264,6 @@ function goHospitalCare() {
   padding: 16px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   margin-bottom: 16px;
-  margin-top: -8px;
 }
 .profile-section {
   display: flex;
@@ -166,7 +293,6 @@ function goHospitalCare() {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
-  
 }
 .summary-btn {
   flex: 1;
@@ -174,7 +300,7 @@ function goHospitalCare() {
   color: #fff;
   border-radius: 12px;
   padding: 16px;
-  min-height: 100px;
+  min-height: 110px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -183,7 +309,6 @@ function goHospitalCare() {
   background: #6366f1;
 }
 
-/* summary left/top */
 .summary-left {
   display: flex;
   flex-direction: column;
@@ -199,14 +324,17 @@ function goHospitalCare() {
   font-weight: 700;
   margin: 0;
 }
+.summary-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #e0e7ff;
+}
 
-/* summary right/bottom */
 .summary-right {
   display: flex;
   justify-content: flex-end;
 }
 
-/* summary action */
 .summary-action {
   background: rgba(255,255,255,0.3);
   border: none;
@@ -258,7 +386,7 @@ function goHospitalCare() {
   background: rgba(59, 130, 246, 0.15);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 3px 5px 3px 5px;
+  padding: 3px 5px;
   color: #3b82f6;
   font-size: 16px;
   font-weight: 500;
@@ -267,10 +395,18 @@ function goHospitalCare() {
   box-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .func-link:hover {
   background: rgba(59, 130, 246, 0.25);
   border-color: rgba(59, 130, 246, 0.5);
   box-shadow: 0 12px 40px rgba(59, 130, 246, 0.2);
+}
+
+.error-box {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 13px;
 }
 </style>

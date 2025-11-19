@@ -14,7 +14,6 @@
 
       <!-- 기존 메시지 -->
       <div v-for="(m, i) in messages" :key="i" class="row" :class="m.role">
-        <!-- 봇 아바타: 손자 얼굴 -->
         <div v-if="m.role === 'bot'" class="avatar">
           <img :src="grandsonAvatar" alt="손자 아바타" class="avatar-img" />
         </div>
@@ -32,7 +31,7 @@
       </div>
     </main>
 
-    <!-- 하단 입력 바 (고정) -->
+    <!-- 하단 입력 바 (뷰 내부 고정) -->
     <footer class="inputbar">
       <button
         class="icon-btn"
@@ -66,17 +65,15 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
-import grandsonAvatar from '@/assets/images/grand.png' // 손자 이미지
+import grandsonAvatar from '@/assets/images/grand.png'
 
-const API_BASE = '' // 같은 오리진이면 공백 유지
+const API_BASE = ''
 
-/** 상태 */
-const messages = ref([]) // [{ role:'me'|'bot', text:'...' }]
+const messages = ref([])
 const draft = ref('')
 const loading = ref(false)
 const scrollRef = ref(null)
 
-/** 초기 한 줄 팁 */
 const TIPS = [
   '“도움말”을 입력하면 사용 가능한 명령을 알려드려요.',
   '음성 버튼을 눌러 “오늘 기록 시작”처럼 말해보세요.',
@@ -85,18 +82,14 @@ const TIPS = [
 const showTip = ref(true)
 const tipText = TIPS[Math.floor(Math.random() * TIPS.length)]
 
-/** 스크롤 하단 고정 (chat-area 안에서만) */
 const scrollToBottom = async () => {
   await nextTick()
   const el = scrollRef.value
-  if (el) {
-    el.scrollTop = el.scrollHeight
-  }
+  if (el) el.scrollTop = el.scrollHeight
 }
 
 onMounted(scrollToBottom)
 
-/** 전송 → /api/chat/handle */
 const sendMessage = async () => {
   if (!draft.value || loading.value) return
   if (showTip.value) showTip.value = false
@@ -130,12 +123,10 @@ const sendMessage = async () => {
   }
 }
 
-/** 퀵 액션(예시) */
 const onQuickAction = () => {
   draft.value = '일정보여줘'
 }
 
-/** (옵션) 음성 입력 */
 const listening = ref(false)
 let rec = null
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -169,10 +160,6 @@ const toggleMic = () => {
 
 <style scoped>
 :root {
-  --appbar-h: 64px;
-  --tabbar-h: 72px;
-  --input-h: 64px;
-
   --me-bg: #eef1ff;
   --me-text: #0b1f33;
   --me-border: #c9d2ff;
@@ -183,23 +170,27 @@ const toggleMic = () => {
   --accent: #667cff;
 }
 
-/* 🔥 메인 래퍼: 부모 영역(헤더~탭바 사이)을 꽉 채우고
-   안에서 위는 채팅, 아래는 입력창으로 flex 분리 */
+/* ▶ 전체 래퍼: 뷰포트 기준 고정 높이 */
 .chatbot-wrap {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   max-width: 420px;
   margin: 0 auto;
+  height: 100%;
   background: linear-gradient(180deg, #e8f9ff 0%, #f0eaff 100%);
-  min-height: 100%;          /* 부모 높이만큼 꽉 채우기 */
+  padding-top: 8px;
+  padding-bottom: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* 래퍼는 더 이상 커지지 않게 */
 }
 
-/* 대화영역(스크롤만 담당) */
+/* 대화영역만 스크롤 */
 .chat-area {
-  flex: 1 1 auto;            /* 남는 공간 전부 사용 */
-  min-height: 0;             /* flex 안에서 스크롤 되게 필수 */
+  flex: 1 1 auto;
+  min-height: 10;
   overflow-y: auto;
-  padding: 12px 12px 16px;   /* 아래 너무 크지 않게 */
+  padding: 12px 12px 110px;    /* 입력창 높이만큼 여유 */
   backdrop-filter: blur(6px);
 }
 
@@ -285,7 +276,7 @@ const toggleMic = () => {
   font-weight: 600;
 }
 
-/* 줄 */
+/* 메시지 줄 */
 .row {
   display: flex;
   gap: 8px;
@@ -303,7 +294,6 @@ const toggleMic = () => {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  border: 2px solid #ffffff;
 }
 
 .avatar-img {
@@ -312,17 +302,23 @@ const toggleMic = () => {
   object-fit: contain;
 }
 
-/* 🔥 입력바: flex 맨 아래에 고정 (position 안 씀) */
+/* 입력바: 항상 같은 자리 (탭바 위) */
 .inputbar {
-  flex: 0 0 auto;
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10%;
   display: flex;
   align-items: center;
   gap: 10px;
-  height: var(--input-h);
-  padding: 12px 12px 12px;
-  background: rgba(255, 255, 255, 0.96);
+  padding: 8px 12px;
+  box-sizing: border-box;
+
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  z-index: 5;
 }
 
 .icon-btn,
@@ -330,7 +326,7 @@ const toggleMic = () => {
   all: unset;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -349,7 +345,7 @@ const toggleMic = () => {
   border: 0;
   outline: none;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 999px;
   padding: 0 12px;
   font-size: 15px;
 }
