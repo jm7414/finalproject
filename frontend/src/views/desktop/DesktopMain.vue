@@ -238,6 +238,9 @@
       </div>
     </div>
   </div>
+    <ConfirmModal :show="isResolveModalVisible" title="상태 해제 확인" message="환자의 '실종' 상태를 해제하시겠습니까?" confirm-text="상태 해제"
+    cancel-text="취소" @close="isResolveModalVisible = false" @cancel="isResolveModalVisible = false"
+    @confirm="handleResolveConfirm" />
 </template>
 
 <script setup>
@@ -249,15 +252,10 @@ import { useSchedule } from '@/composables/useSchedule'
 import { usePatientLocation } from '@/composables/usePatientLocation'
 import MapControls from '@/components/MapControls.vue'
 import defaultProfileImage from '@/assets/default-profile.png'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import axios from 'axios'
 
 const router = useRouter()
-
-const props = defineProps({
-  patientInfo: {
-    type: Object, // patientInfo의 타입은 객체입니다.
-    required: true // (또는 default: () => ({}))
-  }
-});
 
 // 더미 데이터 (나중에 실제 API로 교체)
 const patient = {
@@ -425,25 +423,73 @@ const {
 
 const isResolveModalVisible = ref(false);
 function handleStatusChangeClick() {
-  if (!props.patientInfo?.userNo) {
-    alert("환자 정보가 없습니다.");
+  // 1. 버튼이 눌렸는지 확인
+  console.log("📢 [Debug] 버튼 클릭됨!"); 
+
+  // 2. patientInfo 데이터가 존재하는지 확인
+  console.log("📢 [Debug] 현재 환자 정보:", patientInfo.value);
+
+  if (!patientInfo.value) {
+    console.error("❌ [Error] patientInfo.value가 null 또는 undefined 입니다.");
+    alert("환자 데이터를 불러오는 중입니다.");
     return;
   }
 
-  // 기능 9: 환자 상태(user_status) 값에 따라 분기
-if (props.patientInfo.user_status === 0) {
-    // 이 로그를 추가하여 userNo 값 확인
-    console.log(`실종 신고 페이지(/MissingReport/:id)로 이동 시도. 전달할 ID:`, props.patientInfo.userNo);
+  if (!patientInfo.value.userNo) {
+    console.error("❌ [Error] userNo가 없습니다. 데이터:", patientInfo.value);
+    alert("유효하지 않은 환자 정보입니다.");
+    return;
+  }
 
-    // userNo 값이 유효한 숫자인지 확인 후 push
-    if (props.patientInfo.userNo !== null && props.patientInfo.userNo !== undefined) {
-      router.push({ name: 'MissingReport', params: { id: props.patientInfo.userNo } });
-    } else {
-      console.error('환자 ID(userNo)가 유효하지 않아 페이지 이동 불가');
-      alert('환자 정보가 올바르지 않아 신고 페이지로 이동할 수 없습니다.');
+  // 3. 상태값 확인 (타입 확인 포함)
+  console.log(`📢 [Debug] 상태값: ${patientInfo.value.user_status} (타입: ${typeof patientInfo.value.user_status})`);
+
+  if (patientInfo.value.user_status === 0) {
+    // === [상태 변경 로직] ===
+    console.log("🚀 [Action] 실종 신고 페이지로 이동 시도");
+    
+    // 라우터 이름 확인 필수!
+    try {
+      router.push({ name: 'desktop-missingreport', params: { id: patientInfo.value.userNo } })
+        .then(() => console.log("✅ 페이지 이동 성공"))
+        .catch(err => console.error("❌ 페이지 이동 실패:", err));
+    } catch (e) {
+      console.error("❌ 라우터 호출 중 에러:", e);
     }
+
   } else {
+    // === [실종 해제 로직] ===
+    console.log("🚀 [Action] 실종 해제 모달 열기");
     isResolveModalVisible.value = true;
+    
+    // 모달 변수가 진짜 true로 바뀌었는지 확인
+    console.log("📢 [Debug] 모달 상태:", isResolveModalVisible.value);
+  }
+}
+
+async function handleResolveConfirm() {
+  const newStatus = 0; // 해제 시 상태는 0
+
+  console.log(`--- '실종 해제' API 호출 실행 ---`);
+  console.log(`대상 환자 userNo: ${patientInfo.value.userNo}`);
+  console.log(`새 상태: ${newStatus}`);
+
+  try {
+    // 백엔드 API 호출 (user_status를 0으로 변경)
+    const response = await axios.post('/api/users/update-status',
+      { userNo: patientInfo.value.userNo, userStatus: newStatus },
+      { withCredentials: true } // 인증 처리
+    );
+
+    console.log('API 호출 성공 (상태 해제):', response.data);
+    alert('환자의 실종 상태가 성공적으로 해제되었습니다.');
+    location.reload();
+
+  } catch (error) {
+    console.error("상태 해제 API 호출 실패:", error);
+    alert('상태 변경에 실패했습니다. (콘솔 로그 확인)');
+  } finally {
+    isResolveModalVisible.value = false; // 모달 닫기
   }
 }
 

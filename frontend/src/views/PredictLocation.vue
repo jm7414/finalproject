@@ -1997,7 +1997,7 @@ function wherePeople() {
         startParticipantTracking();
 
         if (missingPostId.value) {
-            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value}`);
+            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value || '아직 로딩 중...'}`);
             searchStore.startSearch(missingPostId.value);
         }
 

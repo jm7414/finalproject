@@ -38,9 +38,16 @@
           <span class="value">{{ formatDisplayDate(lastKnownLocation.time) }}</span>
         </div>
       </div>
+      <div class="d-flex justify-content-center">
+          <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }"
+              @click="wherePeople">
+              <i class="bi bi-arrow-right-circle"></i>
+              {{ isParticipantsLayerVisible ? '함께하는 중...' : '함께하는 사람 보기' }}
+          </button>
+      </div>
       <button class="report-board-btn" @click="openReportBoard">
-        제보 게시판 보기
-      </button>
+    제보 게시판 보기
+   </button>
     </div>
 
   <aside class="right-area-panel" :class="{ visible: isReportBoardVisible }">
@@ -261,9 +268,12 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SightingReportBoard from '../SightingReportBoard.vue'
 import SightingReportWrite from '../../components/SightingReportWrite.vue'
+import { useParticipantLocations } from '../../composables/useParticipantLocations.js';
+import { useSearchStore } from '@/stores/useSearchStore';
 
 const route = useRoute()
 const missingPostId = ref(null) // 게시판용 ID 변수
+const searchStore = useSearchStore();
 
 const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
@@ -371,7 +381,7 @@ onMounted(async () => {
   missingPostId.value = idFromParam;
   
   try {
-    await ensureKakaoLoaded()
+  await ensureKakaoLoaded()
     const idFromParam = route.params.id; // URL에서 ID (missingPostId)를 읽어옴
 
     if (idFromParam) {
@@ -467,36 +477,59 @@ watch(showAllLocations, () => {
   makeMarker()
 })
 
+const { startParticipantTracking, stopParticipantTracking, setMap } = useParticipantLocations({
+    missingPostId: missingPostId
+});
+const isParticipantsLayerVisible = ref(false);
+
+function wherePeople() {
+    isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
+
+    if (isParticipantsLayerVisible.value) {
+        startParticipantTracking();
+
+        if (missingPostId.value) {
+            console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value || '아직 로딩 중...'}`);
+            searchStore.startSearch(missingPostId.value);
+        }
+
+    } else {
+        stopParticipantTracking();
+        console.log("[PredictLocation] '함께 찾기' 스위치를 끕니다.");
+        searchStore.stopSearch();
+    }
+}
+
 /**
  * 임시 테스트용 마커 3개를 생성합니다. 함께하기용 나중에 진짜 함께하기가 되면 삭제해야 함
  */
 function createTemporaryMarkers() {
   // map 객체가 초기화되었는지 확인
-  if (!map) {
-    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
-    return;
-  }
+ if (!map) {
+  console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
+  return;
+ }
 
-  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
+ console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
 
-  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
-  const mapCenter = map.getCenter(); 
-  const testPositions = [
-    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
-    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002), // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
-    new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)          // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
-  ];
+ // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
+ const mapCenter = map.getCenter(); 
+ const testPositions = [
+  new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
+  new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002), // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
+  new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)          // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
+ ];
 
   // 2. 3개의 마커를 생성하여 지도에 바로 표시
   // (이 마커들은 'markers' 배열에 추가하지 않으므로,
   // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
-  testPositions.forEach((position, index) => {
-    new window.kakao.maps.Marker({
-        position: position,
-        map: map, // 맵 객체에 바로 표시
-        title: `테스트 마커 ${index + 1}`
-    });
-  });
+ testPositions.forEach((position, index) => {
+  new window.kakao.maps.Marker({
+    position: position,
+    map: map, // 맵 객체에 바로 표시
+    title: `테스트 마커 ${index + 1}`
+  });
+ });
 }
 
 function getRadiusByMinutes(minutes) {
@@ -1266,16 +1299,16 @@ const isPanelVisible = ref(false)
 const panelContent = ref('board')
 
 function openReportBoard() {
-  if (!missingPostId.value) {
-    alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
-    return;
-  }
+ if (!missingPostId.value) {
+  alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
+  return;
+ }
   panelContent.value = 'board' // 내용물을 'board'로 설정
-  isPanelVisible.value = true // 패널 열기
+ isPanelVisible.value = true // 패널 열기
 }
 
 function closeReportBoard() {
-  isPanelVisible.value = false // 패널 닫기
+ isPanelVisible.value = false // 패널 닫기
 }
 
 function showWriteForm() {
