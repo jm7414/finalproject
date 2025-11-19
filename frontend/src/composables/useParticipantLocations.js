@@ -95,13 +95,13 @@ export function useParticipantLocations({ missingPostId }) {
         console.log('useParticipantLocations: Map 객체를 주입받았습니다.');
         internalMap = mapObject; // 내부 변수에 지도 할당
 
-        // 지도를 받았는데, 만약 ID도 이미 준비된 상태고 타이머가 없다면 추적 시작
-        if (internalMap && missingPostId.value && !pollingTimer) {
-             console.log('useParticipantLocations: Map과 ID가 모두 준비되어 추적을 시작합니다.');
-             fetchParticipantLocations(); // 즉시 1회 실행
-             if (pollingTimer) clearInterval(pollingTimer);
-             pollingTimer = setInterval(fetchParticipantLocations, 5000);
-        }
+        // 지도를 받았는데, 만약 ID도 이미 준비된 상태고 타이머가 없다면 추적 시작                  @@@@@@@@ 예상위치 들어오자마자 시작해서 주석처리 함
+        // if (internalMap && missingPostId.value && !pollingTimer) {
+        //      console.log('useParticipantLocations: Map과 ID가 모두 준비되어 추적을 시작합니다.');
+        //      fetchParticipantLocations(); // 즉시 1회 실행
+        //      if (pollingTimer) clearInterval(pollingTimer);
+        //      pollingTimer = setInterval(fetchParticipantLocations, 5000);
+        // }
     };
 
     // 6. 컴포넌트 언마운트 시 정리
