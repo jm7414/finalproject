@@ -9,7 +9,6 @@ import Login from '@/views/Login.vue'
 import MissingReport from '@/components/MissingReport.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PredictLocation from '@/views/PredictLocation.vue'
-import JustPredict from '@/views/JustPredictLocation.vue'
 import Simulation from '@/views/NoDataSimulation.vue'
 import CommunityMissing from '@/components/CommunityMissing.vue'
 import CommunityPostWrite from '@/components/CommunityPostWrite.vue'
@@ -70,6 +69,7 @@ import DesktopMypagePlusplan from '@/views/desktop/DesktopMypagePlusplan.vue'
 import DesktopMypageConnect from '@/views/desktop/DesktopMypageConnect.vue'
 import DesktopMypageAdmin from '@/views/desktop/DesktopMypageAdmin.vue'
 import DesktopMypageSafezone from '@/views/desktop/DesktopMypageSafezone.vue'
+import DesktopMissingReport from '@/components/desktop/DesktopMissingReport.vue'
 import DesktopMypageSafezoneRadius from '@/views/desktop/DesktopMypageSafezoneRadius.vue'
 import DesktopReport from '@/views/desktop/DesktopReport.vue'
 import JustPredictLocation from '@/views/JustPredictLocation.vue'
@@ -132,6 +132,12 @@ const router = createRouter({
       name: 'desktop-predict',
       component: DesktopPredict,
       meta: { requiresAuth: true, roles: [1], layout: 'desktop' } // '?''를 추가해서 id를 선택적으로 받음
+    },
+    {
+      path: '/desktop/missingreport/:id',
+      name: 'desktop-missingreport',
+      component: DesktopMissingReport,
+      meta: { requiresAuth: true, roles: [1], layout: 'desktop' } // 보호자 전용
     },
     {
       path: '/desktop/mypage',
@@ -231,25 +237,25 @@ const router = createRouter({
       name: 'CommunityView',
 
       component: CommunityView,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 3, 4] } // 보호자 전용
     },
     {
       path: '/not-reported-predict/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'not-reported-predict',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: JustPredictLocation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 및 이웃 (이웃에서도 실종자 게시판으로 들어오게 설정)
     },
     {
       path: '/predict-location/:id?',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'predict-location',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: PredictLocation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 및 이웃 (이웃에서도 실종자 게시판으로 들어오게 설정)
     },
     {
       path: '/simulation',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'simulation',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: Simulation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1] } // 보호자 전용 _이웃추가
     },
     {
       path: '/CommunityMissing',
@@ -384,9 +390,6 @@ const router = createRouter({
       component: Report,
       meta: { requiresAuth: true, roles: [1] } // 보호자 전용
     },
-
-
-
     {
       path: '/loan',
       name: 'loan',

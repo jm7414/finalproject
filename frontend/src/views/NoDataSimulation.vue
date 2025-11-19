@@ -460,6 +460,8 @@ const loadSimulationData = async () => {
         error.value = err.response?.data?.detail || '데이터를 불러올 수 없습니다.'
     } finally {
         isLoading.value = false
+        await nextTick()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 }
 
@@ -474,14 +476,29 @@ const changeScenario = async (scenario) => {
     currentScenario.value = scenario
     isPlaying.value = false
 
+    // ⭐ 개선: 완전한 초기화
     clearMapElements()
+
+    // ⭐ 추가: 객체 완전 초기화
+    Object.keys(markers).forEach(key => {
+        if (markers[key]?.overlay) {
+            markers[key].overlay.setMap(null)
+        }
+        delete markers[key]
+    })
+
+    Object.keys(paths).forEach(key => {
+        if (paths[key]?.line) {
+            paths[key].line.setMap(null)
+        }
+        delete paths[key]
+    })
 
     animationData.value = { data: allScenariosData.value[scenario] }
     currentStep.value = 0
 
     await nextTick()
 
-    // ⭐ 추가: 지도 재조정
     if (map) {
         map.relayout()
     }
@@ -667,9 +684,22 @@ const handleResize = () => {
 // 초기화 및 정리
 // ========================================================================================
 const clearMapElements = () => {
-    Object.values(markers).forEach(marker => marker.overlay.setMap(null))
-    Object.values(paths).forEach(path => path.line.setMap(null))
+    // 마커 제거
+    Object.values(markers).forEach(marker => {
+        if (marker?.overlay) {
+            marker.overlay.setMap(null)
+        }
+    })
 
+    // 경로 제거
+    Object.values(paths).forEach(path => {
+        if (path?.line) {
+            path.line.setMap(null)
+            path.points = []
+        }
+    })
+
+    // 객체 완전 초기화
     Object.keys(markers).forEach(key => delete markers[key])
     Object.keys(paths).forEach(key => delete paths[key])
 }
@@ -764,7 +794,7 @@ onUnmounted(() => {
 .stat-content-modern {
     flex: 1;
     position: relative;
-    top:15px;
+    top: 15px;
     margin-bottom: 30px;
 }
 
@@ -822,12 +852,15 @@ onUnmounted(() => {
    ======================================================================================== */
 .loading-overlay,
 .error-overlay {
-    flex: 1;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
-    bottom: 150px;
+    z-index: 9999;
 }
 
 .loading-state,

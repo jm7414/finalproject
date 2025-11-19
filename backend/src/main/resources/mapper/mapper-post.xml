@@ -26,7 +26,7 @@
         <result property="userId" column="user_no"/>
     </resultMap>
 
-        <select id="findAllPosts" resultMap="PostListResultMap">
+    <select id="findAllPosts" resultMap="PostListResultMap">
         SELECT
             p.post_id,
             p.title,
@@ -68,7 +68,7 @@
             p.post_id = #{postId}
     </select>
 
-        <select id="findNotices" resultMap="PostListResultMap">
+    <select id="findNotices" resultMap="PostListResultMap">
         SELECT
             p.post_id,
             p.title,
@@ -90,7 +90,7 @@
             p.created_at DESC
     </select>
 
-        <insert id="createPost" parameterType="lx.project.dementia_care.dto.PostRequestDto">
+    <insert id="createPost" parameterType="lx.project.dementia_care.dto.PostRequestDto">
         <selectKey keyProperty="postId" resultType="int" order="AFTER">
             SELECT CURRVAL('post_post_id_seq')
         </selectKey>
@@ -100,16 +100,16 @@
             #{content}, 
             #{userId},             
             #{image},
-            <if test="noticeCheck == '공지'">
+            <if test="noticeType == '공지'">
                 '공지'
             </if>
-            <if test="noticeCheck == null or noticeCheck == ''">
+            <if test="noticeType == null or noticeType == ''">
                 NULL
             </if>
         )
     </insert>
 
-        <update id="updatePost">
+    <update id="updatePost">
         UPDATE post
         SET
             title = #{dto.title},
