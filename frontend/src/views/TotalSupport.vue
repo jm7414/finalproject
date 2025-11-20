@@ -252,7 +252,7 @@ function goHospitalCare () {
 .dashboard {
 
   max-height: 720px;
-  margin: 0 auto;
+  margin-top: -15px;
   padding: 16px 16px 96px; /* 아래 여유 */
   background: #f7f8fa;
 }
