@@ -78,7 +78,7 @@
       </div>
     </div>
 
-    <!-- (선택) 에러 표시 -->
+    <!-- 에러 표시 -->
     <div v-if="errorMessage" class="error-box">
       {{ errorMessage }}
     </div>
@@ -111,6 +111,7 @@ const elderLoanCount = ref(0)
 const loanTotalCount = ref(0)
 const errorMessage = ref('')
 
+// 상세 페이지에서 사용할 기본 지자체(쿼리용)
 const localGovNm = ref('서울특별시 구로구')
 
 // ✅ 사용자 정보 로드
@@ -127,47 +128,48 @@ const loadUserData = async () => {
   }
 }
 
+// ✅ 복지서비스 요약 로드 (백엔드 /api/support/welfare 에 맞춤)
 const loadWelfareSummary = async () => {
   try {
     errorMessage.value = ''
 
+    // 🔥 Benefit.vue랑 같은 엔드포인트 사용
+    //  - 여기서는 전국 데이터를 받아서
+    //    1) 치매/노인/돌봄 관련 필터
+    //    2) 그 중 서울 관련만 다시 카운트
     const res = await axios.get('/api/support/welfare', {
       params: {
+        // 전국 기준으로 받기 위해 localGovNm 안 넘김
         pageNo: 1,
         numOfRows: 1000
       }
     })
 
-    const apiResult = res.data
+    let data = res.data
 
-    if (!apiResult || apiResult.upstreamStatus !== 200 || !apiResult.xml) {
-      console.warn('복지서비스 응답 이상:', apiResult)
-      benefitSeoulCount.value = 0
-      benefitTotalCount.value = 0
-      elderLoanCount.value = 0
-      loanTotalCount.value = 0
-      errorMessage.value = '지자체 복지서비스 정보를 불러오지 못했습니다.'
-      return
+    // 혹시 문자열로 들어오면 직접 파싱
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch (parseErr) {
+        console.error('복지서비스 JSON 파싱 실패(문자열):', parseErr, data)
+        throw new Error('복지서비스 데이터 형식이 올바르지 않습니다.')
+      }
     }
 
-    let json
-    try {
-      json = typeof apiResult.xml === 'string'
-        ? JSON.parse(apiResult.xml)
-        : apiResult.xml
-    } catch (parseErr) {
-      console.error('복지서비스 JSON 파싱 실패:', parseErr, apiResult.xml)
-      benefitSeoulCount.value = 0
-      benefitTotalCount.value = 0
-      elderLoanCount.value = 0
-      loanTotalCount.value = 0
-      errorMessage.value = '복지서비스 데이터 형식이 올바르지 않습니다.'
-      return
+    // 에러 형식으로 내려온 경우 (success:false)
+    if (data && data.success === false) {
+      console.warn('복지서비스 응답 에러:', data)
+      throw new Error(data.message || '지자체 복지서비스 정보를 불러오지 못했습니다.')
     }
 
-    const list = json.servList || []
+    const list = Array.isArray(data.servList) ? data.servList : []
 
-    // 지원금 키워드
+    if (!list.length) {
+      console.warn('복지서비스 목록이 비어있습니다:', data)
+    }
+
+    // 🔹 치매/노인/돌봄 관련 키워드
     const dementiaKeywords = ['치매', '인지', '노인', '65세', '돌봄', '요양', '보호자', '간병']
 
     const isDementiaSupport = (item) => {
@@ -179,12 +181,20 @@ const loadWelfareSummary = async () => {
     }
 
     const dementiaList = list.filter(isDementiaSupport)
+
+    // 서울 관련(지자체/부서명에 '서울특별시' 포함)만
     const dementiaSeoulList = dementiaList.filter(item => {
-      const dept = item.bizChrDeptNm || ''
-      return dept.includes('서울특별시')
+      const regionText = [
+        item.selfGovNm,
+        item.jurMnofNm,
+        item.bizChrDeptNm
+      ]
+        .filter(Boolean)
+        .join(' ')
+      return regionText.includes('서울특별시')
     })
 
-    // 대출 키워드
+    // 🔹 대출 키워드
     const loanKeywords = ['대출', '융자', '이자지원', '이자 지원', '보증', '전세자금', '주택구입']
     const elderKeywords = ['노인', '어르신', '고령', '65세', '노령', '장기요양', '기초연금']
 
@@ -206,14 +216,14 @@ const loadWelfareSummary = async () => {
     const loanCandidates = list.filter(isLoanService)
     const elderLoanCandidates = loanCandidates.filter(isElderService)
 
-    benefitTotalCount.value = dementiaList.length
-    benefitSeoulCount.value = dementiaSeoulList.length
-    loanTotalCount.value = loanCandidates.length
-    elderLoanCount.value = elderLoanCandidates.length
-
+    // 🔹 화면에 쓸 숫자 세팅
+    benefitTotalCount.value = dementiaList.length         // 전국 치매/노인/돌봄 서비스 수
+    benefitSeoulCount.value = dementiaSeoulList.length   // 서울 치매/노인/돌봄 서비스 수
+    loanTotalCount.value = loanCandidates.length         // 전국 대출 관련 서비스 수
+    elderLoanCount.value = elderLoanCandidates.length    // 그 중 노인 대상 대출 수
   } catch (err) {
     console.error('지자체 복지서비스 요약 조회 실패:', err)
-    errorMessage.value = '지자체 복지서비스 정보를 불러오지 못했습니다.'
+    errorMessage.value = err.message || '지자체 복지서비스 정보를 불러오지 못했습니다.'
     benefitSeoulCount.value = 0
     benefitTotalCount.value = 0
     elderLoanCount.value = 0
@@ -250,8 +260,7 @@ function goHospitalCare () {
 
 <style scoped>
 .dashboard {
-
-  max-height: 720px;
+  max-height: 890px;
   margin: 0 auto;
   padding: 16px 16px 96px; /* 아래 여유 */
   background: #f7f8fa;

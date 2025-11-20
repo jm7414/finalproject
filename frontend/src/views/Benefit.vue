@@ -189,9 +189,8 @@ const getPhone = (item) => {
 
 /**
  * 지자체 복지서비스 조회
- * 1) 전국 데이터 받아옴
- * 2) "서울" 관련만 필터
- * 3) 그 중에서 "치매/노인/돌봄" 관련만 다시 필터
+ * - 백엔드에서 공공데이터 JSON을 그대로 내려준다는 가정
+ *   (data.servList 배열)
  */
 const loadWelfareBenefits = async () => {
   loading.value = true
@@ -199,6 +198,9 @@ const loadWelfareBenefits = async () => {
   welfareList.value = []
 
   try {
+    // 🔥 여기 URL은 네 컨트롤러 매핑에 맞춰서:
+    //   - @GetMapping("/api/support/welfare") 쓰면 이대로 두고
+    //   - @GetMapping("/api/total-support") 쓰면 그걸로 바꿔주면 됨
     const res = await axios.get('/api/support/welfare', {
       params: {
         localGovNm: localGovNm.value,
@@ -207,27 +209,27 @@ const loadWelfareBenefits = async () => {
       }
     })
 
-    const apiResult = res.data
+    let data = res.data
 
-    if (!apiResult || apiResult.upstreamStatus !== 200 || !apiResult.xml) {
-      console.warn('복지서비스 응답 이상:', apiResult)
-      errorMessage.value = '복지서비스 데이터를 불러오지 못했습니다.'
+    // 문자열로 내려오면 직접 파싱
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch (e) {
+        console.error('복지서비스 JSON 파싱 실패(문자열):', e, data)
+        errorMessage.value = '복지서비스 데이터 형식이 올바르지 않습니다.'
+        return
+      }
+    }
+
+    // 백엔드에서 에러를 JSON으로 내려주는 경우 처리 (예: {success:false,...})
+    if (data && data.success === false) {
+      console.warn('복지서비스 응답 에러:', data)
+      errorMessage.value = data.message || '복지서비스 데이터를 불러오지 못했습니다.'
       return
     }
 
-    // 문자열 JSON 파싱
-    let json
-    try {
-      json = typeof apiResult.xml === 'string'
-        ? JSON.parse(apiResult.xml)
-        : apiResult.xml
-    } catch (e) {
-      console.error('복지서비스 JSON 파싱 실패:', e, apiResult.xml)
-      errorMessage.value = '복지서비스 데이터 형식이 올바르지 않습니다.'
-      return
-    }
-
-    const list = json.servList || []
+    const list = Array.isArray(data.servList) ? data.servList : []
 
     // 1️⃣ "서울" 관련만 필터
     const regionFiltered = list.filter(item => {
@@ -252,7 +254,7 @@ const loadWelfareBenefits = async () => {
       return dementiaKeywords.some(k => text.includes(k))
     })
 
-    // ✅ 샘플 로그로 어떤 필드들이 있는지 한 번 확인 가능
+    // ✅ 샘플 로그
     if (filtered.length > 0) {
       console.log('=== 복지서비스 샘플 ===')
       console.log(filtered[0])
