@@ -1,38 +1,22 @@
-<!-- HeartCare와 145번째줄만 바뀌었습니다 
- => // HeartCare랑 여기만 바꼈어요!
- -->
+<!-- src/views/HospitalCare.vue -->
 <template>
   <!-- 메인 컨테이너 -->
   <div class="main-container">
-
-    <!-- 위치기반 서비스 허용 알림 -->
-    <div v-if="!isAllowed" class="location-permission-alert">
-      <div class="alert-content">
-        <div class="location-icon-wrapper">
-          <div class="location-icon"></div>
-        </div>
-        <span class="permission-text">위치 기반 서비스를 위해 위치 권한이 필요 합니다.</span>
-        <button class="allow-button" @click="allow">
-          <span class="allow-button-text">허용</span>
-        </button>
-      </div>
-    </div>
-
     <!-- 지도 섹션 -->
     <div class="map-section">
       <!-- 지도 컨트롤 버튼 (현위치, 확대, 축소) -->
       <div class="map-controls">
-        <button class="current-location-btn">
+        <button class="current-location-btn" @click="moveToCurrentLocation">
           <div class="icon-wrapper">
             <div class="current-location-icon"></div>
           </div>
         </button>
-        <button class="zoom-in-btn">
+        <button class="zoom-in-btn" @click="zoomIn">
           <div class="icon-wrapper">
             <div class="zoom-in-icon"></div>
           </div>
         </button>
-        <button class="zoom-out-btn">
+        <button class="zoom-out-btn" @click="zoomOut">
           <div class="icon-wrapper">
             <div class="zoom-out-icon"></div>
           </div>
@@ -42,65 +26,151 @@
       <!-- 카카오맵 컨테이너 -->
       <div ref="mapContainer" class="map-container"></div>
 
-      <!-- 검색 입력창 -->
+      <!-- 검색 입력창 (지도 안쪽, 결과 섹션과 안 겹치게) -->
       <div class="search-wrapper">
-        <input class="search-input" placeholder="주변의 상담소를 찾아보세요" v-model="content" @keyup.enter="searchNearby" />
+        <input
+          class="search-input"
+          placeholder="주변의 병원을 찾아보세요"
+          v-model="searchKeyword"
+        />
         <div class="search-icon-wrapper">
           <div class="search-icon"></div>
         </div>
       </div>
     </div>
 
-    <!-- 검색 결과 섹션 -->
+    <!-- 검색 결과 / 요약 섹션 -->
     <div class="results-section">
-      <!-- places 배열에 대한 반복 렌더링 -->
-      <div class="counseling-card" v-for="(place, index) in paginatedPlaces" :key="place.id || index">
-        <div class="card-image"></div>
+      <!-- 상단 타이틀 & 요약 -->
+      <div class="header-summary">
+        <h2 class="page-title">라크라센터 주변 병원</h2>
+        <p class="page-subtitle">
+          라크라센터를 기준으로 반경 1km 안에 있는 병원을 한 번에 모아서 보여드려요.
+        </p>
 
-        <div class="card-header">
-          <div class="card-info">
-            <h3 class="center-name">{{ place.place_name }}</h3>
-            <p class="center-address">
-              {{ place.road_address_name || place.address_name }}
-              <span class="location-pin-icon"></span>
-              <span class="distance-text">
-                {{ (place.distance * 0.001).toFixed(2) }}km
-              </span>
-            </p>
+        <div class="summary-box">
+          <div class="summary-main">
+            <span class="summary-label">1km 이내 병원 수</span>
+            <span class="summary-count">{{ filteredHospitals.length }}곳</span>
           </div>
+          <button class="summary-refresh" @click="reload">
+            🔄 다시 불러오기
+          </button>
         </div>
 
-        <div class="action-buttons">
-          <button class="phone-button" @click="call(place.phone)">
-            <div class="phone-button-content">
-              <div class="phone-icon-wrapper">
-                <div class="phone-icon"></div>
-              </div>
-              <span class="phone-text">전화</span>
-            </div>
+        <!-- 병원 / 전체 카테고리 -->
+        <div class="category-filter-row">
+        </div>
+
+        <!-- 전체 / 큰 병원만 토글 (약국 화면에서는 의미 없으니 병원일 때만 사용) -->
+        <div class="big-filter-row" v-if="category !== 'pharmacy'">
+          <button
+            class="big-filter-btn"
+            :class="{ active: !onlyBig }"
+            @click="onlyBig = false"
+          >
+            전체 병원
           </button>
-          <button class="directions-button" @click="findRoute(place.place_name)">
-            <div class="directions-button-content">
-              <div class="directions-icon-wrapper">
-                <div class="directions-icon"></div>
-              </div>
-              <span class="directions-text">길찾기</span>
-            </div>
+          <button
+            class="big-filter-btn"
+            :class="{ active: onlyBig }"
+            @click="onlyBig = true"
+          >
+            큰 병원만
           </button>
+        </div>
+
+        <p v-if="loading" class="info-text">
+          병원 위치를 불러오는 중입니다...
+        </p>
+        <p v-if="errorMessage" class="error-text">
+          {{ errorMessage }}
+        </p>
+
+        <div
+          v-if="!loading && !errorMessage && filteredHospitals.length === 0"
+          class="fallback-box"
+        >
+          <p class="fallback-main">
+            조건에 맞는 병원·약국 정보를 찾지 못했어요.
+          </p>
+          <p class="fallback-sub">
+            잠시 후 다시 시도해 보거나, 검색어 / 필터를 바꿔서 다시 확인해 주세요.
+          </p>
+        </div>
+      </div>
+
+      <!-- 병원 리스트 -->
+      <div v-if="paginatedHospitals.length > 0" class="cards-wrapper">
+        <div
+          class="counseling-card"
+          v-for="(h, index) in paginatedHospitals"
+          :key="h.name + '-' + h.address + '-' + index"
+        >
+          <div class="card-header">
+            <div class="card-info">
+              <h3 class="center-name">{{ h.name }}</h3>
+              <p class="center-address">
+                {{ h.address }}
+                <span class="location-pin-icon"></span>
+                <span class="distance-text">
+                  {{ h.distanceKm.toFixed(2) }}km
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button
+              class="phone-button"
+              @click="call(h.tel)"
+              :disabled="!h.tel"
+            >
+              <div class="phone-button-content">
+                <div class="phone-icon-wrapper">
+                  <div class="phone-icon"></div>
+                </div>
+                <span class="phone-text">
+                  {{ h.tel ? '전화' : '전화정보 없음' }}
+                </span>
+              </div>
+            </button>
+
+            <button
+              class="directions-button"
+              @click="openKakaoMap(h)"
+            >
+              <div class="directions-button-content">
+                <div class="directions-icon-wrapper">
+                  <div class="directions-icon"></div>
+                </div>
+                <span class="directions-text">길찾기</span>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>
-    <div class="pagination">
-      <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">
+
+    <!-- 페이지네이션 (심플 버전) -->
+    <div class="pagination" v-if="totalPages > 1">
+      <button
+        class="page-btn"
+        :disabled="currentPage === 1"
+        @click="currentPage--"
+      >
         이전
       </button>
 
-      <button v-for="page in totalPages" :key="page" class="page-btn" :class="{ active: page === currentPage }"
-        @click="currentPage = page">
-        {{ page }}
-      </button>
+      <span class="page-info">
+        {{ currentPage }} / {{ totalPages }}
+      </span>
 
-      <button class="page-btn" :disabled="currentPage === totalPages" @click="currentPage++">
+      <button
+        class="page-btn"
+        :disabled="currentPage === totalPages"
+        @click="currentPage++"
+      >
         다음
       </button>
     </div>
@@ -108,127 +178,256 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue'
+import axios from 'axios'
 
-const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891';
-const mapContainer = ref(null);
+const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
+const mapContainer = ref(null)
 
-// 맨 위에 위치정보 허용누르면 true로 바뀌고 없어지게 할 거
-const isAllowed = ref(false)
+// 병원 데이터
+const allHospitals = ref([])
 
-// 여기는 기본적으로 검색했을떄 지도에 마커뜨고 infowindow는 마커 클릭하면 가게이름 나오는거
-let map;
-let geocoder = null;
-let markers = [];
-let infowindow = null;
+// 상태
+const loading = ref(false)
+const errorMessage = ref('')
 
-// 이거로 검색 키워드 넣을 수 있게 할거임
-const content = ref('');
+// 검색 키워드 (이름 + 주소)
+const searchKeyword = ref('')
 
-// 검색결과 나타내기
-const places = ref([])
+// 탭: 전체 / 병원 / 약국
+const category = ref('all')
 
-// 처음 들어오면 지도부터 불러와
+// "큰 병원만 보기" 토글
+const onlyBig = ref(false)
+
+// 지도 관련
+let map = null
+let markers = []
+let infowindow = null
+
+// 라크라센터 좌표 (구로구청 앞 건물)
+const DEFAULT_CENTER_LAT = 37.4942627
+const DEFAULT_CENTER_LNG = 126.8873901
+
+// 페이지네이션
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+// === 마운트 시 카카오맵 & 병원 데이터 로드 ===
 onMounted(() => {
-  const script = document.createElement('script');
-  script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&libraries=services&autoload=false`;
-  document.head.appendChild(script);
+  const script = document.createElement('script')
+  script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`
+  document.head.appendChild(script)
 
   script.onload = () => {
     window.kakao.maps.load(() => {
-      geocoder = new window.kakao.maps.services.Geocoder();
       map = new window.kakao.maps.Map(mapContainer.value, {
-        center: new window.kakao.maps.LatLng(37.494382, 126.887690),
-        level: 6
-      });
-      infowindow = new window.kakao.maps.InfoWindow({ zIndex: 1 });
-      content.value = '병원'  // HeartCare랑 여기만 바꼈어요!
-      searchNearby(content.value)
-      content.value = ''
-    });
-  };
-});
+        center: new window.kakao.maps.LatLng(DEFAULT_CENTER_LAT, DEFAULT_CENTER_LNG),
+        level: 3
+      })
+      infowindow = new window.kakao.maps.InfoWindow({ zIndex: 1 })
+      loadHospitals()
+    })
+  }
+})
 
-function searchNearby() {
-  markers.forEach(marker => marker.setMap(null));
-  markers = [];
+// === 병원 정보 로드 (백엔드 호출) ===
+const loadHospitals = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  allHospitals.value = []
+  currentPage.value = 1
 
-  const ps = new window.kakao.maps.services.Places();
-  const center = map.getCenter();
-  const options = {
-    location: center,
-    radius: 1000,
-    sort: window.kakao.maps.services.SortBy.DISTANCE
-  };
+  try {
+    const res = await axios.get('/api/hospital/near')
+    const raw = Array.isArray(res.data) ? res.data : []
+    allHospitals.value = raw
+  } catch (err) {
+    console.error('병원 정보 조회 실패:', err)
+    errorMessage.value =
+      err.response?.data?.message ||
+      err.message ||
+      '병원 정보를 불러오는 중 오류가 발생했습니다.'
+  } finally {
+    loading.value = false
+  }
+}
 
+// === 약국 여부 ===
+function isPharmacy(hospital) {
+  const name = (hospital.name || '').trim()
+  return !!name && name.includes('약국')
+}
 
-  ps.keywordSearch(content.value, (data, status) => {
-    console.log(`응답 -> ${JSON.stringify(data)}`)
-    if (status === window.kakao.maps.services.Status.OK) {
-      const bounds = new window.kakao.maps.LatLngBounds();
-      // 반환된 데이터로 배열 초기화
-      places.value = data.map(place => ({
-        ...place
-      }));
+// === "큰 병원"인지 이름 기준으로 판단 ===
+function isBigHospitalByName(hospital) {
+  const name = (hospital.name || '').trim()
+  if (!name) return false
 
-      // 마커 표시
-      data.forEach(place => {
-        displayMarker(place);
-        bounds.extend(new window.kakao.maps.LatLng(place.y, place.x));
-      });
-      map.setBounds(bounds);
+  // 작은 규모로 많이 쓰이는 패턴은 제외
+  if (
+    name.includes('의원') ||
+    name.includes('치과') ||
+    name.includes('한의원') ||
+    name.includes('약국')
+  ) {
+    return false
+  }
+
+  // 대학병원, 의료원, 병원 등은 큰 병원으로 취급
+  if (name.includes('대학병원')) return true
+  if (name.includes('의료원')) return true
+  if (name.includes('병원')) return true
+
+  return false
+}
+
+// === 필터링된 병원 목록 (1km + 카테고리 + 큰 병원 토글 + 검색어) ===
+const filteredHospitals = computed(() => {
+  // 1km 이내 먼저 필터
+  let list = allHospitals.value.filter(h => {
+    const d = Number(h.distanceKm)
+    return !Number.isNaN(d) && d <= 1
+  })
+
+  // 병원/약국 카테고리 필터
+  if (category.value === 'hospital') {
+    list = list.filter(h => !isPharmacy(h))
+  } else if (category.value === 'pharmacy') {
+    list = list.filter(h => isPharmacy(h))
+  }
+
+  // 큰 병원만 보기 (약국 탭에서는 적용 X)
+  if (onlyBig.value && category.value !== 'pharmacy') {
+    list = list.filter(h => isBigHospitalByName(h))
+  }
+
+  // 검색어 필터
+  if (searchKeyword.value.trim()) {
+    const kw = searchKeyword.value.trim()
+    list = list.filter(
+      h =>
+        (h.name && h.name.includes(kw)) ||
+        (h.address && h.address.includes(kw))
+    )
+  }
+
+  return list
+})
+
+// === 페이지네이션 계산 ===
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredHospitals.value.length / itemsPerPage))
+)
+
+const paginatedHospitals = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredHospitals.value.slice(start, start + itemsPerPage)
+})
+
+// totalPages 줄어들 때 현재 페이지 보정
+watch(totalPages, newTotal => {
+  if (currentPage.value > newTotal) {
+    currentPage.value = newTotal
+  }
+})
+
+// 필터된 병원 목록이 바뀔 때마다 지도 마커 다시 그림
+watch(
+  filteredHospitals,
+  newList => {
+    renderMarkers(newList)
+  },
+  { immediate: true }
+)
+
+// === 지도에 마커 표시 ===
+function renderMarkers(list) {
+  if (!map || !window.kakao) return
+
+  // 기존 마커 제거
+  markers.forEach(m => m.setMap(null))
+  markers = []
+
+  if (!list || list.length === 0) {
+    // 병원이 하나도 없어도 중심은 라크라센터로
+    const center = new window.kakao.maps.LatLng(DEFAULT_CENTER_LAT, DEFAULT_CENTER_LNG)
+    map.setCenter(center)
+    map.setLevel(3)
+    return
+  }
+
+  list.forEach(h => {
+    if (Number.isNaN(h.lat) || Number.isNaN(h.lng)) return
+
+    const pos = new window.kakao.maps.LatLng(h.lat, h.lng)
+    const marker = new window.kakao.maps.Marker({
+      map,
+      position: pos
+    })
+    markers.push(marker)
+
+    window.kakao.maps.event.addListener(marker, 'click', () => {
+      infowindow.setContent(
+        `<div style="padding:5px;font-size:12px;">${h.name}</div>`
+      )
+      infowindow.open(map, marker)
+    })
+  })
+
+  // ★ 항상 라크라센터 기준 + 레벨 3으로 고정
+  const center = new window.kakao.maps.LatLng(DEFAULT_CENTER_LAT, DEFAULT_CENTER_LNG)
+  map.setCenter(center)
+  map.setLevel(3)
+}
+
+// === 현재 위치로 이동 (백엔드 재호출 없이 지도만 이동) ===
+function moveToCurrentLocation() {
+  if (!navigator.geolocation || !map) return
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude
+      const lng = pos.coords.longitude
+      const loc = new window.kakao.maps.LatLng(lat, lng)
+      map.setCenter(loc)
+    },
+    () => {
+      // 실패 시 그냥 기본 위치 유지
     }
-  }, options);
+  )
 }
 
-
-function displayMarker(place) {
-  const marker = new window.kakao.maps.Marker({
-    map,
-    position: new window.kakao.maps.LatLng(place.y, place.x)
-  });
-
-  markers.push(marker);
-
-  window.kakao.maps.event.addListener(marker, 'click', () => {
-    infowindow.setContent(
-      `<div style="padding:5px;font-size:12px;">${place.place_name}</div>`
-    );
-    infowindow.open(map, marker);
-  });
+// === 줌 컨트롤 ===
+function zoomIn() {
+  if (!map) return
+  const level = map.getLevel()
+  if (level > 1) {
+    map.setLevel(level - 1)
+  }
 }
 
-
-function allow() {
-  isAllowed.value = true
+function zoomOut() {
+  if (!map) return
+  const level = map.getLevel()
+  map.setLevel(level + 1)
 }
 
+// === 전화 & 길찾기 ===
 function call(phone) {
-  window.open(`tel:${phone}`);
+  if (!phone) return
+  window.open(`tel:${phone}`)
 }
 
-function findRoute(x) {
-  // 카카오 길찾기 페이지로 이동 예시
-  window.open(`https://map.kakao.com/link/search/${x}`);
+function openKakaoMap(h) {
+  const q = encodeURIComponent(`${h.name} ${h.address}`)
+  window.open(`https://map.kakao.com/?q=${q}`, '_blank')
 }
 
-
-// pagination
-const currentPage = ref(1);
-const itemsPerPage = 5;
-
-const totalPages = computed(() => {
-  return Math.ceil(places.value.length / itemsPerPage);
-});
-
-const paginatedPlaces = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return places.value.slice(start, start + itemsPerPage);
-});
-
-
-
-
+// === 다시 불러오기 ===
+function reload() {
+  loadHospitals()
+}
 </script>
 
 <style scoped>
@@ -261,92 +460,12 @@ button {
   overflow: hidden;
 }
 
-/* ============================================
-   위치 권한 알림 섹션
-============================================ */
-.location-permission-alert {
-  position: relative;
-  width: 375px;
-  height: 65px;
-  right: 10px;
-  background: #fafafa;
-  border-top: 1px solid #f5f5f5;
-  border-bottom: 1px solid #f5f5f5;
-  z-index: 100;
-}
-
-.alert-content {
-  position: absolute;
-  width: 351px;
-  height: 40px;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.location-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.location-icon {
-  width: 12px;
-  height: 16px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/CCVEhnFpko.png') no-repeat center;
-  background-size: cover;
-}
-
-.permission-text {
-  flex: 1;
-  color: #262626;
-  font-family: var(--default-font-family);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  text-align: left;
-}
-
-.allow-button {
-  width: 48px;
-  height: 24px;
-  background: rgba(170, 193, 253, 0.91);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.allow-button:hover {
-  background: rgba(170, 193, 253, 1);
-}
-
-.allow-button-text {
-  color: #ffffff;
-  font-family: var(--default-font-family);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 14.523px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* ============================================
-   지도 섹션
-============================================ */
+/* 지도 섹션 */
 .map-section {
   position: relative;
   right: 7px;
   width: 375px;
-  height: 320px;
+  height: 360px; /* 조금 더 크게 */
   background: #f5f5f5;
 }
 
@@ -414,45 +533,48 @@ button {
 .current-location-icon {
   width: 16px;
   height: 16px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/YGSmfjJuiN.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/YGSmfjJuiN.png')
+    no-repeat center;
   background-size: cover;
 }
 
 .zoom-in-icon {
   width: 14px;
   height: 16px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/sxkSvTkgyU.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/sxkSvTkgyU.png')
+    no-repeat center;
   background-size: cover;
 }
 
 .zoom-out-icon {
   width: 14px;
   height: 16px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/2TXTq4KJ99.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/2TXTq4KJ99.png')
+    no-repeat center;
   background-size: cover;
 }
 
-/* 검색 입력창 */
+/* 검색 입력창 (지도 안쪽, 결과와 겹치지 않게) */
 .search-wrapper {
   position: absolute;
-  bottom: -55px;
-  left: 6px;
-  width: 343px;
-  height: 50px;
+  bottom: 12px;
+  left: 16px;
+  width: calc(100% - 32px);
+  height: 46px;
   z-index: 10;
 }
 
 .search-input {
   width: 100%;
   height: 100%;
-  padding: 12px 12px 12px 48px;
+  padding: 10px 12px 10px 44px;
   background: #fafafa;
   border: 1px solid #d4d4d4;
   border-radius: 8px;
   font-family: var(--default-font-family);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 400;
-  line-height: 24px;
+  line-height: 22px;
   color: #262626;
 }
 
@@ -478,16 +600,15 @@ button {
 .search-icon {
   width: 16px;
   height: 16px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/bjkU3DLsqM.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/bjkU3DLsqM.png')
+    no-repeat center;
   background-size: cover;
 }
 
-/* ============================================
-   검색 결과 섹션
-============================================ */
+/* 결과 섹션 */
 .results-section {
   position: relative;
-  top: 30px;
+  top: 0;
   right: 7px;
   width: 375px;
   min-height: 300px;
@@ -495,7 +616,149 @@ button {
   background: #ffffff;
 }
 
-/* 상담소 카드 */
+.header-summary {
+  margin-bottom: 12px;
+}
+
+.page-title {
+  margin: 0;
+  font-family: Pretendard, var(--default-font-family);
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.page-subtitle {
+  margin: 6px 0 10px 0;
+  font-family: Pretendard, var(--default-font-family);
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* 요약 박스 */
+.summary-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+
+.summary-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.summary-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.summary-refresh {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #eef2ff;
+  color: #4f46e5;
+  cursor: pointer;
+}
+
+/* 카테고리 (병원/약국/전체) */
+.category-filter-row {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.category-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+  color: #4b5563;
+}
+
+.category-btn.active {
+  background: #4a62dd;
+  color: #ffffff;
+  border-color: #4a62dd;
+}
+
+/* 전체/큰 병원 토글 */
+.big-filter-row {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+}
+
+.big-filter-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+  color: #4b5563;
+}
+
+.big-filter-btn.active {
+  background: #4a62dd;
+  color: #ffffff;
+  border-color: #4a62dd;
+}
+
+.info-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.error-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+.fallback-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef9c3;
+  border: 1px solid #facc15;
+}
+
+.fallback-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: #854d0e;
+  margin: 0 0 4px 0;
+}
+
+.fallback-sub {
+  font-size: 12px;
+  color: #92400e;
+  margin: 0;
+}
+
+/* 카드 */
+.cards-wrapper {
+  margin-top: 6px;
+}
+
 .counseling-card {
   width: 100%;
   padding: 20px;
@@ -551,7 +814,8 @@ button {
   display: inline-block;
   width: 9px;
   height: 12px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/OeCRPTBYB4.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/OeCRPTBYB4.png')
+    no-repeat center;
   background-size: cover;
 }
 
@@ -561,23 +825,6 @@ button {
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
-  white-space: nowrap;
-}
-
-.status-badge {
-  flex-shrink: 0;
-  padding: 5px 12px;
-  background: #dcfce7;
-  border-radius: 9999px;
-  height: fit-content;
-}
-
-.status-text {
-  color: #15803d;
-  font-family: Pretendard, var(--default-font-family);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 14px;
   white-space: nowrap;
 }
 
@@ -602,13 +849,18 @@ button {
   transition: all 0.2s ease;
 }
 
-.phone-button:hover {
+.phone-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.phone-button:hover:not([disabled]) {
   background: rgba(74, 98, 221, 1);
   transform: translateY(-1px);
   box-shadow: 2px 4px 6px 0 rgba(0, 0, 0, 0.1);
 }
 
-.phone-button:active {
+.phone-button:active:not([disabled]) {
   transform: translateY(0);
 }
 
@@ -631,7 +883,8 @@ button {
 .phone-icon {
   width: 14px;
   height: 14px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/pceOwzmAMJ.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/pceOwzmAMJ.png')
+    no-repeat center;
   background-size: cover;
 }
 
@@ -685,7 +938,8 @@ button {
 .directions-icon {
   width: 14px;
   height: 14px;
-  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/UHPKx6GoL9.png') no-repeat center;
+  background: url('https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-10-17/UHPKx6GoL9.png')
+    no-repeat center;
   background-size: cover;
 }
 
@@ -698,43 +952,27 @@ button {
   white-space: nowrap;
 }
 
-/* 반응형 디자인 (선택사항) */
-@media (max-width: 375px) {
-  .main-container {
-    width: 100%;
-  }
-
-  .location-permission-alert,
-  .map-section,
-  .results-section {
-    width: 100%;
-  }
-
-  .search-wrapper {
-    width: calc(100% - 32px);
-  }
-}
-
-/* 페이지네이션 스타일 */
+/* 페이지네이션 스타일 (심플) */
 .pagination {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  top:5px;
-  gap: 8px;
-  margin-top: 16px;
+  top: 15px;
+  gap: 10px;
+  margin: 12px 0 28px; /* 아래 여유 조금 더 */
 }
 
 .page-btn {
   padding: 6px 12px;
   background: #f3f4f6;
   border: none;
-  border-radius: 4px;
+  border-radius: 16px;
   cursor: pointer;
   font-family: var(--default-font-family);
-  font-size: 14px;
+  font-size: 13px;
+  color: #374151;
 }
 
 .page-btn:disabled {
@@ -742,8 +980,25 @@ button {
   opacity: 0.5;
 }
 
-.page-btn.active {
-  background: #4a62dd;
-  color: #ffffff;
+.page-info {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* 반응형 */
+@media (max-width: 375px) {
+  .main-container {
+    width: 100%;
+  }
+
+  .map-section,
+  .results-section {
+    width: 100%;
+  }
+
+  .search-wrapper {
+    left: 16px;
+    width: calc(100% - 32px);
+  }
 }
 </style>

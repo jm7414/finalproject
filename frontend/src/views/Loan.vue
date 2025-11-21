@@ -40,7 +40,10 @@
       <p v-if="loading" class="info-text">복지 대출 정보를 불러오는 중입니다...</p>
       <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
 
-      <div v-if="!loading && !errorMessage && elderLoanList.length === 0" class="fallback-box">
+      <div
+        v-if="!loading && !errorMessage && elderLoanList.length === 0"
+        class="fallback-box"
+      >
         <p class="fallback-main">
           노인·어르신을 대상으로 한 대출형 복지서비스를 찾지 못했어요.
         </p>
@@ -57,7 +60,7 @@
 
       <article
         v-for="item in elderLoanList"
-        :key="item.servId"
+        :key="item.servId || item.servNm"
         class="loan-card"
       >
         <header class="card-header">
@@ -103,12 +106,15 @@
     </section>
 
     <!-- 노인 조건이 없을 경우: 전체 대출 리스트 -->
-    <section v-if="!loading && !errorMessage && elderLoanList.length === 0 && loanList.length > 0" class="list-section">
+    <section
+      v-if="!loading && !errorMessage && elderLoanList.length === 0 && loanList.length > 0"
+      class="list-section"
+    >
       <h2 class="section-title">전체 대출·이자지원 복지서비스</h2>
 
       <article
         v-for="item in loanList"
-        :key="item.servId"
+        :key="item.servId || item.servNm"
         class="loan-card"
       >
         <header class="card-header">
@@ -210,13 +216,13 @@ const resolveGovName = (item) => {
   )
 }
 
-// 문의전화 정리
+// 문의전화 정리 (Benefit.vue와 필드 맞춤)
 const resolveTel = (item) => {
   return (
-    item.cnsgnInstTelno || // 위탁기관 전화
-    item.chrDeptTelno || // 담당부서 전화
-    item.telNo || // 기타
-    item.telno ||
+    item.cnsgnInsttOfcTelNo || // 수탁기관 전화번호
+    item.jurMnofTelNo ||       // 소관부처 전화번호
+    item.jurMnofContcNo ||     // 소관부처 연락처
+    item.telNo ||              // 기타 tel 필드
     '지자체 홈페이지 또는 콜센터로 문의해주세요.'
   )
 }
@@ -229,32 +235,35 @@ const loadLoanServices = async () => {
   loanList.value = []
 
   try {
-    // 지역 제한 없이 전국 단위에서 검색 (필요하면 localGovNm 파라미터 제거 또는 ""로)
+    // 지역 제한 없이 전국 단위에서 검색
     const res = await axios.get('/api/support/welfare', {
       params: {
-        // localGovNm: '',   // 전국 검색 느낌 (백엔드에서 파라미터 비워서 처리 가능)
         pageNo: 1,
-        numOfRows: 1000 // 가능하면 최대치, 안 되면 500 정도로
+        numOfRows: 1000
       }
     })
 
-    const apiResult = res.data
-    if (!apiResult || apiResult.upstreamStatus !== 200 || !apiResult.xml) {
-      console.warn('복지서비스 응답 이상:', apiResult)
-      errorMessage.value = '복지 대출 정보를 불러오지 못했습니다.'
+    let data = res.data
+
+    // 문자열로 내려오는 경우 처리
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data)
+      } catch (e) {
+        console.error('[Loan.vue] 복지서비스 JSON 파싱 실패(문자열):', e, data)
+        errorMessage.value = '복지서비스 데이터 형식이 올바르지 않습니다.'
+        return
+      }
+    }
+
+    // 백엔드에서 에러 래핑해 보낸 경우
+    if (data && data.success === false) {
+      console.warn('[Loan.vue] 복지서비스 응답 에러:', data)
+      errorMessage.value = data.message || '복지 대출 정보를 불러오지 못했습니다.'
       return
     }
 
-    let json
-    try {
-      json = typeof apiResult.xml === 'string' ? JSON.parse(apiResult.xml) : apiResult.xml
-    } catch (e) {
-      console.error('복지서비스 JSON 파싱 실패:', e)
-      errorMessage.value = '복지서비스 데이터 형식이 올바르지 않습니다.'
-      return
-    }
-
-    const list = json.servList || []
+    const list = Array.isArray(data.servList) ? data.servList : []
 
     // 1차: 대출 관련 필터
     const loanCandidates = list.filter(isLoanService)
