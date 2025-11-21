@@ -39,7 +39,7 @@
           <div class="addr">{{ p.road_address_name || p.address_name }}</div>
         </div>
         <div class="item-right">
-          <button class="arrive">도착</button>
+          <button class="arrive">{{ activeField === 'start' ? '출발' : '도착' }}</button>
         </div>
       </li>
       <li v-if="!currentResults.length" class="empty">검색 결과가 없습니다. 검색어를 입력하고 Enter를 눌러보세요.</li>

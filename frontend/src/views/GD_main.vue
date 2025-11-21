@@ -926,7 +926,7 @@ function typeOfMissing() {
 
 .activity-text {
   font-family: 'SUIT', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.63rem;
   font-weight: 400;
   text-align: center;
   color: #666;

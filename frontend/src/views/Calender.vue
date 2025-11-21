@@ -681,6 +681,9 @@ onMounted(() => {
   overflow-x: hidden;
 }
 
+.calendar-page::-webkit-scrollbar {
+  display: none;
+}
 
 /* 캘린더 섹션 */
 .calendar-section {
@@ -895,7 +898,7 @@ onMounted(() => {
 /* 플로팅 액션 버튼 */
 .fab {
   position: fixed;
-  bottom: 110px; /* 푸터와 적절한 간격 */
+  bottom: 140px; /* 푸터와 적절한 간격 */
   right: calc((100vw - 375px) / 2 + 20px);
   width: 56px;
   height: 56px;
@@ -909,7 +912,7 @@ onMounted(() => {
   justify-content: center;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   transition: all 0.2s;
-  z-index: 1001;
+  z-index: 1000;
 }
 
 /* 작은 화면에서는 화면 오른쪽에 고정 */
@@ -945,7 +948,7 @@ onMounted(() => {
 .modal-container {
   background: #ffffff;
   border-radius: 16px;
-  width: 100%;
+  width: 348px;
   max-width: 500px;
   max-height: 80vh;
   overflow: hidden;
