@@ -106,26 +106,25 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import axios from 'axios';
 
 const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891';
 const mapContainer = ref(null);
-
-// 맨 위에 위치정보 허용누르면 true로 바뀌고 없어지게 할 거
-const isAllowed = ref(false)
-
-// 여기는 기본적으로 검색했을떄 지도에 마커뜨고 infowindow는 마커 클릭하면 가게이름 나오는거
+const isAllowed = ref(false);
 let map;
 let geocoder = null;
 let markers = [];
 let infowindow = null;
+let myMarker = null; // 내 기준점 마커
 
-// 이거로 검색 키워드 넣을 수 있게 할거임
 const content = ref('');
+const places = ref([]);
 
-// 검색결과 나타내기
-const places = ref([])
+const BASE_LAT = 37.494364;
+const BASE_LNG = 126.887661;
+const BASE_ZOOM = 9;
 
-// 처음 들어오면 지도부터 불러와
+// ---------- 지도 및 데이터 초기화 ----------
 onMounted(() => {
   const script = document.createElement('script');
   script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&libraries=services&autoload=false`;
@@ -135,58 +134,141 @@ onMounted(() => {
     window.kakao.maps.load(() => {
       geocoder = new window.kakao.maps.services.Geocoder();
       map = new window.kakao.maps.Map(mapContainer.value, {
-        center: new window.kakao.maps.LatLng(37.494382, 126.887690),
-        level: 6
+        center: new window.kakao.maps.LatLng(BASE_LAT, BASE_LNG),
+        level: BASE_ZOOM
       });
       infowindow = new window.kakao.maps.InfoWindow({ zIndex: 1 });
-      content.value = '상담소'
-      searchNearby(content.value)
-      content.value = ''
+
+      // ✅ (3) 기준점 마커 강조
+      if (myMarker) myMarker.setMap(null); // 중복방지
+      myMarker = new window.kakao.maps.Marker({
+        map,
+        position: new window.kakao.maps.LatLng(BASE_LAT, BASE_LNG),
+        image: new window.kakao.maps.MarkerImage(
+          'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', // 눈에 띄는 아이콘(스타)
+          new window.kakao.maps.Size(24, 35)
+        )
+      });
+
+      loadSeoulAndGyeonggi();
     });
   };
 });
 
+// ---------- 검색 -----------
 function searchNearby() {
   markers.forEach(marker => marker.setMap(null));
   markers = [];
-
-  const ps = new window.kakao.maps.services.Places();
-  const center = map.getCenter();
-  const options = {
-    location: center,
-    radius: 1000,
-    sort: window.kakao.maps.services.SortBy.DISTANCE
-  };
-
-
-  ps.keywordSearch(content.value, (data, status) => {
-    console.log(`응답 -> ${JSON.stringify(data)}`)
-    if (status === window.kakao.maps.services.Status.OK) {
-      const bounds = new window.kakao.maps.LatLngBounds();
-      // 반환된 데이터로 배열 초기화
-      places.value = data.map(place => ({
-        ...place
-      }));
-
-      // 마커 표시
-      data.forEach(place => {
-        displayMarker(place);
-        bounds.extend(new window.kakao.maps.LatLng(place.y, place.x));
-      });
-      map.setBounds(bounds);
-    }
-  }, options);
+  if (content.value.trim()) {
+    loadPublicData(content.value);
+  } else {
+    loadSeoulAndGyeonggi();
+  }
 }
 
+// ---------- 서울+경기 통합 요청 ----------
+async function loadSeoulAndGyeonggi() {
+  try {
+    const [gyeonggiResp, seoulResp] = await Promise.all([
+      axios.get('/api/heart-care/centers', { params: { page: 1, perPage: 30, keyword: '경기도' } }),
+      axios.get('/api/heart-care/centers', { params: { page: 1, perPage: 30, keyword: '서울' } })
+    ]);
+    const merged = [...(gyeonggiResp.data.data || []), ...(seoulResp.data.data || [])];
+    const uniqueMap = new Map();
+    merged.forEach(center => {
+      const key = `${center["주소"]}_${center["기관명"]}`;
+      uniqueMap.set(key, center);
+    });
+    const uniqueCenters = Array.from(uniqueMap.values());
 
+    places.value = uniqueCenters.map(center => ({
+      place_name: center["기관명"],
+      address_name: center["주소"],
+      road_address_name: center["주소"],
+      phone: center["전화번호"] || '-',
+      category_name: center["기관구분"],
+      x: 0,
+      y: 0,
+      distance: 0
+    }));
+    convertAddressesToCoordinates();
+  } catch (error) {
+    console.error('공공데이터 조회 실패:', error);
+    alert('상담소 정보를 불러오는데 실패했습니다.');
+  }
+}
+
+async function loadPublicData(keyword) {
+  try {
+    const response = await axios.get('/api/heart-care/centers', {
+      params: { page: 1, perPage: 100, keyword: keyword }
+    });
+    if (response.data.success) {
+      places.value = response.data.data.map(center => ({
+        place_name: center["기관명"],
+        address_name: center["주소"],
+        road_address_name: center["주소"],
+        phone: center["전화번호"] || '-',
+        category_name: center["기관구분"],
+        x: 0,
+        y: 0,
+        distance: 0
+      }));
+      convertAddressesToCoordinates();
+    }
+  } catch (error) {
+    console.error('공공데이터 조회 실패:', error);
+    alert('상담소 정보를 불러오는데 실패했습니다.');
+  }
+}
+
+// ---------- 좌표변환/거리 정렬(모두 변환 후) ----------
+function convertAddressesToCoordinates() {
+  if (!window.kakao || !window.kakao.maps) return;
+  const geocoder = new window.kakao.maps.services.Geocoder();
+  let processedCount = 0;
+
+  markers.forEach(marker => marker.setMap(null)); // 마커 초기화
+  markers = [];
+
+  places.value.forEach((place) => {
+    if (!place.address_name || !place.address_name.trim()) {
+      console.warn('빈 주소로 변환 시도:', place);
+      return;
+    }
+    geocoder.addressSearch(place.address_name, (result, status) => {
+      processedCount++;
+      if (status === window.kakao.maps.services.Status.OK) {
+        place.x = result[0].x;
+        place.y = result[0].y;
+        // (1,2) 고정 기준점에서 거리계산
+        const baseCenter = new window.kakao.maps.LatLng(BASE_LAT, BASE_LNG);
+        const placePosition = new window.kakao.maps.LatLng(place.y, place.x);
+        const polyline = new window.kakao.maps.Polyline({ path: [baseCenter, placePosition] });
+        place.distance = polyline.getLength();
+        displayMarker(place);
+      } else {
+        console.warn(`주소 변환 실패: ${place.address_name}`);
+      }
+      if (processedCount === places.value.length) {
+        // (2) 지도 비율 자동 조정(setBounds) 대신
+        map.setCenter(new window.kakao.maps.LatLng(BASE_LAT, BASE_LNG));
+        map.setLevel(BASE_ZOOM);
+
+        places.value.sort((a, b) => a.distance - b.distance); // 가까운순
+      }
+    });
+  });
+}
+
+// ---------- 마커 표시 ----------
 function displayMarker(place) {
+  if (!place.x || !place.y) return;
   const marker = new window.kakao.maps.Marker({
     map,
     position: new window.kakao.maps.LatLng(place.y, place.x)
   });
-
   markers.push(marker);
-
   window.kakao.maps.event.addListener(marker, 'click', () => {
     infowindow.setContent(
       `<div style="padding:5px;font-size:12px;">${place.place_name}</div>`
@@ -195,38 +277,28 @@ function displayMarker(place) {
   });
 }
 
-
-function allow() {
-  isAllowed.value = true
-}
-
+function allow() { isAllowed.value = true; }
 function call(phone) {
-  window.open(`tel:${phone}`);
+  if (phone && phone !== '-') window.open(`tel:${phone}`);
+  else alert('전화번호 정보가 없습니다.');
+}
+function findRoute(placeName) {
+  window.open(`https://map.kakao.com/link/search/${placeName}`);
 }
 
-function findRoute(x) {
-  // 카카오 길찾기 페이지로 이동 예시
-  window.open(`https://map.kakao.com/link/search/${x}`);
-}
-
-
-// pagination
 const currentPage = ref(1);
 const itemsPerPage = 5;
-
-const totalPages = computed(() => {
-  return Math.ceil(places.value.length / itemsPerPage);
-});
-
+const totalPages = computed(() => Math.ceil(places.value.length / itemsPerPage));
 const paginatedPlaces = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return places.value.slice(start, start + itemsPerPage);
 });
-
-
-
-
 </script>
+
+
+
+
+
 
 <style scoped>
 /* 기본 설정 */
@@ -253,7 +325,7 @@ button {
   position: relative;
   width: 375px;
   min-height: 100vh;
-  margin: 0 auto;
+  margin-top: -15px;
   background: #ffffff;
   overflow: hidden;
 }

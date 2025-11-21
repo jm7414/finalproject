@@ -18,10 +18,11 @@
         </h5>
         
         <div class="search-section">
+          <!-- 지현 수정: type="number" -> type="text", placeholder 변경 -->
           <input 
-            v-model="searchUserNo" 
-            type="number" 
-            placeholder="이웃의 사용자 번호를 입력하세요"
+            v-model="searchUserId" 
+            type="text" 
+            placeholder="이웃의 사용자 ID를 입력하세요"
             class="form-control search-input"
             @keyup.enter="addFriend"
           />
@@ -39,7 +40,8 @@
 
         <div class="info-box mt-3">
           <i class="bi bi-info-circle-fill me-2"></i>
-          이웃의 사용자 번호를 입력하여 친구를 추가할 수 있습니다.
+          <!-- 지현 수정: 안내 문구 변경 -->
+          이웃의 사용자 ID를 입력하여 친구를 추가할 수 있습니다.
         </div>
       </div>
     </div>
@@ -83,10 +85,12 @@
             </div>
             <div class="friend-info">
               <h6 class="friend-name">{{ friend.name }}</h6>
-              <p class="friend-detail">사용자 번호: {{ friend.userNo }}</p>
+              <!-- 지현 수정: 사용자 ID 표시 추가 -->
+              <p class="friend-detail">사용자 ID: {{ friend.userId || '정보 없음' }}</p>
               <p class="friend-detail">전화번호: {{ friend.phoneNumber || '미등록' }}</p>
             </div>
-            <button @click="removeFriend(friend.userNo)" class="btn-delete">
+            <!-- 지현 수정: 삭제 시 userId 전달 (백엔드가 userId 기반으로 변경됨) -->
+            <button @click="removeFriend(friend.userId)" class="btn-delete">
               <i class="bi bi-trash-fill"></i>
             </button>
           </div>
@@ -103,22 +107,25 @@ import axios from 'axios'
 
 const router = useRouter()
 
-const searchUserNo = ref('')
+// 지현 수정: searchUserNo -> searchUserId로 변경
+const searchUserId = ref('')
 const friends = ref([])
 const loading = ref(false)
 const message = ref(null)
 
 /* ===== 친구 추가 ===== */
 const addFriend = async () => {
-  if (!searchUserNo.value) {
-    showMessage('사용자 번호를 입력해주세요.', 'error')
+  // 지현 수정: searchUserId 체크
+  if (!searchUserId.value) {
+    showMessage('사용자 ID를 입력해주세요.', 'error')
     return
   }
 
   try {
-    await axios.post(`/NH/api/neighbor/friends/${searchUserNo.value}`)
+    // 지현 수정: API 경로를 userId 기반으로 변경
+    await axios.post(`/NH/api/neighbor/friends/${searchUserId.value}`)
     showMessage('친구가 추가되었습니다! 🎉', 'success')
-    searchUserNo.value = ''
+    searchUserId.value = ''
     loadFriends()
   } catch (error) {
     showMessage(error.response?.data?.message || '친구 추가에 실패했습니다.', 'error')
@@ -139,11 +146,13 @@ const loadFriends = async () => {
 }
 
 /* ===== 친구 삭제 ===== */
-const removeFriend = async (userNo) => {
+// 지현 수정: 파라미터를 userId로 변경
+const removeFriend = async (userId) => {
   if (!confirm('정말 삭제하시겠습니까?')) return
 
   try {
-    await axios.delete(`/NH/api/neighbor/friends/${userNo}`)
+    // 지현 수정: API 경로를 userId 기반으로 변경
+    await axios.delete(`/NH/api/neighbor/friends/${userId}`)
     showMessage('친구가 삭제되었습니다.', 'success')
     loadFriends()
   } catch (error) {

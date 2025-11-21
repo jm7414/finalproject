@@ -120,41 +120,35 @@
       </button>
     </div>
 
+    <!-- 지현 수정: 초대 모달 - 친구 목록 제거, 사용자 ID 입력으로 변경 -->
     <!-- 초대 모달 -->
     <div v-if="showInviteModal" class="modal-overlay" @click="showInviteModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>친구 초대</h3>
+          <h3>사용자 초대</h3>
           <button @click="showInviteModal = false" class="btn-close">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
 
         <div class="modal-body">
-          <div v-if="loadingFriends" class="loading-state">
-            <div class="spinner"></div>
-            <p>친구 목록 조회 중...</p>
-          </div>
-
-          <div v-else-if="invitableFriends.length === 0" class="empty-state">
-            <p>초대할 수 있는 친구가 없습니다</p>
-          </div>
-
-          <div v-else class="friend-list">
-            <div v-for="friend in invitableFriends" :key="friend.userNo" class="friend-item">
-              <div class="friend-info">
-                <div class="friend-avatar">
-                  <img v-if="friend.profilePhoto" :src="friend.profilePhoto" alt="프로필" />
-                  <div v-else class="avatar-placeholder small">
-                    {{ friend.name.charAt(0) }}
-                  </div>
-                </div>
-                <div class="friend-name">{{ friend.name }}</div>
-              </div>
-              <button @click="inviteFriend(friend.userNo)" class="btn-invite-friend">
-                초대
-              </button>
-            </div>
+          <div class="invite-form">
+            <label class="form-label">초대할 사용자 ID</label>
+            <input 
+              v-model="inviteUserId" 
+              type="text" 
+              placeholder="사용자 ID를 입력하세요"
+              class="form-input"
+              @keyup.enter="inviteUser"
+            />
+            <p class="form-hint">
+              <i class="bi bi-info-circle-fill me-1"></i>
+              초대하려는 사용자의 ID를 입력해주세요
+            </p>
+            <button @click="inviteUser" class="btn-invite-submit">
+              <i class="bi bi-person-plus-fill me-1"></i>
+              초대하기
+            </button>
           </div>
         </div>
       </div>
@@ -184,25 +178,20 @@ const plazaInfo = ref({
 
 const allMembers = ref([])
 const activeMembers = ref([])
-const myFriends = ref([])
+// 지현 수정: myFriends 제거, inviteUserId 추가
+const inviteUserId = ref('')
 const isOwner = ref(false)
 const loadingMembers = ref(false)
 const loadingActive = ref(false)
-const loadingFriends = ref(false)
 const showInviteModal = ref(false)
 
 let map = null
 let circle = null
 let markers = []
 let refreshInterval = null
-let locationInterval = null //추가
+let locationInterval = null
 
 const activeMemberCount = computed(() => activeMembers.value.length)
-
-const invitableFriends = computed(() => {
-  const memberUserNos = allMembers.value.map(m => m.userNo)
-  return myFriends.value.filter(f => !memberUserNos.includes(f.userNo))
-})
 
 onMounted(async () => {
   await initMap()
@@ -394,28 +383,26 @@ async function refreshActiveMembers() {
   await loadActiveMembers()
 }
 
-// 친구 초대 모달 열기
-async function openInviteModal() {
+// 지현 수정: 초대 모달 열기 - 친구 목록 조회 제거
+// 초대 모달 열기
+function openInviteModal() {
   showInviteModal.value = true
-  loadingFriends.value = true
-
-  try {
-    const response = await axios.get('/NH/api/neighbor/friends')
-    myFriends.value = response.data
-  } catch (error) {
-    console.error('친구 목록 조회 실패:', error)
-    alert('친구 목록을 불러올 수 없습니다.')
-  } finally {
-    loadingFriends.value = false
-  }
+  inviteUserId.value = ''
 }
 
-// 친구 초대
-async function inviteFriend(friendUserNo) {
+// 지현 수정: 사용자 ID로 초대하는 함수로 변경
+// 사용자 초대
+async function inviteUser() {
+  if (!inviteUserId.value.trim()) {
+    alert('사용자 ID를 입력해주세요.')
+    return
+  }
+
   try {
-    await axios.post(`/NH/api/neighbor/plazas/${plazaNo.value}/invite/${friendUserNo}`)
+    await axios.post(`/NH/api/neighbor/plazas/${plazaNo.value}/invite/${inviteUserId.value}`)
     alert('초대가 완료되었습니다! 🎉')
     showInviteModal.value = false
+    inviteUserId.value = ''
     await loadAllMembers()
   } catch (error) {
     console.error('초대 실패:', error)
@@ -451,7 +438,6 @@ function goBack() {
 }
 </script>
 
-
 <style scoped>
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
@@ -465,7 +451,7 @@ function goBack() {
   overflow-y: auto;   
   background: #f9fafb;
   padding: 0;
-  padding-bottom: 20px; 
+  padding-bottom: 70px; 
   margin-top: -15px;
   scrollbar-width: none;
 }
@@ -797,7 +783,7 @@ function goBack() {
   background: white;
   border-radius: 16px;
   width: 100%;
-  max-width: 400px;
+  max-width: 350px;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
@@ -843,57 +829,63 @@ function goBack() {
   overflow-y: auto;
 }
 
-.friend-list {
+/* 지현 수정: 초대 폼 스타일 추가 */
+.invite-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.friend-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 10px;
-}
-
-.friend-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.friend-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #a7cc10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.friend-name {
-  font-size: 15px;
+.form-label {
+  font-size: 14px;
   font-weight: 600;
   color: #111827;
+  margin-bottom: -8px;
 }
 
-.btn-invite-friend {
-  padding: 6px 16px;
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #c2d477;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #a7cc10;
+  box-shadow: 0 0 0 3px rgba(167, 204, 16, 0.1);
+}
+
+.form-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: -8px 0 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.btn-invite-submit {
+  width: 100%;
+  padding: 14px;
   background: #a7cc10;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.btn-invite-friend:hover {
+.btn-invite-submit:hover {
   background: #8fb80e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(167, 204, 16, 0.3);
 }
 </style>
