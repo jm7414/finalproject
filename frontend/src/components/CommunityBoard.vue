@@ -323,8 +323,8 @@ function goToPostWrite() {
 /* 글쓰기 버튼 (FAB) */
 .create-post-fab {
   position: fixed;
-  bottom: 80px; /* 하단 탭 위에 위치 (탭 높이에 따라 조정) */
-  right: 20px;
+  bottom: 140px; /* 하단 탭 위에 위치 (탭 높이에 따라 조정) */
+  right: calc((100vw - 375px) / 2 + 20px);
   width: 56px;
   height: 56px;
   border-radius: 50%;
