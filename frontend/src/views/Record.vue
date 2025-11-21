@@ -38,6 +38,41 @@
       </div>
     </div>
 
+    <!-- ✅ 오늘 기록 완료 모달 -->
+    <div v-if="showCompleteModal" class="record-modal-backdrop">
+      <div class="record-modal">
+        <div class="record-modal-header">
+          <div class="record-modal-icon">
+            <span>✅</span>
+          </div>
+          <div class="record-modal-title">오늘의 기록이 완료되었습니다</div>
+          <div class="record-modal-sub">
+            남긴 내용을 바탕으로<br />
+            AI 보고서가 업데이트됩니다.
+          </div>
+        </div>
+
+        <div class="record-modal-body">
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn flex-fill record-btn-secondary"
+              @click="closeCompleteModal"
+            >
+              수정하기
+            </button>
+            <button
+              type="button"
+              class="btn flex-fill record-btn-primary"
+              @click="goHomeAfterComplete"
+            >
+              홈으로 가기
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 진행률 -->
     <div class="px-1">
       <div class="d-flex justify-content-between align-items-center mb-1">
@@ -444,6 +479,8 @@ const isCurrentStepComplete = computed(() => {
 
 /* 이미 오늘 기록이 있는지 관련 상태 */
 const showAlreadyModal = ref(false)
+/* 오늘 기록 완료 모달 상태 */
+const showCompleteModal = ref(false)
 
 /* helpers */
 function setAnswer(q, v) {
@@ -539,8 +576,8 @@ async function submit() {
     })
     if (!res.ok) throw new Error(`저장 실패(${res.status})`)
 
-    alert('오늘의 기록이 저장되었습니다.')
-    router.push('/') // 저장 후 홈으로
+    // ✅ alert 대신 완료 모달 표시
+    showCompleteModal.value = true
   } catch (e) {
     alert('[저장 오류] ' + (e?.message || e))
   }
@@ -574,7 +611,7 @@ onMounted(async () => {
   }
 })
 
-/* 모달 버튼 동작 */
+/* 모달 버튼 동작 (이미 기록 있음) */
 function cancelEdit() {
   showAlreadyModal.value = false
   router.back() // 필요하면 router.push('/') 로 바꿔도 됨
@@ -583,10 +620,19 @@ function confirmEdit() {
   showAlreadyModal.value = false
   // 프리필된 상태에서 그냥 계속 작성/수정
 }
+
+/* 모달 버튼 동작 (기록 완료) */
+function closeCompleteModal() {
+  showCompleteModal.value = false
+}
+function goHomeAfterComplete() {
+  showCompleteModal.value = false
+  router.push('/') // 기존 동작과 동일하게 홈으로 이동
+}
 </script>
 
 <style scoped>
-/* ✅ 오늘 기록 있음 모달 스타일 */
+/* ✅ 오늘 기록 있음/완료 모달 공통 스타일 */
 .record-modal-backdrop {
   position: fixed;
   inset: 0;

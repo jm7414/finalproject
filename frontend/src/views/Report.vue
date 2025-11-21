@@ -234,9 +234,6 @@
                         <div class="display-6 fw-bold score-display">
                             {{ totalScore0to100 }}
                         </div>
-                        <div class="small text-secondary">
-                            이전 대비 {{ signed(deltaScore) }}
-                        </div>
                     </div>
                 </div>
             </div>
