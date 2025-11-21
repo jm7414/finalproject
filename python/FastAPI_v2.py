@@ -32,17 +32,6 @@ import random
 import serial
 import threading
 
-# 아두이노 센서 추가부분 이거는 안꽂혀있어도 괜찮음
-try:
-    ser = serial.Serial('COM3', 9600, timeout=1)
-    thread = threading.Thread(target=monitor_sensor, daemon=True)
-    thread.start()
-    print("✅ 아두이노 센서 모니터링 시작")
-except serial.SerialException as e:
-    print(f"⚠️ 아두이노 연결 실패: {e}")
-    ser = None
-    pir_state = -1  # 센서 비활성 상태
-
 def monitor_sensor():
     global pir_state
     while True:
@@ -54,6 +43,19 @@ def monitor_sensor():
                     print("Movement detected! Triggering event.")
                     # 여기서 원하는 API 호출 또는 동작 실행 가능
                 pir_state = val
+
+# 아두이노 센서 추가부분 이거는 안꽂혀있어도 괜찮음
+try:
+    ser = serial.Serial('COM3', 9600, timeout=1)
+    thread = threading.Thread(target=monitor_sensor, daemon=True)
+    thread.start()
+    print("✅ 아두이노 센서 모니터링 시작")
+except serial.SerialException as e:
+    print(f"⚠️ 아두이노 연결 실패: {e}")
+    ser = None
+    pir_state = -1  # 센서 비활성 상태
+
+
 
 # =============================================================================
 # Configuration
