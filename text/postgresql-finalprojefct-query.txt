@@ -437,11 +437,14 @@ INSERT INTO users (user_id, user_pw, name, birth_date, phone_number, invitation_
 ('1', '$2a$10$xq0wJw38x3VbFJgbWf1Ms.4nIHMwiedUyK8Psi50KQegFACEHZybC', '이재빈', '1965-03-15', '010-1234-5678', NULL, 1, 0, 1),
 ('2', '$2a$10$AfUiLvowiy9siSIXARErweg6HJBDycKcjJJwc8z7ZCY4vac3XQ.Cy', '이정민', '1968-07-22', '010-2345-6789', NULL, 1, 0, 1),
 ('3', '$2a$10$1.0xJFOsl6Nwc/bKBZRCeuPCbPfbFhFreyiIby2fYlH2wVaaxt8V.', '박지겸', '1970-11-08', '010-3456-7890', NULL, 1, 0, 1),
-('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 0, 3),
+('4', '$2a$10$eVDtK3awsigHOnLBQnpQvu/hI9VjZDTPFdkP4M3cbtXIKuHVk0dA2', '서지현', '1947-05-30', '010-4567-8901', 'K7M2pQ9x', 1, 1, 3),
 ('5', '$2a$10$VouPFhIzSF0KidzGbEeu1e1AR7TtHt77VmdqcWXzhATMZFpL1nREK', '이주형', '1972-09-18', '010-5678-9012', NULL, 0, 0, 1),
 ('6', '$2a$10$J4wpcY/coYYLf1iTEvhVauhQtfUpMnOybtKV4ywTzvI5o2JYvxF3i', '김병욱', '1955-02-14', '010-6789-0123', 'A8nB5vL1', 0, 0, 2),
 ('7', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '고영준', '1971-01-07', '010-5647-5416', NULL, 0, 0, 4),
-('8', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '김이웃', '1985-05-20', '010-1111-2222', NULL, 0, 0, 4);
+('8', '$2a$10$1M.O5GVTBy4.bzk7OdGrGeWplqd1wz5mIosWwbA3HBbTb8qhkeXy.', '김이웃', '1985-05-20', '010-1111-2222', NULL, 0, 0, 4),
+-- 시연용 아이디
+('12', '$2a$10$3508X86rNNGRL2b68AsLIuwUf5vdqTSQHKas9G7BVKuY1AGGOvPV2', 'LX', '2025-06-23', '010-2025-0623', NULL, 0, 0, 1),
+('13', '$2a$10$JBSbCh2dDygIyKuDRN34kuPa8WK2muR2h02.kZK0vIiMteK5GTcBO', '랜디', '2025-11-28', '010-2025-1128','32049506',0, 1, 2);
 
 -- 샘플 데이터: plaza + safe_zone
 INSERT INTO plaza (plaza_no, plaza_name, member_name, user_no) VALUES
@@ -463,12 +466,15 @@ INSERT INTO post (title, user_no, content, view_count, image_path, plaza_no, not
 ('경1 광장 공지: 건강 강좌 안내', 7, '다음 주 수요일 오전 10시에 치매 예방 건강 강좌가 있습니다.', 3, NULL, 1, '공지');
 
 INSERT INTO missing_post (reporter_user_no, patient_user_no, photo_path, description) VALUES
-(1, 4, '/images/missing_grandma.jpg', '성함: 서지현 (78세)\n실종일시: 2025년 10월 9일 오전 9시경\n실종장소: 안산시 단원구 중앙동 인근\n인상착의: 연한 회색 가디건, 검정색 바지, 흰색 운동화 착용.');
+(1, 4, '/images/missing_grandma.jpg', '성함: 서지현 (78세)\n실종일시: 2025년 10월 9일 오전 9시경\n실종장소: 안산시 단원구 중앙동 인근\n인상착의: 연한 회색 가디건, 검정색 바지, 흰색 운동화 착용.'),
+(9, 10, 'C:\final-project\python\landy.jpg', '성함: 랜디 (65세)\n실종일시: 2025년 11월 28일 오전 11시경\n실종장소: 서울시 구로구 구로동 인근\n인상착의: 빨간색 스카프, 파란색 가방 착용.')
+;
 
 INSERT INTO search_Together (missing_post_id, user_no) VALUES (1, 2);
 
 INSERT INTO guardian_patient_connection (patient_no, guardian1_no, guardian2_no, guardian3_no) VALUES
 (4, 1, 2, 3),
+(10,9,NULL, NULL),
 (6, 5, NULL, NULL);
 
 SELECT setseed(0.42);
@@ -605,8 +611,75 @@ SELECT
 FROM dates d
 ON CONFLICT (user_no, record_date) DO NOTHING;
 
+-- 13번 환자(랜디) 기록 생성
+WITH params AS (
+    SELECT
+        10::int           AS user_no,
+        DATE '2024-01-01' AS start_date,
+        DATE '2025-11-27' AS end_date
+),
+dates AS (
+    SELECT p.user_no, gs::date AS record_date
+    FROM params p
+    JOIN generate_series((SELECT start_date FROM params),
+                         (SELECT end_date   FROM params),
+                         INTERVAL '1 day') gs ON TRUE
+)
+INSERT INTO record (user_no, record_date, content)
+SELECT
+    d.user_no,
+    d.record_date,
+    jsonb_build_object(
+        'act', jsonb_build_object(
+            'fall',        (random() < 0.05),
+            'dress',       (ARRAY['혼자','도움 필요'])[1 + floor(random()*2)],
+            'toilet',      (ARRAY['혼자','도움 필요'])[1 + floor(random()*2)],
+            'lostWay',     (random() < 0.03),
+            'knowDate',    (random() >= 0.10),
+            'missAppt',    (ARRAY['0','1–2회','3회 이상'])[1 + floor(random()*3)],
+            'appliance',   (ARRAY['문제 없음','주의 필요'])[1 + floor(random()*2)],
+            'lostItems',   (ARRAY['0','1–2회','3회 이상'])[1 + floor(random()*3)]
+        ),
+        'med', jsonb_build_object(
+            'medMiss',        to_jsonb(ARRAY(
+                                 SELECT x FROM unnest(ARRAY['아침','점심','저녁']) x
+                                 WHERE random() < 0.10
+                             )),
+            'extraMed',       (random() < 0.08),
+            'extraMedDetail', CASE WHEN random() < 0.08 THEN '진통제' ELSE '' END
+        ),
+        'feel', jsonb_build_object(
+            'apathy',       (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+            'anxiety',      (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+            'depress',      (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+            'irritate',     (ARRAY['없음','경미','심함'])[1 + floor(random()*3)],
+            'moodScore',    (1 + floor(random()*5))::int,
+            'conversation', (ARRAY['적극','보통','소극'])[1 + floor(random()*3)]
+        ),
+        'meal', jsonb_build_object(
+            'snack',    (random() < 0.60),
+            'water',    (ARRAY['충분','보통','적음'])[1 + floor(random()*3)],
+            'skipMeal', (ARRAY['아침','점심','저녁','없음'])[1 + floor(random()*4)]
+        ),
+        'note', jsonb_build_object(
+            'pain',            (random() < 0.10),
+            'temp',            (random() < 0.10),
+            'support',         (random() < 0.15),
+            'emergency',       (random() < 0.02),
+            'repeatAct',       (random() < 0.08),
+            'painDetail',      '',
+            'tempDetail',      '',
+            'nightWander',     (random() < 0.12),
+            'supportDetail',   '',
+            'emergencyDetail', ''
+        )
+    )
+FROM dates d
+ON CONFLICT (user_no, record_date) DO NOTHING;
+
+
 -- user_location 테이블에 CSV 데이터 삽입
 COPY user_location(user_no, latitude, longitude, record_time)
-FROM 'C:\LX\final-project\python\gps_trajectory_1year.csv'
+FROM 'C:\final-project\python\gps_trajectory_1year_later.csv'
 DELIMITER ','
 CSV HEADER;
