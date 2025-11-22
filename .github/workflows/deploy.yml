@@ -81,17 +81,30 @@ jobs:
           FASTAPI_URL=$(gcloud run services describe dementia-care-fastapi --region ${{ env.REGION }} --format "value(status.url)")
           echo "fastapi_url=$FASTAPI_URL" >> $GITHUB_OUTPUT
 
-      - name: Deploy Frontend
+      - name: Setup Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker asia-northeast3-docker.pkg.dev
+
+      - name: Build Frontend Docker Image
         run: |
           cd frontend
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ steps.backend-url.outputs.backend_url }} \
+            --build-arg VITE_FASTAPI_URL=${{ steps.fastapi-url.outputs.fastapi_url }} \
+            --build-arg VITE_KAKAO_JS_KEY=${{ secrets.KAKAO_JS_KEY }} \
+            -t asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/dementia-care-frontend:${{ github.sha }} \
+            .
+          docker push asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/dementia-care-frontend:${{ github.sha }}
+      
+      - name: Deploy Frontend to Cloud Run
+        run: |
           gcloud run deploy dementia-care-frontend \
-            --source . \
+            --image asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/dementia-care-frontend:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --allow-unauthenticated \
             --port 80 \
             --memory 1Gi \
             --cpu 1 \
             --timeout 300 \
-            --max-instances 3 \
-            --set-build-env-vars="VITE_API_BASE_URL=${{ steps.backend-url.outputs.backend_url }},VITE_FASTAPI_URL=${{ steps.fastapi-url.outputs.fastapi_url }},VITE_KAKAO_JS_KEY=${{ secrets.KAKAO_JS_KEY }}"
+            --max-instances 3
 
