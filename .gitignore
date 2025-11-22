@@ -34,9 +34,9 @@ target/
 
 ### Spring Boot ###
 HELP.md
-mvnw
-mvnw.cmd
-.mvn/
+# mvnw  # Docker 빌드에 필요하므로 주석 처리
+# mvnw.cmd  # Docker 빌드에 필요하므로 주석 처리
+# .mvn/  # Docker 빌드에 필요하므로 주석 처리
 application-*.yml
 application-*.properties
 
