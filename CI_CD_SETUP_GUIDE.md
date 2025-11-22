@@ -149,39 +149,13 @@ env:
    - **빌드 오류**: Dockerfile 또는 코드 오류 확인
    - **환경변수 오류**: GitHub Secrets 값 확인
 
-### 로컬에서 테스트
-
-```bash
-# 환경변수 설정 후 Docker 빌드
-cd backend
-docker build -t backend-test .
-docker run -p 8080:8080 \
-  -e DB_HOST=... \
-  -e GEMINI_API_KEY=... \
-  backend-test
 ```
-
----
-
-## 📚 추가 리소스
-
-- [GitHub Actions 문서](https://docs.github.com/en/actions)
-- [Google Cloud Run 문서](https://cloud.google.com/run/docs)
-- [로컬 개발 가이드](./README_LOCAL_SETUP.md)
-- [환경변수 예시](./env-example.txt)
 
 ---
 
 ## ⚠️ 주의사항
 
-1. **main 브랜치 보호**: main 브랜치는 직접 push하지 말고 PR 또는 develop에서 merge
-2. **Secrets 관리**: API 키는 절대 코드에 포함하지 말 것
-3. **비용 관리**: Cloud Run은 사용량에 따라 과금됨 (무료 할당량 확인)
-4. **로그 모니터링**: 정기적으로 배포 로그와 애플리케이션 로그 확인
-
+1. **main 브랜치 보호**: main 브랜치는 직접 push하지 말고 develop에만 merge해 주세용
+2. **Secrets 관리**: API 키 변경 시 서버에도 변경되야하기 때문에 팀장한테 카톡 주세요, 깃허브에 시크릿에서 변경할게요
 ---
-
-## 📞 문의
-
-CI/CD 관련 문제가 있으면 팀 리더에게 문의하세요.
 
