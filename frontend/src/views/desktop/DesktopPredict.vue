@@ -756,7 +756,7 @@ async function fetchPredictionData() {
   }
 
   const response = await axios.post(
-    'http://localhost:8000/api/predict-destinations',
+    `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/predict-destinations`,
     requestBody,
     {
       withCredentials: true,

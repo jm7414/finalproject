@@ -58,7 +58,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const startQuery = ref('')
 const destQuery = ref('')
 const startResults = ref([])

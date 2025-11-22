@@ -1,5 +1,6 @@
 package lx.project.dementia_care.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -13,9 +14,15 @@ public class GoogleAiClient {
 	private static final String MODEL = "gemini-2.0-flash";
 	private static final String BASE = "https://generativelanguage.googleapis.com";
 
+	@Value("${GEMINI_API_KEY:#{null}}")
+	private String geminiApiKey;
+
 	private String resolveApiKey() {
-		return "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-		
+		if (geminiApiKey != null && !geminiApiKey.trim().isEmpty()) {
+			return geminiApiKey;
+		}
+		throw new IllegalStateException("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.");
+
 	}
 
 	// 간단 타임아웃 설정

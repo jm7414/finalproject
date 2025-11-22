@@ -328,7 +328,7 @@ import axios from 'axios'
 // API 키 설정
 // ========================================================================================
 const mapContainer = ref(null)
-const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
@@ -854,7 +854,7 @@ async function fetchPredictionData() {
         }
 
         const response = await axios.post(
-            `http://localhost:8000/api/predict-destinations/test`,
+            `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/predict-destinations/test`,
             requestBody,
             {
                 withCredentials: true,
@@ -1287,7 +1287,7 @@ async function loadSimulationData() {
 
     try {
         const response = await axios.post(
-            'http://localhost:8000/api/agent-simulation/run-all',
+            `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/agent-simulation/run-all`,
             {
                 user_no: patientUserNo.value,
                 latitude: missingLocation.value.lat,

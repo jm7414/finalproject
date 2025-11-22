@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 import numpy as np
+import os
 import pandas as pd
 import hdbscan
 import asyncio
@@ -77,7 +78,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://localhost:5173"],
+    allow_origins=[
+        "https://localhost:3000",
+        "https://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1458,9 +1464,9 @@ async def health_check():
     
 
 ## /sensor로 들어오면 이걸 계속 보내줌
-#@app.get('/sensor')
-#def get_sensor_value():
-#    return {"pir": pir_state}
+@app.get('/sensor')
+def get_sensor_value():
+    return {"pir": pir_state}
 
 # =============================================================================
 # Main
@@ -1476,4 +1482,4 @@ if __name__ == "__main__":
     print("💚 헬스: GET /api/health")
     print("⭐ 특징: 도로 네트워크를 따라가는 경로")
     print("="*60)
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", "8000")))

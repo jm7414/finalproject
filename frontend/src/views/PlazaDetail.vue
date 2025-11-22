@@ -164,7 +164,7 @@ import axios from 'axios'
 const router = useRouter()
 const route = useRoute()
 
-const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const mapEl = ref(null)
 const plazaNo = ref(parseInt(route.params.plazaNo))
 

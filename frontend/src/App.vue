@@ -154,6 +154,11 @@ const isGeoFencingPage = computed(() => {
   return route.name === 'geo-fencing'
 })
 
+// 기본 안심존 설정 페이지인지 확인하는 computed 속성
+const isBasicSafeZonePage = computed(() => {
+  return route.name === 'basic-safe-zone-location' || route.name === 'basic-safe-zone-radius'
+})
+
 const showMobileHeader = computed(() => {
   if (isDesktopLayout.value) return false
   return !(isAddSchedulePage.value ||
@@ -195,7 +200,8 @@ const mobileMainContentClass = computed(() => {
       SightingReport.value ||
       SightingReportWrite.value ||
       ReportEdit.value ||
-      isGeoFencingPage.value,
+      isGeoFencingPage.value ||
+      isBasicSafeZonePage.value,
     'neighbor-page': isNeighborPage.value
   }
 })
@@ -746,7 +752,7 @@ let intervalId = null
 
 const checkMovement = async () => {
   try {
-    const res = await fetch('http://localhost:8000/sensor')
+    const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL}/sensor`)
     const data = await res.json()
     if (data.pir === 1) {
       alert('움직임 감지됨')

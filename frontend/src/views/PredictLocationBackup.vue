@@ -709,7 +709,7 @@ import axios from 'axios'
 const mapContainer = ref(null)
 
 // 카카오맵 API 키
-const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 
 // VWorld API Key
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
@@ -1188,7 +1188,7 @@ async function fetchPrediction() {
         console.log('DB에서 값 불러옴')
 
 
-        const response = await fetch('http://localhost:8000/api/predict-location', {
+        const response = await fetch(`${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/predict-location`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1261,7 +1261,7 @@ onMounted(() => {
 
 const loadKakaoMap = (container) => {
     const script = document.createElement('script')
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false&libraries=services`
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${import.meta.env.VITE_KAKAO_JS_KEY || KAKAO_JS_KEY}&autoload=false&libraries=services`
     document.head.appendChild(script)
 
     script.onload = () => {

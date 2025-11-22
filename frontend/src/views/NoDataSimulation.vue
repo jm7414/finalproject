@@ -155,7 +155,7 @@ const userNo = ref(0)
 const missingLocation = ref({ lat: 0, lon: 0 })
 
 // 카카오 지도 관련
-const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const mapContainer = ref(null)
 let map = null
 const markers = {}
@@ -394,7 +394,7 @@ const loadSimulationData = async () => {
 
     try {
         const response = await axios.post(
-            'http://localhost:8000/api/agent-simulation/run-all',
+            `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/agent-simulation/run-all`,
             {
                 user_no: userNo.value,
                 latitude: missingLocation.value.lat,

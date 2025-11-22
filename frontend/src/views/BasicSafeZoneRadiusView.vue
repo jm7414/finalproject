@@ -58,7 +58,7 @@ const radiusSettings = {
   3: 100
 }
 
-const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 let locationData = null
 
 onMounted(() => {
@@ -233,7 +233,7 @@ function cancelSettings() {
 
 .map-box {
   width: 100%;
-  height: 35vh; /* 지도 높이를 35vh로 고정 */
+  height: 35vh; /* 데스크톱은 원래대로 */
   min-height: 250px;
   flex-shrink: 0;
 }
@@ -358,33 +358,63 @@ function cancelSettings() {
 
 /* 반응형 */
 @media (max-width: 480px) {
+  .page {
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
   .map-box {
-    height: 30vh; /* 모바일에서는 지도 높이를 더 줄임 */
+    height: 25vh; /* 모바일에서 적절한 지도 크기 */
     min-height: 200px;
+    max-height: 240px;
   }
 
   .controls {
-    padding: 16px;
+    padding: 14px 16px 16px 16px;
+    overflow: visible;
   }
 
   .control-header {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+  }
+
+  .control-header h3 {
+    font-size: 16px;
+  }
+
+  .control-header p {
+    font-size: 12px;
+  }
+
+  .control-row {
+    margin-bottom: 12px;
   }
 
   .level-options {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .level-btn {
-    padding: 14px 12px;
+    padding: 12px 10px;
   }
 
-  .control-header h3 {
-    font-size: 18px;
+  .level-name {
+    font-size: 15px;
   }
 
-  .control-header p {
-    font-size: 13px;
+  .level-desc {
+    font-size: 12px;
+  }
+
+  .action-row {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .set-btn, .cancel-btn {
+    padding: 12px;
+    font-size: 15px;
   }
 }
 </style>

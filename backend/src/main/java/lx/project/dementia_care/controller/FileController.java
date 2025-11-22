@@ -34,7 +34,7 @@ public class FileController {
     private UserDAO userDAO;
 
     // 환경변수에서 도메인 가져오기, 없으면 localhost 사용 (개발용)
-    @Value("${DOMAIN:localhost:8080}")
+    @Value("${DOMAIN:localhost:3000}")
     private String domain;
 
     // 프로토콜 결정 (도메인이 localhost면 https, 아니면 https)

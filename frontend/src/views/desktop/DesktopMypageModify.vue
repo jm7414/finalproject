@@ -145,7 +145,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const API_BASE = 'https://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:8080'
 
 // 상태 관리
 const saving = ref(false)
