@@ -69,3 +69,8 @@ learning-pages-guide.txt
 python/__pycache__/
 python/cache/
 python/venv/
+
+# Google Cloud Service Account Keys
+*-key.json
+github-actions-key.json
+key.json
