@@ -78,14 +78,20 @@ app = FastAPI(
     version="12.0.2"
 )
 
+# CORS 설정
+origins = [
+    os.getenv("FRONTEND_URL", "http://localhost:3000"),
+    "https://localhost:3000",
+    "https://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://lx12mammamia.xyz",
+    "https://www.lx12mammamia.xyz"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://localhost:3000",
-        "https://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:5173"
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
