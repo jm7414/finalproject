@@ -13,8 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY FastAPI_v2.py .
 COPY all_locations.csv .
-COPY gps_trajectory_1year.csv .
-COPY gps_trajectory_1year_later.csv .
 
 EXPOSE 8000
 CMD ["python", "FastAPI_v2.py"]
