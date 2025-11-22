@@ -18,6 +18,9 @@
   <!-- 안심존 이탈 알림 모달 -->
   <SafeZoneAlertModal :show="showSafeZoneAlert" :patient-name="alertPatientName" @close="closeSafeZoneAlert" />
 
+  <!-- 문열림 감지 알림 모달 -->
+  <DoorOpenAlertModal :show="doorOpenAlert" :patient-name="alertPatientName" @close="closeDoorOpenAlert" />
+
   <ConfirmModal :show="showMissingAlert" title="긴급 실종 알림" :message="alertMessage" confirmText="지금 확인하기"
     cancelText="나중에 확인하기" @close="handleCloseAlert" @confirm="handleConfirmAndNavigate" @cancel="handleCloseAlert" />
 
@@ -29,6 +32,7 @@ import AppFooter from './components/AppFooter.vue';
 import NeighborHeader from './components/NeighborHeader.vue';
 import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
+import DoorOpenAlertModal from './components/DoorOpenAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
@@ -208,8 +212,9 @@ const mobileMainContentClass = computed(() => {
 
 /* ===== 안심존 이탈 알림 시스템 ===== */
 
-// 알림 모달 상태
+// 알림 모달 상태 + 문열림
 const showSafeZoneAlert = ref(false)
+const doorOpenAlert = ref(false)
 const alertPatientName = ref('')
 
 // 안심존 모니터링 상태
@@ -222,6 +227,12 @@ const lastSafeZoneData = ref(null) // 이전 안심존 데이터 (변경 감지�
 // 안심존 이탈 알림 닫기
 function closeSafeZoneAlert() {
   showSafeZoneAlert.value = false
+  alertPatientName.value = ''
+}
+
+// 문열림 알림 닫기
+function closeDoorOpenAlert() {
+  doorOpenAlert.value = false
   alertPatientName.value = ''
 }
 
@@ -666,8 +677,8 @@ onMounted(async () => {
   }
 
   // 움직임 감지 센서 일단 일부러 시간 길게 설정해놨습니다
-  checkMovement()
-  intervalId = setInterval(checkMovement, 1500000000000000000000000)
+    checkMovement()
+    intervalId = setInterval(checkMovement, 1000)
 })
 
 // 컴포넌트 언마운트 시 모니터링 중지
@@ -752,11 +763,16 @@ let intervalId = null
 
 const checkMovement = async () => {
   try {
+    if (!connectedPatientNo.value) {
+      return
+    }
     const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL}/sensor`)
     const data = await res.json()
     if (data.pir === 1) {
-      alert('움직임 감지됨')
       console.log(`움직임 감지됨`)
+      alertPatientName.value = patientName.value
+      doorOpenAlert.value = true;
+      return
     }
   } catch (e) {
     console.error('Error fetching sensor data:', e)
