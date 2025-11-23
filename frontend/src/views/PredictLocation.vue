@@ -1047,19 +1047,37 @@ async function requestAllRoutes() {
                 // ⭐ waypoints 변환
                 let waypointsStr = ''
                 if (d.waypoints && Array.isArray(d.waypoints) && d.waypoints.length > 0) {
-                    const waypointsCoords = d.waypoints.map(wp => {
-                        if (!wp.lon || !wp.lat) {
-                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp)
-                            return null
+                    let selectedWaypoints = [];
+                    const totalWaypoints = d.waypoints.length;
+
+                    if (totalWaypoints <= 5) {
+                        // 5개 이하면 전체 사용
+                        selectedWaypoints = d.waypoints;
+                    } else {
+                        // 5개 초과 시 균등 간격으로 5개 추출
+                        const maxWaypoints = 5;
+                        const step = totalWaypoints / maxWaypoints;
+
+                        for (let j = 0; j < maxWaypoints; j++) {
+                            const idx = Math.floor(step * (j + 1)) - 1;  // 5번째, 10번째, 15번째... 인덱스
+                            selectedWaypoints.push(d.waypoints[idx]);
                         }
-                        return `${wp.lon},${wp.lat}`
-                    }).filter(coord => coord !== null)
+                    }
+
+                    const waypointsCoords = selectedWaypoints.map(wp => {
+                        if (!wp.lon || !wp.lat) {
+                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp);
+                            return null;
+                        }
+                        return `${wp.lon},${wp.lat}`;
+                    }).filter(coord => coord !== null);
 
                     if (waypointsCoords.length > 0) {
-                        waypointsStr = waypointsCoords.join('_')
+                        waypointsStr = waypointsCoords.join('_');
+                        console.log(`✅ ${totalWaypoints}개 waypoints → ${waypointsCoords.length}개로 샘플링`);
                     }
                 } else {
-                    console.log(`ℹ️  경유지 없음`)
+                    console.log(`ℹ️  경유지 없음`);
                 }
 
                 // ⭐ 요청 본문 구성`
