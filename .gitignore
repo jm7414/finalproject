@@ -38,7 +38,6 @@ HELP.md
 # mvnw.cmd  # Docker 빌드에 필요하므로 주석 처리
 # .mvn/  # Docker 빌드에 필요하므로 주석 처리
 application-*.yml
-application-*.properties
 
 ### Vuejs ###
 node_modules/
