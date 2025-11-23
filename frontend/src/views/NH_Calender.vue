@@ -698,7 +698,7 @@ onMounted(() => {
   background: #ffffff;
   border-radius: 16px;
   width: 100%;
-  max-width: 500px;
+  max-width: 348px;
   max-height: 80vh;
   overflow: hidden;
   display: flex;

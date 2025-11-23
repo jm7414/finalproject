@@ -1,7 +1,7 @@
 <!-- src/views/PatientHome.vue -->
 <template>
   <div class="dp-main-page bg-light">
-    <div class="container-sm py-3" style="max-width:414px; margin-top: -20px;">
+    <div class="container-sm py-3 dp-container" style="max-width:414px; margin-top: -20px;">
       <!-- 메인 카드 -->
       <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3" style="">
@@ -40,7 +40,7 @@
               <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
                 style="height:220px;background-image:linear-gradient(135deg,#9CA7FF 0%,#7E89FF 55%,#6D7BFF 100%);
                      background-size:100% 100%;background-repeat:no-repeat;box-shadow:0 8px 20px rgba(16,24,40,.08);"
-                @click="go('/geo-fencing')">
+                @click="openSafeZoneModal">
                 <!-- 이미지 영역(라벨 높이만큼 아래 비움) -->
                 <div class="position-absolute top-0 start-0 end-0" style="bottom:44px">
                   <div class="h-100 d-flex align-items-center justify-content-center">
@@ -121,8 +121,11 @@
 
       <div class="py-3"></div>
 
-      <!-- 내 정보 모달 -->
+      <!-- 모달들 -->
       <MyInfoModal v-model="isMyInfoModalOpen" :user-name="userName" @close="handleMyInfoModalClose" />
+      <div v-if="isSafeZoneModalOpen" class="safe-zone-modal-host">
+        <PatientSafeZoneModal @close="closeSafeZoneModal" />
+      </div>
     </div>
   </div>
 </template>
@@ -131,6 +134,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import MyInfoModal from '@/components/MyinfoModal.vue'
+import PatientSafeZoneModal from '@/views/PatientSafeZoneView.vue'
 
 import imgZone from '@/assets/images/My zone.svg'
 import imgInfo from '@/assets/images/Myinfo.svg'
@@ -146,6 +150,7 @@ const userName = ref('')
 const patientUserNo = ref(null)
 const allSchedules = ref([])
 const isMyInfoModalOpen = ref(false)
+const isSafeZoneModalOpen = ref(false)
 
 // 위치 추적 관련
 const locationUpdateInterval = ref(null)
@@ -227,6 +232,14 @@ function openMyInfoModal() {
 
 function handleMyInfoModalClose() {
   isMyInfoModalOpen.value = false
+}
+
+function openSafeZoneModal() {
+  isSafeZoneModalOpen.value = true
+}
+
+function closeSafeZoneModal() {
+  isSafeZoneModalOpen.value = false
 }
 
 /** ====== 위치 추적 관련 함수 ====== */
@@ -371,5 +384,16 @@ function updateTime() {
 .dp-main-page {
   height: 600px;
   max-width: 480px;
+  position: relative;
+}
+
+.dp-container {
+  position: relative;
+}
+
+.safe-zone-modal-host {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
 }
 </style>

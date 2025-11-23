@@ -54,7 +54,7 @@ const bufferLevels = [
 ]
 
 /* 카카오 지도 */
-const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 onMounted(() => {
   loadKakaoMap(mapContainer.value)
 })

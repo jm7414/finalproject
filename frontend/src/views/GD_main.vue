@@ -40,10 +40,8 @@
               <span class="patient-name-bold">{{ patient.name }}</span>님은
             </div>
             <div class="d-flex align-items-center gap-2">
-              <div 
-                :class="safeZoneStatus.isInside ? 'status-indicator-safe' : 'status-indicator-danger'"
-                class="status-indicator"
-              ></div>
+              <div :class="safeZoneStatus.isInside ? 'status-indicator-safe' : 'status-indicator-danger'"
+                class="status-indicator"></div>
               <div :class="safeZoneStatus.isInside ? 'text-success' : 'text-danger'" class="safety-status-text">
                 {{ safeZoneStatus.isInside ? '안전한 위치에 있습니다' : '안심존을 벗어났습니다' }}
               </div>
@@ -99,8 +97,11 @@
         <div class="schedule-time">{{ nextSchedule.time }}</div>
       </div>
       <div class="schedule-location">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="location-icon">
-          <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" fill="currentColor"/>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+          class="location-icon">
+          <path
+            d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"
+            fill="currentColor" />
         </svg>
         <span>{{ nextSchedule.location || '위치 정보 없음' }}</span>
       </div>
@@ -117,8 +118,11 @@
     </div>
     <div v-else class="schedule-empty-card mb-3">
       <div class="schedule-empty-content">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="empty-icon">
-          <path d="M19 4H5C3.89 4 3 4.9 3 6V20C3 21.1 3.89 22 5 22H19C20.1 22 21 21.1 21 20V6C21 4.9 20.1 4 19 4ZM19 20H5V9H19V20ZM19 7H5V6H19V7Z" fill="currentColor"/>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+          class="empty-icon">
+          <path
+            d="M19 4H5C3.89 4 3 4.9 3 6V20C3 21.1 3.89 22 5 22H19C20.1 22 21 21.1 21 20V6C21 4.9 20.1 4 19 4ZM19 20H5V9H19V20ZM19 7H5V6H19V7Z"
+            fill="currentColor" />
         </svg>
         <p class="empty-text">오늘 남은 일정이 없습니다</p>
       </div>
@@ -150,7 +154,7 @@
       <!-- 2) 예상 위치 -->
       <div class="col-6">
         <button type="button" class="btn p-0 w-100 border-0 rounded-4 shadow-sm position-relative overflow-hidden"
-          @click="router.push('/predict-location')" style="height:196px;
+          @click="typeOfMissing" style="height:196px;
                        background-image:
                          linear-gradient(0deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 75%),
                          linear-gradient(135deg,#ff7b64 0%,#ff5a42 60%,#ff3f2e 100%);">
@@ -162,6 +166,7 @@
           <div class="position-absolute bottom-0 start-0 end-0 d-flex align-items-end px-3 pb-2 fw-bold text-white"
             style="height:40px">예상 위치</div>
         </button>
+        <ConfirmModal ref="modal" />
       </div>
 
       <!-- 3) AI 보고서 -->
@@ -348,31 +353,31 @@ async function fetchPatientInfo() {
       method: 'GET',
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
       connected.value = false
       throw new Error('환자 정보를 가져올 수 없습니다.')
     }
-    
+
     const patientData = await response.json()
-    
+
     // 메시지만 있는 경우 (환자가 없는 경우)
     if (patientData.message) {
       console.warn(patientData.message)
       connected.value = false
       return null
     }
-    
+
     // 환자 연결 상태 업데이트
     connected.value = true
-    
+
     // 환자 정보 업데이트
     patient.value = {
       userNo: patientData.userNo,
       name: patientData.name || '',
       avatarUrl: patientData.profilePhoto || null
     }
-    
+
     return patientData.userNo
   } catch (error) {
     console.error('환자 정보 조회 오류:', error)
@@ -406,16 +411,16 @@ async function fetchScheduleSafeZone(scheduleNo) {
       method: 'GET',
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
       throw new Error('경로 정보를 가져올 수 없습니다.')
     }
-    
+
     const route = await response.json()
     if (!route.bufferCoordinates) return null
-    
+
     const bufferCoordinates = JSON.parse(route.bufferCoordinates)
-    
+
     // 기존 데이터 호환성 처리
     if (Array.isArray(bufferCoordinates)) {
       return {
@@ -423,7 +428,7 @@ async function fetchScheduleSafeZone(scheduleNo) {
         coordinates: bufferCoordinates
       }
     }
-    
+
     return bufferCoordinates
   } catch (error) {
     console.error('일정 안심존 조회 오류:', error)
@@ -438,18 +443,18 @@ async function fetchBasicSafeZone(userNo) {
       method: 'GET',
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
       throw new Error('기본 안심존을 가져올 수 없습니다.')
     }
-    
+
     const result = await response.json()
-    
+
     if (result.message) {
       console.warn(result.message)
       return null
     }
-    
+
     return result.boundaryCoordinates ? JSON.parse(result.boundaryCoordinates) : null
   } catch (error) {
     console.error('기본 안심존 조회 오류:', error)
@@ -462,13 +467,13 @@ async function fetchBasicSafeZone(userNo) {
 // 지도에 경로형 안심존(버퍼 폴리곤) 그리기
 function drawScheduleSafeZone(map, bufferCoordinates) {
   if (!map || !bufferCoordinates) return
-  
+
   try {
     // 기존 안심존 제거
     if (currentSafeZone) {
       currentSafeZone.setMap(null)
     }
-    
+
     // bufferCoordinates 형식 처리
     let coordinates
     if (Array.isArray(bufferCoordinates)) {
@@ -479,11 +484,11 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       console.error('지원하지 않는 bufferCoordinates 형식:', bufferCoordinates)
       return
     }
-    
-    const kakaoPath = coordinates.map(coord => 
+
+    const kakaoPath = coordinates.map(coord =>
       new window.kakao.maps.LatLng(coord.latitude, coord.longitude)
     )
-    
+
     // 폴리곤 생성
     currentSafeZone = new window.kakao.maps.Polygon({
       path: kakaoPath,
@@ -493,14 +498,14 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
       fillColor: '#EF4444',
       fillOpacity: 0.3
     })
-    
+
     currentSafeZone.setMap(map)
-    
+
     // 안심존이 보이도록 지도 범위 조정
     const bounds = new window.kakao.maps.LatLngBounds()
     kakaoPath.forEach(latLng => bounds.extend(latLng))
     map.setBounds(bounds)
-    
+
     console.log('경로형 안심존 표시 완료')
   } catch (error) {
     console.error('경로형 안심존 표시 오류:', error)
@@ -510,33 +515,33 @@ function drawScheduleSafeZone(map, bufferCoordinates) {
 // 지도에 기본형 안심존(원형) 그리기
 function drawBasicSafeZone(map, boundaryData) {
   if (!map || !boundaryData) return
-  
+
   try {
     // 기존 안심존 제거
     if (currentSafeZone) {
       currentSafeZone.setMap(null)
     }
-    
+
     if (boundaryData.type === 'Circle') {
       const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
       const radius = boundaryData.radius
-      
+
       // 원형 폴리곤 생성
       const circlePoints = []
       const steps = 64
       const earthRadius = 6371000
-      
+
       for (let i = 0; i < steps; i++) {
         const angle = (Math.PI * 2 * i) / steps
         const dx = radius * Math.cos(angle)
         const dy = radius * Math.sin(angle)
-        
+
         const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
         const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)
-        
+
         circlePoints.push(new window.kakao.maps.LatLng(lat, lng))
       }
-      
+
       // 폴리곤 생성
       currentSafeZone = new window.kakao.maps.Polygon({
         path: circlePoints,
@@ -546,14 +551,14 @@ function drawBasicSafeZone(map, boundaryData) {
         fillColor: '#6366f1',
         fillOpacity: 0.2
       })
-      
+
       currentSafeZone.setMap(map)
-      
+
       // 지도 레벨 조정
       const bounds = new window.kakao.maps.LatLngBounds()
       circlePoints.forEach(point => bounds.extend(point))
       map.setBounds(bounds)
-      
+
       console.log('기본형 안심존 표시 완료')
     }
   } catch (error) {
@@ -564,16 +569,16 @@ function drawBasicSafeZone(map, boundaryData) {
 // 안심존 업데이트 (현재 일정에 따라)
 async function updateSafeZone(map) {
   if (!map || !patientUserNo.value) return
-  
+
   try {
     // 1. 현재 진행 중인 일정 찾기
     const currentSchedule = getCurrentSchedule()
-    
+
     if (currentSchedule) {
       // 2. 진행 중인 일정이 있으면 해당 일정의 안심존 표시
       console.log('현재 진행 중인 일정:', currentSchedule.scheduleTitle)
       const bufferCoordinates = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
-      
+
       if (bufferCoordinates && (
         (Array.isArray(bufferCoordinates) && bufferCoordinates.length > 0) ||
         (typeof bufferCoordinates === 'object' && bufferCoordinates.coordinates && bufferCoordinates.coordinates.length > 0)
@@ -582,11 +587,11 @@ async function updateSafeZone(map) {
         return
       }
     }
-    
+
     // 3. 진행 중인 일정이 없거나 안심존이 없으면 기본 안심존 표시
     console.log('기본 안심존 표시')
     const basicSafeZone = await fetchBasicSafeZone(patientUserNo.value)
-    
+
     if (basicSafeZone) {
       drawBasicSafeZone(map, basicSafeZone)
     } else {
@@ -611,7 +616,7 @@ async function checkPatientInSafeZone() {
     }
     return
   }
-  
+
   // 환자 위치가 없는 경우
   if (!patientLocation.value) {
     safeZoneStatus.value = {
@@ -622,17 +627,17 @@ async function checkPatientInSafeZone() {
     }
     return
   }
-  
+
   try {
     const patientLat = patientLocation.value.latitude
     const patientLng = patientLocation.value.longitude
-    
+
     let isInside = false
-    
+
     // 현재 활성화된 안심존 정보 가져오기
     const currentSchedule = getCurrentSchedule()
     let safeZoneData = null
-    
+
     if (currentSchedule) {
       // 현재 일정의 안심존 데이터 가져오기
       safeZoneData = await fetchScheduleSafeZone(currentSchedule.scheduleNo)
@@ -640,17 +645,17 @@ async function checkPatientInSafeZone() {
       // 기본 안심존 데이터 가져오기
       safeZoneData = await fetchBasicSafeZone(patientUserNo.value)
     }
-    
+
     if (safeZoneData) {
       if (currentSchedule && safeZoneData.coordinates) {
         // 경로형 안심존 (폴리곤) - 점이 폴리곤 내부에 있는지 판단
         console.log('[GD_main - 경로형 안심존] 판단 시작')
         console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
         console.log('- 안심존 데이터:', safeZoneData)
-        
+
         const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
         console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
-        
+
         isInside = isPointInPolygon(patientLat, patientLng, coordinates)
         console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
       } else if (safeZoneData.type === 'Circle') {
@@ -659,13 +664,13 @@ async function checkPatientInSafeZone() {
         const centerLat = safeZoneData.center.lat
         const centerLng = safeZoneData.center.lng
         const radius = safeZoneData.radius
-        
+
         const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
         isInside = distance <= radius
         console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m, 결과: ${isInside ? '내부' : '외부'}`)
       }
     }
-    
+
     // 안심존 상태 업데이트
     if (isInside) {
       safeZoneStatus.value = {
@@ -682,9 +687,9 @@ async function checkPatientInSafeZone() {
         bgColor: '#FEE2E2'
       }
     }
-    
+
     console.log(`안심존 상태: ${isInside ? '안전' : '벗어남'} (환자 위치: ${patientLat}, ${patientLng})`)
-    
+
   } catch (error) {
     console.error('안심존 상태 확인 오류:', error)
     safeZoneStatus.value = {
@@ -703,10 +708,10 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000 // 지구 반지름 (미터)
   const dLat = (lat2 - lat1) * Math.PI / 180
   const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng/2) * Math.sin(dLng/2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
 }
 
@@ -718,7 +723,7 @@ function isPointInPolygon(lat, lng, polygon) {
     const yi = polygon[i].latitude
     const xj = polygon[j].longitude
     const yj = polygon[j].latitude
-    
+
     // Ray casting: 점의 y좌표(위도)가 선분의 y좌표 범위 안에 있고,
     // 점의 x좌표(경도)가 교차점의 x좌표보다 왼쪽에 있으면 교차
     if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
@@ -780,22 +785,22 @@ onMounted(async () => {
   try {
     // DOM이 완전히 마운트될 때까지 대기
     await nextTick()
-    
+
     // 일정 데이터 로드
     await loadScheduleData()
-    
+
     // 지도 초기화 (DOM 요소가 준비된 후)
     await initMap()
-    
+
     // 안심존 표시
     await updateSafeZone(mapInstance.value)
-    
+
     // 환자 위치 추적 시작
     startPatientLocationTracking()
-    
+
     // 초기 안심존 상태 확인
     await checkPatientInSafeZone()
-    
+
     // 실종 이벤트 확인
     if (patientUserNo.value) {
       await getActiveMissing(patientUserNo.value)
@@ -810,6 +815,45 @@ onBeforeUnmount(() => {
   // 환자 위치 추적 중지
   stopPatientLocationTracking()
 })
+
+///
+/// 주형 yes실종 no실종 비교해서 각 상황에 맞는 페이지를 모달로 넘겨줌
+///
+
+import ConfirmModal from '../components/predict_split_Modal.vue'
+const modal = ref(null)
+
+// 환자 번호를 patientUserNo.value 로 받아오면 됨!
+// 실종게시판에 있는지 없는지 판단하는 함수
+async function isReported() {
+  try {
+    const response = await fetch(`/api/user/my-patient`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    const patientData = await response.json()
+
+    if (patientData.userStatus == 1) {
+      router.push(`/predict-location`)
+    } else {
+      const confirmed = await modal.value.show(
+        '실종상태가 아니므로 환자의 현위치를 중심으로 예상위치와 시뮬레이션이 제공됩니다. 이동하시겠습니까?'
+      )
+
+      if (confirmed) {
+        router.push('not-reported-predict')
+      }
+    }
+  } catch (error) {
+    console.log(`환자 정보에서 실종자 게시판에 있는지 확인중 오류 :::: ${error}`)
+  }
+}
+
+// 버튼 클릭시 페이지 어디로갈지
+function typeOfMissing() {
+  console.log(`환자 번호는 ::::: ${patientUserNo.value}`)
+  isReported()
+}
 </script>
 
 <style scoped>
@@ -882,7 +926,7 @@ onBeforeUnmount(() => {
 
 .activity-text {
   font-family: 'SUIT', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.63rem;
   font-weight: 400;
   text-align: center;
   color: #666;

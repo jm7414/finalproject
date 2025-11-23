@@ -38,42 +38,44 @@
           <span class="value">{{ formatDisplayDate(lastKnownLocation.time) }}</span>
         </div>
       </div>
+      <div class="d-flex justify-content-center">
+        <button class="btn btn-info modern-btn" :class="{ active: isParticipantsLayerVisible }" @click="wherePeople">
+          <i class="bi bi-arrow-right-circle"></i>
+          {{ isParticipantsLayerVisible ? '함께하는 중...' : '함께하는 사람 보기' }}
+        </button>
+      </div>
       <button class="report-board-btn" @click="openReportBoard">
-        제보 게시판 보기
-      </button>
+        제보 게시판 보기
+      </button>
     </div>
 
-  <aside class="right-area-panel" :class="{ visible: isReportBoardVisible }">
-    <header class="right-area-header">
-      <h2>제보 게시판</h2>
-      <button @click="closeReportBoard" class="close-btn">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </header>
-    <div class="right-area-content">
-      <SightingReportBoard vD-if="isReportBoardVisible" :id="missingPostId" />
-    </div>
-  </aside>
+    <aside class="right-area-panel" :class="{ visible: isReportBoardVisible }">
+      <header class="right-area-header">
+        <h2>제보 게시판</h2>
+        <button @click="closeReportBoard" class="close-btn">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <div class="right-area-content">
+        <SightingReportBoard vD-if="isReportBoardVisible" :id="missingPostId" />
+      </div>
+    </aside>
 
-  <aside class="right-area-panel" :class="{ visible: isPanelVisible }"> <header class="right-area-header">
-      <h2>{{ panelContent === 'board' ? '제보 게시판' : '제보 등록' }}</h2>
-      <button @click="closeReportBoard" class="close-btn">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </header>
-    <div class="right-area-content">
-      
-      <SightingReportBoard 
-        v-if="panelContent === 'board'" 
-        :id="missingPostId" 
-        @open-write="showWriteForm" />
-      
-      <SightingReportWrite 
-        v-if="panelContent === 'write'"
-        :id="missingPostId" @close-write="showBoard" />
-      
-    </div>
-  </aside>
+    <aside class="right-area-panel" :class="{ visible: isPanelVisible }">
+      <header class="right-area-header">
+        <h2>{{ panelContent === 'board' ? '제보 게시판' : '제보 등록' }}</h2>
+        <button @click="closeReportBoard" class="close-btn">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <div class="right-area-content">
+
+        <SightingReportBoard v-if="panelContent === 'board'" :id="missingPostId" @open-write="showWriteForm" />
+
+        <SightingReportWrite v-if="panelContent === 'write'" :id="missingPostId" @close-write="showBoard" />
+
+      </div>
+    </aside>
 
     <div v-if="loadError" class="error-banner">
       <i class="bi bi-exclamation-triangle"></i>
@@ -90,30 +92,30 @@
     <div class="predict-layout">
       <section class="map-section">
         <div class="timeline-legend-top">
-          <button
-            class="legend-item"
-            :class="{ active: selectedMinutes <= 30 }"
-            @click="setTime(30)"
-          >
+          <button class="legend-item" :class="{ active: selectedMinutes <= 30 }" @click="setTime(30)">
             <span class="legend-color color-1"></span>
             <span class="legend-text">실종~30분</span>
           </button>
-          <button
-            class="legend-item"
-            :class="{ active: selectedMinutes > 30 && selectedMinutes <= 60 }"
-            @click="setTime(60)"
-          >
+          <button class="legend-item" :class="{ active: selectedMinutes > 30 && selectedMinutes <= 60 }"
+            @click="setTime(60)">
             <span class="legend-color color-2"></span>
             <span class="legend-text">30~60분</span>
           </button>
-          <button
-            class="legend-item"
-            :class="{ active: selectedMinutes > 60 }"
-            @click="setTime(90)"
-          >
+          <button class="legend-item" :class="{ active: selectedMinutes > 60 }" @click="setTime(90)">
             <span class="legend-color color-3"></span>
             <span class="legend-text">60~90분</span>
           </button>
+          <button class="legend-item" @click="openSimulationModal">
+            <span class="legend-color color-3"></span>
+            <span class="legend-text">시뮬레이션 보기</span>
+          </button>
+              <AgentSimulationModal
+      :isVisible="isModalVisible"
+      :userNo=1
+      :missingLocation="miss"
+      :missingTime="missingTime"
+      @close="closeSimulationModal"
+    />
         </div>
 
         <div class="map-card">
@@ -161,12 +163,8 @@
               </div>
             </div>
 
-            <div
-              class="timeline-handle"
-              :style="{ left: progressWidth + '%' }"
-              @mousedown.stop="startDrag"
-              @touchstart.stop="startDrag"
-            >
+            <div class="timeline-handle" :style="{ left: progressWidth + '%' }" @mousedown.stop="startDrag"
+              @touchstart.stop="startDrag">
               <div class="handle-icon">
                 <i class="bi bi-person-walking"></i>
               </div>
@@ -210,22 +208,16 @@
           </div>
         </div>
 
-        <div
-          v-if="!isLoading && displayedZoneToShow.length === 0"
-          class="empty-state"
-        >
+        <div v-if="!isLoading && displayedZoneToShow.length === 0" class="empty-state">
           <i class="bi bi-geo-alt"></i>
           <p>표시할 예상 위치가 없습니다. 데이터를 다시 시도해 주세요.</p>
         </div>
 
         <div class="location-list">
-          <article
-            v-for="(loc, index) in displayedZoneToShow"
-            :key="`${displayZoneLevel}-${index}`"
+          <article v-for="(loc, index) in displayedZoneToShow" :key="`${displayZoneLevel}-${index}`"
             class="location-card"
             :class="{ selected: selectedLocation && selectedLocation.lat === loc.lat && selectedLocation.lon === loc.lon }"
-            @click="selectLocation(loc, index)"
-          >
+            @click="selectLocation(loc, index)">
             <div class="rank">
               <span>{{ index + 1 }}</span>
             </div>
@@ -261,9 +253,30 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SightingReportBoard from '../SightingReportBoard.vue'
 import SightingReportWrite from '../../components/SightingReportWrite.vue'
+import { useParticipantLocations } from '../../composables/useParticipantLocations.js';
+import { useSearchStore } from '@/stores/useSearchStore';
+import AgentSimulationModal from '@/components/DesktopAgentSimulationModal.vue'
+
+// 모달 상태 관리
+const isModalVisible = ref(false)
+
+// 모달에 전달할 데이터
+const missingTime = ref(30) // 30분, 60분, 90분
+const miss = ref([])
+// 모달 열기
+const openSimulationModal = () => {
+  console.log(`${JSON.stringify(miss.value)}`)
+  isModalVisible.value = true
+}
+
+// 모달 닫기
+const closeSimulationModal = () => {
+  isModalVisible.value = false
+}
 
 const route = useRoute()
 const missingPostId = ref(null) // 게시판용 ID 변수
+const searchStore = useSearchStore();
 
 const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
@@ -369,50 +382,50 @@ onMounted(async () => {
 
   const idFromParam = route.params.id;
   missingPostId.value = idFromParam;
-  
+
   try {
-    await ensureKakaoLoaded()
+    await ensureKakaoLoaded()
     const idFromParam = route.params.id; // URL에서 ID (missingPostId)를 읽어옴
 
     if (idFromParam) {
-        // 게시판/모달에서 진입 (ID가 있음) 
-        console.log("URL 파라미터 ID 사용:", idFromParam);
-        missingPostId.value = idFromParam; 
+      // 게시판/모달에서 진입 (ID가 있음) 
+      console.log("URL 파라미터 ID 사용:", idFromParam);
+      missingPostId.value = idFromParam;
 
-        try {
-            const response = await axios.get(`/api/missing-persons/${missingPostId.value}`);
-            if (!response.data || !response.data.patientUserNo) {
-                throw new Error("API 응답에 patientUserNo가 없습니다.");
-            }
-            patientUserNo.value = response.data.patientUserNo;
-            console.log(`실종 ID(${missingPostId.value})에 연결된 환자 ID(${patientUserNo.value})를 찾았습니다.`);
-
-        } catch (e) {
-            console.error("실종 ID로 환자 정보를 찾는 데 실패했습니다:", e);
-            loadError.value = "해당 실종 신고에 연결된 환자 정보를 찾을 수 없습니다.";
-            isLoading.value = false;
-            return;
+      try {
+        const response = await axios.get(`/api/missing-persons/${missingPostId.value}`);
+        if (!response.data || !response.data.patientUserNo) {
+          throw new Error("API 응답에 patientUserNo가 없습니다.");
         }
+        patientUserNo.value = response.data.patientUserNo;
+        console.log(`실종 ID(${missingPostId.value})에 연결된 환자 ID(${patientUserNo.value})를 찾았습니다.`);
+
+      } catch (e) {
+        console.error("실종 ID로 환자 정보를 찾는 데 실패했습니다:", e);
+        loadError.value = "해당 실종 신고에 연결된 환자 정보를 찾을 수 없습니다.";
+        isLoading.value = false;
+        return;
+      }
 
     } else {
-        // 홈에서 직접 진입 (ID가 없음) ---
-        console.log("URL 파라미터 없음, '내 환자' 정보 조회");
-        
-        // 예측용 '내 환자' ID 조회
-        patientUserNo.value = await fetchMyPatient();
-        if (!patientUserNo.value) {
-            loadError.value = "연결된 환자 정보가 없습니다.";
-            isLoading.value = false;
-            return;
-        }
-        
-        // 제보 게시판용 '내 환자'의 '최신 실종 ID' 조회
-        const latestInfo = await fetchLatestMissingInfo(patientUserNo.value);
-        missingPostId.value = latestInfo.missingPostId;
+      // 홈에서 직접 진입 (ID가 없음) ---
+      console.log("URL 파라미터 없음, '내 환자' 정보 조회");
 
-        if (!missingPostId.value) {
-            console.warn("현재 활성화된 실종 신고가 없습니다 (제보 게시판 버튼이 작동하지 않을 수 있음).");
-        }
+      // 예측용 '내 환자' ID 조회
+      patientUserNo.value = await fetchMyPatient();
+      if (!patientUserNo.value) {
+        loadError.value = "연결된 환자 정보가 없습니다.";
+        isLoading.value = false;
+        return;
+      }
+
+      // 제보 게시판용 '내 환자'의 '최신 실종 ID' 조회
+      const latestInfo = await fetchLatestMissingInfo(patientUserNo.value);
+      missingPostId.value = latestInfo.missingPostId;
+
+      if (!missingPostId.value) {
+        console.warn("현재 활성화된 실종 신고가 없습니다 (제보 게시판 버튼이 작동하지 않을 수 있음).");
+      }
     }
 
     await fetchPredictionData()
@@ -467,36 +480,59 @@ watch(showAllLocations, () => {
   makeMarker()
 })
 
+const { startParticipantTracking, stopParticipantTracking, setMap } = useParticipantLocations({
+  missingPostId: missingPostId
+});
+const isParticipantsLayerVisible = ref(false);
+
+function wherePeople() {
+  isParticipantsLayerVisible.value = !isParticipantsLayerVisible.value;
+
+  if (isParticipantsLayerVisible.value) {
+    startParticipantTracking();
+
+    if (missingPostId.value) {
+      console.log(`[PredictLocation] '함께 찾기' 스위치를 켭니다. ID: ${missingPostId.value || '아직 로딩 중...'}`);
+      searchStore.startSearch(missingPostId.value);
+    }
+
+  } else {
+    stopParticipantTracking();
+    console.log("[PredictLocation] '함께 찾기' 스위치를 끕니다.");
+    searchStore.stopSearch();
+  }
+}
+
 /**
  * 임시 테스트용 마커 3개를 생성합니다. 함께하기용 나중에 진짜 함께하기가 되면 삭제해야 함
  */
 function createTemporaryMarkers() {
   // map 객체가 초기화되었는지 확인
-  if (!map) {
-    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
-    return;
-  }
+  if (!map) {
+    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
+    return;
+  }
 
-  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
+  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
 
-  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
-  const mapCenter = map.getCenter(); 
-  const testPositions = [
-    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
-    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002), // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
-    new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)          // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
-  ];
+  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
+  const mapCenter = map.getCenter();
+  const testPositions = [
+    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
+    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002), // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
+    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.001)          // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
+  ];
 
   // 2. 3개의 마커를 생성하여 지도에 바로 표시
   // (이 마커들은 'markers' 배열에 추가하지 않으므로,
   // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
-  testPositions.forEach((position, index) => {
-    new window.kakao.maps.Marker({
-        position: position,
-        map: map, // 맵 객체에 바로 표시
-        title: `테스트 마커 ${index + 1}`
-    });
-  });
+  testPositions.forEach((position, index) => {
+    new window.kakao.maps.Marker({
+      position: position,
+      map: map, // 맵 객체에 바로 표시
+      title: `테스트 마커 ${index + 1}`
+    });
+  });
 }
 
 function getRadiusByMinutes(minutes) {
@@ -531,8 +567,12 @@ async function initMap() {
     ),
     level: 5
   })
-
+  if (map && setMap) {  // 함께찾기용 map 주입
+        console.log("✅ [Desktop] 지도 생성 완료 -> useParticipantLocations에 주입");
+        setMap(map); 
+    }
   if (missingLocation.value.lat && missingLocation.value.lon) {
+    console.log(`missingLocation =-> ${JSON.stringify(missingLocation.value)}`)
     centerMarker = new window.kakao.maps.Marker({
       position: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
       map,
@@ -658,7 +698,9 @@ async function fetchLatestMissingInfo(patientNo) {
     })
 
     if (response?.data?.reportedAt) {
+       const fetchedId = response.data.id || response.data.missingPostId; // 이 줄이랑 리턴에 있는 missingPostId 없으면 missingPostId없을때는 함께찾기 작동 안함
       return {
+        missingPostId: fetchedId,
         missingTime: response.data.reportedAt,
         missingLatitude: response.data.latitude || null,
         missingLongitude: response.data.longitude || null
@@ -714,7 +756,7 @@ async function fetchPredictionData() {
   }
 
   const response = await axios.post(
-    'http://localhost:8000/api/predict-destinations',
+    `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/predict-destinations`,
     requestBody,
     {
       withCredentials: true,
@@ -743,6 +785,12 @@ async function fetchPredictionData() {
       lat: data.last_known_location.latitude,
       lon: data.last_known_location.longitude
     }
+    console.log(`${JSON.stringify(lastKnownLocation.value)}`)
+    miss.value = {
+      lat: lastKnownLocation.value.latitude,
+      lon: lastKnownLocation.value.longitude
+    }
+    console.log(`asdasdasdasd ${JSON.stringify(miss.value)}`)
   } else if (latestMissingInfo.missingLatitude && latestMissingInfo.missingLongitude) {
     missingLocation.value = {
       lat: latestMissingInfo.missingLatitude,
@@ -1266,16 +1314,16 @@ const isPanelVisible = ref(false)
 const panelContent = ref('board')
 
 function openReportBoard() {
-  if (!missingPostId.value) {
-    alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
-    return;
-  }
+  if (!missingPostId.value) {
+    alert("현재 활성화된 실종 신고가 없어 게시판을 열 수 없습니다.");
+    return;
+  }
   panelContent.value = 'board' // 내용물을 'board'로 설정
-  isPanelVisible.value = true // 패널 열기
+  isPanelVisible.value = true // 패널 열기
 }
 
 function closeReportBoard() {
-  isPanelVisible.value = false // 패널 닫기
+  isPanelVisible.value = false // 패널 닫기
 }
 
 function showWriteForm() {
@@ -1611,6 +1659,10 @@ function showBoard() {
 
 .legend-color.color-3 {
   background: #ff6b9d;
+}
+
+.legend-color.color-4 {
+  background: #fd568e;
 }
 
 .legend-text {
@@ -1966,10 +2018,13 @@ function showBoard() {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(-50%, -50%) scale(1);
     box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
   }
+
   50% {
     transform: translate(-50%, -50%) scale(1.08);
     box-shadow: 0 0 0 15px rgba(102, 126, 234, 0);
@@ -1981,6 +2036,7 @@ function showBoard() {
     transform: translate(-50%, -50%) scale(0.8);
     opacity: 1;
   }
+
   100% {
     transform: translate(-50%, -50%) scale(1.5);
     opacity: 0;
@@ -1988,9 +2044,17 @@ function showBoard() {
 }
 
 @keyframes progressAnimation {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(0); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @media (max-width: 1280px) {
@@ -2012,9 +2076,10 @@ function showBoard() {
     height: 480px;
   }
 }
+
 .report-board-btn {
   padding: 10px 16px;
-  background-color: #4F46E5;
+  background-color: #667eea;
   color: white;
   border: none;
   border-radius: 8px;
@@ -2029,6 +2094,7 @@ function showBoard() {
   margin-left: auto;
   align-self: center;
 }
+
 .report-board-btn:hover {
   background-color: #4338CA;
 }
@@ -2070,6 +2136,7 @@ function showBoard() {
   display: flex;
   flex-direction: column;
 }
+
 .right-area-panel.visible {
   transform: translateX(0);
 }
@@ -2081,11 +2148,13 @@ function showBoard() {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
 }
+
 .right-area-header h2 {
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
 }
+
 .close-btn {
   background: none;
   border: none;
@@ -2102,5 +2171,26 @@ function showBoard() {
   padding: 1.5rem;
   background-color: #f9fafb;
 }
-</style>
 
+.modern-btn {
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: #667eea;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+
+.modern-btn:active {
+    transform: translateY(0);
+}
+
+</style>

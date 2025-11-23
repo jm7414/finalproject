@@ -6,6 +6,7 @@
   <div v-else class="mobile-shell">
     <div class="app-layout">
       <AppHeader v-if="showMobileHeader" />
+      <NeighborHeader v-if="isNeighborPage" /> <!-- ← 이 줄 추가 -->
       <main class="main-content" :class="mobileMainContentClass">
         <RouterView />
       </main>
@@ -15,30 +16,23 @@
   </div>
 
   <!-- 안심존 이탈 알림 모달 -->
-  <SafeZoneAlertModal 
-    :show="showSafeZoneAlert"
-    :patient-name="alertPatientName"
-    @close="closeSafeZoneAlert"
-  />
+  <SafeZoneAlertModal :show="showSafeZoneAlert" :patient-name="alertPatientName" @close="closeSafeZoneAlert" />
 
-<ConfirmModal 
-    :show="showMissingAlert"
-    title="긴급 실종 알림"
-    :message="alertMessage"
-    confirmText="지금 확인하기"
-    cancelText="나중에 확인하기"
-    @close="handleCloseAlert"
-    @confirm="handleConfirmAndNavigate"
-    @cancel="handleCloseAlert"
-  />
+  <!-- 문열림 감지 알림 모달 -->
+  <DoorOpenAlertModal :show="doorOpenAlert" :patient-name="alertPatientName" @close="closeDoorOpenAlert" />
+
+  <ConfirmModal :show="showMissingAlert" title="긴급 실종 알림" :message="alertMessage" confirmText="지금 확인하기"
+    cancelText="나중에 확인하기" @close="handleCloseAlert" @confirm="handleConfirmAndNavigate" @cancel="handleCloseAlert" />
 
 </template>
 
 <script setup>
 import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
+import NeighborHeader from './components/NeighborHeader.vue';
 import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
+import DoorOpenAlertModal from './components/DoorOpenAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
@@ -58,7 +52,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter();
 
 function handleConfirmAndNavigate() {
-  handleConfirmAlert(); 
+  handleConfirmAlert();
   router.push({ path: '/communityView', query: { tab: 'Missing' } });
 }
 
@@ -164,15 +158,22 @@ const isGeoFencingPage = computed(() => {
   return route.name === 'geo-fencing'
 })
 
+// 기본 안심존 설정 페이지인지 확인하는 computed 속성
+const isBasicSafeZonePage = computed(() => {
+  return route.name === 'basic-safe-zone-location' || route.name === 'basic-safe-zone-radius'
+})
+
 const showMobileHeader = computed(() => {
   if (isDesktopLayout.value) return false
   return !(isAddSchedulePage.value ||
+    isDPMainPage.value ||
     isMapMainPage.value ||
     isLoginPage.value ||
     isSignUpPage.value ||
     isDpMypage.value ||
     isDpSchedule.value ||
     isDpConnect.value ||
+    isNeighborPage.value ||
     isGame.value)
 })
 
@@ -203,15 +204,17 @@ const mobileMainContentClass = computed(() => {
       SightingReport.value ||
       SightingReportWrite.value ||
       ReportEdit.value ||
-      isGeoFencingPage.value,
+      isGeoFencingPage.value ||
+      isBasicSafeZonePage.value,
     'neighbor-page': isNeighborPage.value
   }
 })
 
 /* ===== 안심존 이탈 알림 시스템 ===== */
 
-// 알림 모달 상태
+// 알림 모달 상태 + 문열림
 const showSafeZoneAlert = ref(false)
+const doorOpenAlert = ref(false)
 const alertPatientName = ref('')
 
 // 안심존 모니터링 상태
@@ -224,6 +227,12 @@ const lastSafeZoneData = ref(null) // 이전 안심존 데이터 (변경 감지�
 // 안심존 이탈 알림 닫기
 function closeSafeZoneAlert() {
   showSafeZoneAlert.value = false
+  alertPatientName.value = ''
+}
+
+// 문열림 알림 닫기
+function closeDoorOpenAlert() {
+  doorOpenAlert.value = false
   alertPatientName.value = ''
 }
 
@@ -498,10 +507,10 @@ async function checkSafeZoneStatus(patientNo, patientLocation) {
       console.log('[경로형 안심존] 판단 시작')
       console.log('- 환자 위치:', { lat: patientLat, lng: patientLng })
       console.log('- 안심존 데이터:', safeZoneData)
-      
+
       const coordinates = Array.isArray(safeZoneData) ? safeZoneData : safeZoneData.coordinates
       console.log('- coordinates 개수:', coordinates ? coordinates.length : 0)
-      
+
       isInside = isPointInPolygon(patientLat, patientLng, coordinates)
       console.log('- 판단 결과:', isInside ? '안심존 내부' : '안심존 외부')
     } else if (safeZoneData.type === 'Circle') {
@@ -658,14 +667,18 @@ onMounted(async () => {
     setTimeout(async () => {
       // ⭐ 4. (중요) 안심존 모니터링 전에 사용자 정보부터 가져와서 ref에 채웁니다.
       currentUser.value = await getCurrentUser();
+      console.log('[App.vue] onMounted에서 currentUser 초기화:', currentUser.value);
       await startSafeZoneMonitoring()
       startAlertPolling(currentUser.value?.role); // 실종알림
     }, 500)
+  } else {
+    // 로그인/회원가입 페이지에서는 currentUser를 null로 설정
+    currentUser.value = null;
   }
 
   // 움직임 감지 센서 일단 일부러 시간 길게 설정해놨습니다
-  checkMovement()
-  intervalId = setInterval(checkMovement, 1500000000000000000000000)
+    checkMovement()
+    intervalId = setInterval(checkMovement, 1000)
 })
 
 // 컴포넌트 언마운트 시 모니터링 중지
@@ -680,24 +693,50 @@ onBeforeUnmount(() => {
 // 라우트 변경 감지
 const prevRoute = ref(null)
 watch(route, async (newRoute, oldRoute) => {
-  // 로그인/회원가입 페이지로 이동할 때 모니터링 중지
+  // 로그인/회원가입 페이지로 이동할 때 모니터링 중지 및 currentUser 초기화
   if (newRoute.name === 'login' || newRoute.name === 'SignUp') {
     stopSafeZoneMonitoring()
+    currentUser.value = null // 로그아웃 시 currentUser 초기화
     prevRoute.value = newRoute
     return
   }
 
-  // 로그인/회원가입 페이지에서 다른 페이지로 이동할 때 모니터링 시작
+  // 로그인/회원가입 페이지에서 다른 페이지로 이동할 때 모니터링 시작 및 currentUser 갱신
   if (oldRoute && (oldRoute.name === 'login' || oldRoute.name === 'SignUp')) {
     setTimeout(async () => {
-      await startSafeZoneMonitoring()
-
+      // ⭐ currentUser를 먼저 갱신 (useMyCurrentLocation이 올바른 userNo를 받도록)
       currentUser.value = await getCurrentUser();
-      startAlertPolling(currentUser.value?.role);
+      console.log('[App.vue] 로그인 후 currentUser 갱신:', currentUser.value);
       
+      await startSafeZoneMonitoring()
+      startAlertPolling(currentUser.value?.role);
+
     }, 500)
     prevRoute.value = newRoute
     return
+  }
+
+  // ⭐ 인증이 필요한 페이지로 이동할 때마다 currentUser 갱신 (다른 계정으로 재로그인 대응)
+  if (newRoute.meta?.requiresAuth) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        // userNo가 변경되었는지 확인
+        if (!currentUser.value || currentUser.value.userNo !== user.userNo) {
+          console.log('[App.vue] currentUser 갱신 감지:', {
+            이전: currentUser.value?.userNo,
+            현재: user.userNo
+          });
+          currentUser.value = user;
+        }
+      } else {
+        // 인증 실패 시 null로 설정
+        currentUser.value = null;
+      }
+    } catch (error) {
+      console.error('[App.vue] currentUser 갱신 실패:', error);
+      currentUser.value = null;
+    }
   }
 
   // 다른 경우에도 모니터링이 중지되어 있다면 재시작 시도
@@ -724,11 +763,16 @@ let intervalId = null
 
 const checkMovement = async () => {
   try {
-    const res = await fetch('http://localhost:8000/sensor')
+    if (!connectedPatientNo.value) {
+      return
+    }
+    const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL}/sensor`)
     const data = await res.json()
     if (data.pir === 1) {
-      alert('움직임 감지됨')
       console.log(`움직임 감지됨`)
+      alertPatientName.value = patientName.value
+      doorOpenAlert.value = true;
+      return
     }
   } catch (e) {
     console.error('Error fetching sensor data:', e)

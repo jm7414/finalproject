@@ -34,11 +34,10 @@ target/
 
 ### Spring Boot ###
 HELP.md
-mvnw
-mvnw.cmd
-.mvn/
+# mvnw  # Docker 빌드에 필요하므로 주석 처리
+# mvnw.cmd  # Docker 빌드에 필요하므로 주석 처리
+# .mvn/  # Docker 빌드에 필요하므로 주석 처리
 application-*.yml
-application-*.properties
 
 ### Vuejs ###
 node_modules/
@@ -69,3 +68,8 @@ learning-pages-guide.txt
 python/__pycache__/
 python/cache/
 python/venv/
+
+# Google Cloud Service Account Keys
+*-key.json
+github-actions-key.json
+key.json

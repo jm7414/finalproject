@@ -23,16 +23,29 @@
     </div>
 
     <div class="content-area">
-      <!-- 공지 탭: 목록 또는 작성 -->
+      <!-- 공지 탭: 목록, 작성, 수정 -->
       <div v-if="activeTab === 'Post'">
+        <!-- 공지 목록 -->
         <NH_NoticeBoard 
           v-if="noticeView === 'list'"
           :isPlazaMaster="isPlazaMaster"
           @write-notice="goToNoticeWrite"
+          @edit-notice="goToNoticeEdit"
         />
+        
+        <!-- 공지 작성 -->
         <NH_NoticeWrite 
           v-if="noticeView === 'write'"
           @notice-created="handleNoticeCreated"
+          @cancel="goToNoticeList"
+        />
+        
+        <!-- 공지 수정 -->
+        <NH_NoticeWrite 
+          v-if="noticeView === 'edit'"
+          :notice="editingNotice"
+          :isEdit="true"
+          @notice-updated="handleNoticeUpdated"
           @cancel="goToNoticeList"
         />
       </div>
@@ -54,17 +67,15 @@ import CommunityMissing from '@/components/CommunityMissing.vue';
 import NH_CommunityEvent from '@/components/NH_CommunityEvent.vue';
 import axios from 'axios';
 
-// 기본으로 보여줄 탭(채널)을 'Post'로 설정
 const activeTab = ref('Post');
-const noticeView = ref('list'); // 공지 탭 내부 상태: 'list' 또는 'write'
+const noticeView = ref('list'); // 'list', 'write', 'edit'
 const isPlazaMaster = ref(false);
+const editingNotice = ref(null); // 수정할 공지 데이터
 
-// 마운트 시 방장 정보 조회
 onMounted(async () => {
   await fetchMyPlazaRole();
 });
 
-// 내 역할 조회
 async function fetchMyPlazaRole() {
   try {
     const response = await axios.get('/NH/api/neighbor/plazas/my/role');
@@ -74,32 +85,40 @@ async function fetchMyPlazaRole() {
   }
 }
 
-// 탭(채널)을 변경하는 함수 - 라우팅 제거
 function changeTab(tabName) {
   activeTab.value = tabName;
   if (tabName === 'Post') {
-    noticeView.value = 'list'; // 공지 탭으로 돌아갈 때 리스트로 초기화
+    noticeView.value = 'list';
+    editingNotice.value = null;
   }
 }
 
-// 공지 작성 페이지로 이동
 function goToNoticeWrite() {
   noticeView.value = 'write';
+  editingNotice.value = null;
 }
 
-// 공지 리스트로 돌아가기
+function goToNoticeEdit(notice) {
+  console.log('수정할 공지:', notice);
+  editingNotice.value = notice;
+  noticeView.value = 'edit';
+}
+
 function goToNoticeList() {
   noticeView.value = 'list';
+  editingNotice.value = null;
 }
 
-// 공지 작성 완료
 function handleNoticeCreated() {
+  goToNoticeList();
+}
+
+function handleNoticeUpdated() {
   goToNoticeList();
 }
 </script>
 
 <style scoped>
-/* 전체 레이아웃 */
 .community-view-container {
   min-height: 120vh;
   padding: 10px;

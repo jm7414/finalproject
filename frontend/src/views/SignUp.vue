@@ -269,5 +269,6 @@ async function onSubmit() {
   padding: 20px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;
 }
 </style>

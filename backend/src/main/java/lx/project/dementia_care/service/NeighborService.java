@@ -18,7 +18,6 @@ import lx.project.dementia_care.dto.ActiveMemberDTO;
 import lx.project.dementia_care.dto.MyPlazaDTO;
 import lx.project.dementia_care.dto.PlazaInfoDTO;
 import lx.project.dementia_care.dto.PlazaMemberDTO;
-// 공지 기능으로 인한 추가
 import lx.project.dementia_care.dto.PlazaNoticeDTO;
 import lx.project.dementia_care.dto.PlazaScheduleDTO;
 import lx.project.dementia_care.vo.NeighborFriendVO;
@@ -41,8 +40,75 @@ public class NeighborService {
 
     // ==================== 친구 관리 ====================
 
+    // 지현 수정: userId 기반 친구 추가 메서드 추가
     /**
-     * 친구 추가
+     * 친구 추가 (userId 기반)
+     */
+    @Transactional
+    public void addFriendByUserId(String myUserId, String friendUserId) {
+        // 자기 자신을 친구로 추가하는 경우 방지
+        if (myUserId.equals(friendUserId)) {
+            throw new RuntimeException("자기 자신을 친구로 추가할 수 없습니다.");
+        }
+
+        // userId로 userNo 조회
+        Integer myUserNo = neighborDAO.getUserNoByUserId(myUserId);
+        Integer friendUserNo = neighborDAO.getUserNoByUserId(friendUserId);
+
+        if (myUserNo == null) {
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
+        }
+        if (friendUserNo == null) {
+            throw new RuntimeException("친구로 추가할 사용자를 찾을 수 없습니다.");
+        }
+
+        // 이미 친구인지 확인
+        if (neighborDAO.isFriend(myUserNo, friendUserNo)) {
+            throw new RuntimeException("이미 친구입니다.");
+        }
+
+        // 작은 번호를 user_no_1에, 큰 번호를 user_no_2에 저장
+        Integer userNo1 = Math.min(myUserNo, friendUserNo);
+        Integer userNo2 = Math.max(myUserNo, friendUserNo);
+
+        Map<String, Integer> params = new HashMap<>();
+        params.put("userNo1", userNo1);
+        params.put("userNo2", userNo2);
+
+        neighborDAO.insertFriendship(params);
+    }
+
+    // 지현 수정: userId 기반 친구 삭제 메서드 추가
+    /**
+     * 친구 삭제 (userId 기반)
+     */
+    @Transactional
+    public void removeFriendByUserId(String myUserId, String friendUserId) {
+        // userId로 userNo 조회
+        Integer myUserNo = neighborDAO.getUserNoByUserId(myUserId);
+        Integer friendUserNo = neighborDAO.getUserNoByUserId(friendUserId);
+
+        if (myUserNo == null || friendUserNo == null) {
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
+        }
+
+        // 친구 관계가 없는 경우
+        if (!neighborDAO.isFriend(myUserNo, friendUserNo)) {
+            throw new RuntimeException("친구 관계가 아닙니다.");
+        }
+
+        Integer userNo1 = Math.min(myUserNo, friendUserNo);
+        Integer userNo2 = Math.max(myUserNo, friendUserNo);
+
+        Map<String, Integer> params = new HashMap<>();
+        params.put("userNo1", userNo1);
+        params.put("userNo2", userNo2);
+
+        neighborDAO.deleteFriendship(params);
+    }
+
+    /**
+     * 친구 추가 (기존 userNo 기반 - 하위 호환용)
      */
     @Transactional
     public void addFriend(Integer myUserNo, Integer friendUserNo) {
@@ -68,7 +134,7 @@ public class NeighborService {
     }
 
     /**
-     * 친구 삭제
+     * 친구 삭제 (기존 userNo 기반 - 하위 호환용)
      */
     @Transactional
     public void removeFriend(Integer myUserNo, Integer friendUserNo) {
@@ -248,9 +314,48 @@ public class NeighborService {
         }
     }
 
+    // 지현 수정: 친구 관계 체크 제거, userId로 초대 가능하도록 변경
     /**
-     * 광장에 친구 초대
-     * 수정: 1개 광장만 허용 (초대할 친구도 확인)
+     * 광장에 사용자 초대 (userId 기반, 친구 관계 불필요)
+     */
+    @Transactional
+    public void inviteToPlazaByUserId(Integer plazaNo, Integer ownerUserNo, String inviteUserId) {
+        // 방장 권한 확인
+        if (!neighborDAO.isPlazaOwner(plazaNo, ownerUserNo)) {
+            throw new RuntimeException("방장만 초대할 수 있습니다.");
+        }
+
+        // userId로 userNo 조회
+        Integer inviteUserNo = neighborDAO.getUserNoByUserId(inviteUserId);
+        if (inviteUserNo == null) {
+            throw new RuntimeException("초대할 사용자를 찾을 수 없습니다.");
+        }
+
+        // 초대할 사용자가 이미 광장에 속해있는지 확인
+        if (isUserInAnyPlaza(inviteUserNo)) {
+            throw new IllegalStateException("이미 다른 광장에 속해 있어 초대할 수 없습니다.");
+        }
+
+        // 이미 멤버인지 확인
+        if (neighborDAO.isPlazaMember(plazaNo, inviteUserNo)) {
+            throw new RuntimeException("이미 광장 멤버입니다.");
+        }
+
+        // 광장 정보 가져오기
+        PlazaVO plaza = neighborDAO.getPlazaByNo(plazaNo);
+
+        // 멤버 추가
+        PlazaVO newMember = new PlazaVO();
+        newMember.setPlazaNo(plazaNo);
+        newMember.setPlazaName(plaza.getPlazaName());
+        newMember.setMemberName("이웃");
+        newMember.setUserNo(inviteUserNo);
+
+        neighborDAO.insertPlazaMember(newMember);
+    }
+
+    /**
+     * 광장에 친구 초대 (기존 메서드 - 하위 호환용)
      */
     @Transactional
     public void inviteToPlaza(Integer plazaNo, Integer ownerUserNo, Integer friendUserNo) {
@@ -397,8 +502,6 @@ public class NeighborService {
 
         neighborDAO.insertPlazaNotice(params);
     }
-
-    // ===== 공지 기능 =====
 
     /**
      * 공지 수정 (방장만 가능)

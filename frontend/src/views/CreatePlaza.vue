@@ -146,7 +146,7 @@ import axios from 'axios'
 
 const router = useRouter()
 
-const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const locationQuery = ref('')
 const searchResults = ref([])
 const selectedLocation = ref(null)

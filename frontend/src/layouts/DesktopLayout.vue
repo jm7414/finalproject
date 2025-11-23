@@ -7,12 +7,7 @@
       </div>
       <div v-if="showHeaderActions" class="header-actions">
         <button type="button" class="ghost-btn">알림</button>
-        <button
-          type="button"
-          class="primary-btn"
-          :disabled="isProcessing"
-          @click="handleLogout"
-        >
+        <button type="button" class="primary-btn" :disabled="isProcessing" @click="handleLogout">
           {{ isProcessing ? '로그아웃 중...' : '로그아웃' }}
         </button>
       </div>
@@ -29,16 +24,12 @@
         </div>
 
         <nav class="menu">
-          <button
-            v-for="(item, idx) in menuItems"
-            :key="idx"
-            type="button"
-            class="menu-item"
-            :class="{ active: activeMenu === item.route }"
-            @click="navigateToMenu(item.route)"
-          >
+          <button v-for="(item, idx) in menuItems" :key="idx" type="button" class="menu-item"
+            :class="{ active: activeMenu === item.route }" @click="navigateToMenu(item.route)">
             <span>{{ item.name }}</span>
           </button>
+          <AgentSimulationModal :isVisible="isModalVisible" :userNo=1 :missingLocation="miss" :missingTime="missingTime"
+            @close="closeSimulationModal" />
         </nav>
 
         <div class="sidebar-footer">
@@ -88,6 +79,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCurrentUser, logout } from '@/utils/auth'
+import AgentSimulationModal from '@/components/DesktopAgentSimulationModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,9 +109,149 @@ const activeMenu = computed(() => {
 const showHeaderActions = computed(() => route.meta.requiresAuth)
 const showSidebar = computed(() => route.meta.requiresAuth)
 
-function navigateToMenu(targetRoute) {
-  if (!targetRoute || targetRoute === route.path) return
-  router.push(targetRoute)
+async function navigateToMenu(targetRoute) {
+  console.log(targetRoute)
+  if (targetRoute === '/desktop/predict') {
+    // 여기다가 데이터 있 없 구분해서 넣을거임
+
+    // 누구의 환자인지?
+    const patientNo = await fetchMyPatient();
+
+    // 실종상태인지?
+    const isMissing = await fetchLatestMissingInfo(patientNo)
+
+    // 실종이라면 바로 predict-location으로 보냄
+    if (isMissing != null) {
+      router.push(targetRoute)
+      return
+    }
+
+    const time = new Date().getTime()
+    // 실종상태가 아니라면 환자의 위치정보를 불러옴
+    const missing = await fetchPredictionData(patientNo, time)
+    console.log(missing[missing.length - 1])
+    const lastLocation = missing[missing.length - 1]
+    miss.value = {
+      lat: lastLocation.latitude,
+      lon: lastLocation.longitude
+    }
+    console.log(miss.value)
+
+    // 데이터가 충분한지?
+    if (missing.length < 3 * 20 * 24 * 7) {
+      alert(`환자의 위치데이터가 부족하여 시뮬레이션만 제공됩니다.`)
+
+      missingTime.value = new Date().getTime()
+      openSimulationModal()
+    } else {
+      alert(`실종 상태가 아니므로 현위치를 중심으로 예상위치를 제공합니다.`)
+      router.push(targetRoute)
+    }
+
+  } else {
+    if (!targetRoute || targetRoute === route.path) return
+    router.push(targetRoute)
+  }
+}
+
+// 주형 환자 데이터 충분/불충분 나누기 위해 보호자로그인 시 환자번호 가져오는 함수
+async function fetchMyPatient() {
+  const response = await fetch('/api/user/my-patient', {
+    method: 'GET',
+    credentials: 'include'
+  })
+
+  if (!response.ok) return null
+
+  const data = await response.json()
+  if (data.message) return null
+
+  return data.userNo
+}
+
+//주형 환자번호를 받아온 결과로 실종정보 확인
+async function fetchLatestMissingInfo(patientNo) {
+  try {
+    const response = await fetch(`/api/missing-persons/patient/${patientNo}/latest`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+
+    if (response.status === 404) {
+      console.log('실종 정보가 없습니다.')
+      return null
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    alert(`RESPONSE :::: ${JSON.stringify(data)}`)
+
+    if (data?.reportedAt) {
+      const fetchedId = data.id || data.missingPostId; // 이 줄이랑 리턴에 있는 missingPostId 없으면 missingPostId없을때는 함께찾기 작동 안함
+      return {
+        missingPostId: fetchedId,
+        missingTime: data.reportedAt,
+        missingLatitude: data.latitude || null,
+        missingLongitude: data.longitude || null
+      }
+    }
+  } catch (error) {
+    console.warn('최신 실종 신고 정보를 찾을 수 없습니다.', error?.message)
+  }
+}
+
+// 주형 환자의 번호를 통해 위치데이터 불러오는 함수
+async function fetchPredictionData(userNo, missingTime) {
+
+  // URLSearchParams를 사용하여 쿼리 파라미터 생성
+  const params = new URLSearchParams({
+    datetime: new Date(missingTime).getTime()
+  })
+
+  const gpsResponse = await fetch(`/api/pred/${userNo}?${params}`, {
+    method: 'GET',
+    credentials: 'include'
+  })
+
+  if (!gpsResponse.ok) {
+    throw new Error(`HTTP error! status: ${gpsResponse.status}`)
+  }
+
+  const gpsData = await gpsResponse.json()
+
+  const gpsRecords = (gpsData || []).map(record => {
+    let recordTime = record.recordTime
+    if (recordTime && recordTime.split(':').length === 2) {
+      recordTime = `${recordTime}:00`
+    }
+
+    return {
+      latitude: record.latitude,
+      longitude: record.longitude,
+      record_time: recordTime
+    }
+  })
+  return gpsRecords
+}
+
+// 주형 실종상황 아닐 때 모달관리
+const isModalVisible = ref(false)
+
+// 모달에 전달할 데이터
+const missingTime = ref(30) // 30분, 60분, 90분
+const miss = ref([])
+// 모달 열기
+const openSimulationModal = () => {
+  console.log(`${JSON.stringify(miss.value)}`)
+  isModalVisible.value = true
+}
+
+// 모달 닫기
+const closeSimulationModal = () => {
+  isModalVisible.value = false
 }
 
 async function handleLogout() {
@@ -508,4 +640,3 @@ onMounted(async () => {
   color: #171717;
 }
 </style>
-

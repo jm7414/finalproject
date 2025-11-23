@@ -155,7 +155,7 @@ const userNo = ref(0)
 const missingLocation = ref({ lat: 0, lon: 0 })
 
 // 카카오 지도 관련
-const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const mapContainer = ref(null)
 let map = null
 const markers = {}
@@ -394,7 +394,7 @@ const loadSimulationData = async () => {
 
     try {
         const response = await axios.post(
-            'http://localhost:8000/api/agent-simulation/run-all',
+            `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/agent-simulation/run-all`,
             {
                 user_no: userNo.value,
                 latitude: missingLocation.value.lat,
@@ -460,6 +460,8 @@ const loadSimulationData = async () => {
         error.value = err.response?.data?.detail || '데이터를 불러올 수 없습니다.'
     } finally {
         isLoading.value = false
+        await nextTick()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 }
 
@@ -469,48 +471,128 @@ const loadSimulationData = async () => {
 const changeScenario = async (scenario) => {
     if (scenario === currentScenario.value) return
 
-    if (!allScenariosData.value || !allScenariosData.value[scenario]) return
+    console.log(`🔄 시나리오 변경: ${currentScenario.value} → ${scenario}`)
+
+    if (!allScenariosData.value || !allScenariosData.value[scenario]) {
+        console.error('❌ 시나리오 데이터 없음:', scenario)
+        return
+    }
+
+    // ⭐⭐⭐ 1. 애니메이션 완전 정지
+    isPlaying.value = false
+    stopAnimation()
+
+    // ⭐⭐⭐ 2. 모든 마커와 경로를 지도에서 제거하고 객체 완전 삭제
+    console.log('🗑️ 기존 마커/경로 제거 시작')
+    
+    // 마커 완전 제거
+    Object.keys(markers).forEach(key => {
+        if (markers[key]?.overlay) {
+            markers[key].overlay.setMap(null) // 지도에서 제거
+            markers[key].overlay = null       // 참조 해제
+        }
+        delete markers[key] // 객체에서 삭제
+    })
+
+    // 경로 완전 제거
+    Object.keys(paths).forEach(key => {
+        if (paths[key]?.line) {
+            paths[key].line.setMap(null)      // 지도에서 제거
+            paths[key].line = null            // 참조 해제
+        }
+        if (paths[key]?.points) {
+            paths[key].points.length = 0      // 배열 비우기
+            paths[key].points = null          // 참조 해제
+        }
+        delete paths[key] // 객체에서 삭제
+    })
+
+    console.log('✅ 기존 마커/경로 제거 완료')
+
+    // ⭐⭐⭐ 3. animationData 완전 초기화 후 새 데이터 설정
+    animationData.value = null // 먼저 null로 초기화
+    await nextTick()
+
+    animationData.value = {
+        data: JSON.parse(JSON.stringify(allScenariosData.value[scenario])) // ⭐ 깊은 복사
+    }
 
     currentScenario.value = scenario
-    isPlaying.value = false
-
-    clearMapElements()
-
-    animationData.value = { data: allScenariosData.value[scenario] }
     currentStep.value = 0
+
+    console.log(`✅ ${scenario} 데이터 설정 완료`)
+
+    // ⭐⭐⭐ 4. 지도 갱신
+    if (map) {
+        map.relayout()
+        console.log('✅ 지도 relayout 완료')
+    }
 
     await nextTick()
 
-    // ⭐ 추가: 지도 재조정
-    if (map) {
-        map.relayout()
-    }
-
+    // ⭐⭐⭐ 5. 새 에이전트 초기화 (지연 시간 증가)
     setTimeout(() => {
+        console.log('🚀 새 에이전트 초기화 시작')
         initializeAgents()
-    }, 300)
+    }, 500) // 300ms → 500ms로 증가
 }
 
 // ========================================================================================
 // 에이전트 초기화
 // ========================================================================================
 const initializeAgents = () => {
-    if (!animationData.value || !map) return
-    if (!animationData.value.data || !animationData.value.data.frames || animationData.value.data.frames.length === 0) return
+    console.log('👥 initializeAgents 호출')
+
+    if (!animationData.value || !map) {
+        console.warn('❌ 지도 또는 애니메이션 데이터 없음')
+        return
+    }
+
+    if (!animationData.value.data || !animationData.value.data.frames || animationData.value.data.frames.length === 0) {
+        console.warn('❌ 프레임 데이터 없음')
+        return
+    }
 
     const firstFrame = animationData.value.data.frames[0]
-    if (!firstFrame.agents || firstFrame.agents.length === 0) return
+    if (!firstFrame.agents || firstFrame.agents.length === 0) {
+        console.warn('❌ 에이전트 데이터 없음')
+        return
+    }
 
+    // ⭐ 다시 한 번 확인: 기존 마커/경로가 남아있으면 제거
+    if (Object.keys(markers).length > 0 || Object.keys(paths).length > 0) {
+        console.warn('⚠️ 기존 마커/경로가 남아있음. 재정리 시작...')
+        clearMapElements()
+    }
+
+    console.log(`✅ 에이전트 초기화 시작: ${firstFrame.agents.length}개`)
+
+    // ⭐ 각 에이전트 생성
     firstFrame.agents.forEach(agent => {
+        console.log(`생성 중: Agent ${agent.rank}`)
         createAgentMarker(agent)
         createAgentPath(agent)
     })
 
+    console.log(`✅ 생성된 마커: ${Object.keys(markers).length}개`)
+    console.log(`✅ 생성된 경로: ${Object.keys(paths).length}개`)
+
     updateFrame()
+    console.log('✅ 에이전트 초기화 완료')
 }
 
 const createAgentMarker = (agent) => {
-    if (!map) return
+    if (!map) {
+        console.warn('❌ map 없음')
+        return
+    }
+
+    // ⭐ 중복 방지: 이미 존재하면 제거
+    if (markers[agent.rank]) {
+        console.warn(`⚠️ Agent ${agent.rank} 마커 이미 존재. 제거 후 재생성`)
+        markers[agent.rank].overlay?.setMap(null)
+        delete markers[agent.rank]
+    }
 
     try {
         const position = new window.kakao.maps.LatLng(agent.latitude, agent.longitude)
@@ -528,13 +610,24 @@ const createAgentMarker = (agent) => {
         })
 
         markers[agent.rank] = { overlay: customOverlay, position: position }
+        console.log(`✅ Agent ${agent.rank} 마커 생성 완료`)
     } catch (error) {
-        console.error(`❌ 마커 생성 실패:`, error)
+        console.error(`❌ Agent ${agent.rank} 마커 생성 실패:`, error)
     }
 }
 
 const createAgentPath = (agent) => {
-    if (!map) return
+    if (!map) {
+        console.warn('❌ map 없음')
+        return
+    }
+
+    // ⭐ 중복 방지: 이미 존재하면 제거
+    if (paths[agent.rank]) {
+        console.warn(`⚠️ Agent ${agent.rank} 경로 이미 존재. 제거 후 재생성`)
+        paths[agent.rank].line?.setMap(null)
+        delete paths[agent.rank]
+    }
 
     try {
         const polyline = new window.kakao.maps.Polyline({
@@ -548,8 +641,9 @@ const createAgentPath = (agent) => {
         })
 
         paths[agent.rank] = { line: polyline, points: [] }
+        console.log(`✅ Agent ${agent.rank} 경로 생성 완료`)
     } catch (error) {
-        console.error(`❌ 경로 생성 실패:`, error)
+        console.error(`❌ Agent ${agent.rank} 경로 생성 실패:`, error)
     }
 }
 
@@ -667,11 +761,41 @@ const handleResize = () => {
 // 초기화 및 정리
 // ========================================================================================
 const clearMapElements = () => {
-    Object.values(markers).forEach(marker => marker.overlay.setMap(null))
-    Object.values(paths).forEach(path => path.line.setMap(null))
+    console.log('🗑️ clearMapElements 호출')
 
-    Object.keys(markers).forEach(key => delete markers[key])
-    Object.keys(paths).forEach(key => delete paths[key])
+    // ⭐ 마커 완전 제거
+    Object.keys(markers).forEach(key => {
+        try {
+            if (markers[key]?.overlay) {
+                markers[key].overlay.setMap(null)
+                markers[key].overlay = null
+            }
+        } catch (error) {
+            console.error(`마커 제거 실패 (${key}):`, error)
+        }
+        delete markers[key]
+    })
+
+    // ⭐ 경로 완전 제거
+    Object.keys(paths).forEach(key => {
+        try {
+            if (paths[key]?.line) {
+                paths[key].line.setMap(null)
+                paths[key].line = null
+            }
+            if (paths[key]?.points) {
+                paths[key].points.length = 0
+                paths[key].points = null
+            }
+        } catch (error) {
+            console.error(`경로 제거 실패 (${key}):`, error)
+        }
+        delete paths[key]
+    })
+
+    console.log('✅ clearMapElements 완료')
+    console.log('남은 마커:', Object.keys(markers).length)
+    console.log('남은 경로:', Object.keys(paths).length)
 }
 
 // ========================================================================================
@@ -714,13 +838,32 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+    console.log('🧹 컴포넌트 언마운트 - 정리 시작')
+
+    // 애니메이션 정지
     stopAnimation()
+
+    // 모든 맵 요소 제거
     clearMapElements()
+
+    // 지도 객체 제거
+    if (map) {
+        map = null
+    }
+
+    // 데이터 초기화
+    animationData.value = null
+    allScenariosData.value = null
     currentScenario.value = null
 
-    // ⭐ 리사이즈 이벤트 리스너 제거
+    // 리사이즈 이벤트 제거
     window.removeEventListener('resize', handleResize)
-    if (resizeTimer) clearTimeout(resizeTimer)
+    if (resizeTimer) {
+        clearTimeout(resizeTimer)
+        resizeTimer = null
+    }
+
+    console.log('✅ 정리 완료')
 })
 </script>
 
@@ -764,7 +907,7 @@ onUnmounted(() => {
 .stat-content-modern {
     flex: 1;
     position: relative;
-    top:15px;
+    top: 15px;
     margin-bottom: 30px;
 }
 
@@ -822,12 +965,15 @@ onUnmounted(() => {
    ======================================================================================== */
 .loading-overlay,
 .error-overlay {
-    flex: 1;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
-    bottom: 150px;
+    z-index: 9999;
 }
 
 .loading-state,

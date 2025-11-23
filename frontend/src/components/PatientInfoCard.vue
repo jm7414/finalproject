@@ -81,10 +81,7 @@ async function handleResolveConfirm() {
 
     console.log('API 호출 성공 (상태 해제):', response.data);
     alert('환자의 실종 상태가 성공적으로 해제되었습니다.');
-
-    // 페이지 새로고침으로 변경된 상태(버튼 텍스트) 반영
     location.reload();
-    // emit('statusUpdated'); // 또는 부모에게 알려 갱신
 
   } catch (error) {
     console.error("상태 해제 API 호출 실패:", error);
@@ -149,7 +146,7 @@ async function handleResolveConfirm() {
     </div>
   </div>
 
-  <!-- 기능 15: '실종 해제' 시 사용할 ConfirmModal -->
+  <!-- '실종 해제' 시 사용할 ConfirmModal -->
   <ConfirmModal :show="isResolveModalVisible" title="상태 해제 확인" message="환자의 '실종' 상태를 해제하시겠습니까?" confirm-text="상태 해제"
     cancel-text="취소" @close="isResolveModalVisible = false" @cancel="isResolveModalVisible = false"
     @confirm="handleResolveConfirm" />

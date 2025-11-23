@@ -1,0 +1,110 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: dementia-care-project
+  REGION: asia-northeast3
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy Backend
+        run: |
+          cd backend
+          gcloud run deploy dementia-care-backend \
+            --source . \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 2Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --max-instances 5 \
+            --set-env-vars="DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:dementia-care-db,DB_PORT=5432,DB_NAME=finalproject,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},TMAP_API_KEY=${{ secrets.TMAP_API_KEY }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"
+
+  deploy-fastapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy FastAPI
+        run: |
+          cd python
+          gcloud run deploy dementia-care-fastapi \
+            --source . \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port 8000 \
+            --memory 2Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --max-instances 5 \
+            --set-env-vars="GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-fastapi]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get Backend URL
+        id: backend-url
+        run: |
+          BACKEND_URL=$(gcloud run services describe dementia-care-backend --region ${{ env.REGION }} --format "value(status.url)")
+          echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Get FastAPI URL
+        id: fastapi-url
+        run: |
+          FASTAPI_URL=$(gcloud run services describe dementia-care-fastapi --region ${{ env.REGION }} --format "value(status.url)")
+          echo "fastapi_url=$FASTAPI_URL" >> $GITHUB_OUTPUT
+
+      - name: Setup Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker asia-northeast3-docker.pkg.dev
+
+      - name: Build Frontend Docker Image
+        run: |
+          cd frontend
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ steps.backend-url.outputs.backend_url }} \
+            --build-arg VITE_FASTAPI_URL=${{ steps.fastapi-url.outputs.fastapi_url }} \
+            --build-arg VITE_KAKAO_JS_KEY=${{ secrets.KAKAO_JS_KEY }} \
+            -t asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/dementia-care-frontend:${{ github.sha }} \
+            .
+          docker push asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/dementia-care-frontend:${{ github.sha }}
+      
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy dementia-care-frontend \
+            --image asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/dementia-care-frontend:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port 80 \
+            --memory 1Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --max-instances 3
+

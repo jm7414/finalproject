@@ -151,7 +151,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 // 환경변수에서 API Base URL 가져오기, 없으면 localhost 사용 (개발용)
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3000'
 
 // 상태 관리
 const saving = ref(false)

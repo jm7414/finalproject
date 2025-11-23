@@ -39,9 +39,11 @@ public class SecurityConfig {
     @Value("${DOMAIN:localhost:5173}")
     private String domain;
 
-    // Frontend URL 생성
+    // Frontend URL 생성 (https:// 중복 방지)
     private String getFrontendUrl() {
-        if (domain.contains("localhost")) {
+        if (domain.startsWith("http://") || domain.startsWith("https://")) {
+            return domain;
+        } else if (domain.contains("localhost")) {
             return "https://" + domain;
         } else {
             return "https://" + domain;
@@ -51,7 +53,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .exceptionHandling(exceptionHandling -> exceptionHandling.accessDeniedPage("/login"))
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // API 요청에 대해서는 JSON 응답 반환
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                response.setContentType("application/json;charset=UTF-8");
+                                response.getWriter().write("{\"message\":\"인증이 필요합니다.\"}");
+                            } else {
+                                // 일반 페이지 요청은 로그인 페이지로 리다이렉트
+                                response.sendRedirect(getFrontendUrl() + "/login");
+                            }
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            // API 요청에 대해서는 JSON 응답 반환
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                response.setContentType("application/json;charset=UTF-8");
+                                response.getWriter().write("{\"message\":\"접근 권한이 없습니다.\"}");
+                            } else {
+                                // 일반 페이지 요청은 로그인 페이지로 리다이렉트
+                                response.sendRedirect(getFrontendUrl() + "/login");
+                            }
+                        }))
                 .authorizeHttpRequests(authz -> authz
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR)
                         .permitAll()
@@ -80,8 +104,12 @@ public class SecurityConfig {
                         // 일정 생성/수정/삭제 API (보호자/구독자 전용)
                         .requestMatchers("/api/schedule/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
 
-                        // 위치 업데이트 API (환자/구독자 전용)
-                        .requestMatchers(HttpMethod.POST, "/api/location/update").hasAnyRole("PATIENT", "SUBSCRIBER")
+                        // 위치 업데이트 API (환자/구독자 전용) + 함께찾는사람 때문에 가디언도 추가 함
+                        .requestMatchers(HttpMethod.POST, "/api/location/update").hasAnyRole("GUARDIAN", "PATIENT", "SUBSCRIBER")
+
+                        // 지현 추가: 이웃 위치 업데이트 API (이웃/보호자 전용) / 환자에서 이웃으로 들어갔을때 안돼서 추가한 사항
+                        .requestMatchers(HttpMethod.POST, "/NH/api/neighbor/location/update")
+                        .hasAnyRole("NEIGHBOR", "GUARDIAN", "PATIENT", "SUBSCRIBER")
 
                         // 위치 조회 API (보호자/구독자 전용)
                         .requestMatchers(HttpMethod.GET, "/api/location/patient/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
@@ -92,11 +120,11 @@ public class SecurityConfig {
                         // 환자 전용 페이지 및 API
                         .requestMatchers("/DP", "/api/patient/**").hasAnyRole("PATIENT", "SUBSCRIBER")
 
-                        // 이웃 페이지 (보호자와 이웃 접근 가능)
-                        .requestMatchers("/NH").hasAnyRole("GUARDIAN", "NEIGHBOR")
+                        // 이웃 페이지 (보호자/이웃/환자/구독자 접근 가능)
+                        .requestMatchers("/NH").hasAnyRole("GUARDIAN", "NEIGHBOR", "PATIENT", "SUBSCRIBER")
                         
-                        // ✅ 수정: 이웃 API (보호자와 이웃 모두 접근 가능)
-                        .requestMatchers("/NH/api/**").hasAnyRole("GUARDIAN", "NEIGHBOR")
+                        // 이웃 API (보호자/이웃/환자/구독자 접근 가능)
+                        .requestMatchers("/NH/api/**").hasAnyRole("GUARDIAN", "NEIGHBOR", "PATIENT", "SUBSCRIBER")
 
                         // 본인정보 수정 API 권한
                         .requestMatchers(HttpMethod.POST, "/api/user/update").hasAnyRole("GUARDIAN","PATIENT", "SUBSCRIBER", "NEIGHBOR")
@@ -113,7 +141,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(login -> login
-                        .loginPage("https://localhost:5173/login")
+                        .loginPage(getFrontendUrl() + "/login")
                         .loginProcessingUrl("/api/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
@@ -157,19 +185,40 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        // 환경변수에서 도메인 가져오기, 없으면 localhost 사용
+        // 환경변수에서 도메인 가져오기
         String frontendUrl = getFrontendUrl();
-        String productionDomain = domain.contains("localhost") ? "https://lx12mammamia.xyz" : "https://" + domain;
-        String productionDomainWww = domain.contains("localhost") ? "https://www.lx12mammamia.xyz" : "https://www." + domain;
+        
+        // 프로덕션 도메인 처리 (https:// 중복 방지)
+        String productionDomain;
+        String productionDomainWww;
+        
+        if (domain.contains("localhost")) {
+            // 개발 환경: 프로덕션 도메인도 허용
+            productionDomain = "https://lx12mammamia.xyz";
+            productionDomainWww = "https://www.lx12mammamia.xyz";
+        } else {
+            // 프로덕션 환경: 환경변수에서 가져온 도메인 사용
+            if (domain.startsWith("http://") || domain.startsWith("https://")) {
+                productionDomain = domain;
+                productionDomainWww = domain.replace("://", "://www.");
+            } else {
+                productionDomain = "https://" + domain;
+                productionDomainWww = "https://www." + domain;
+            }
+        }
         
         corsConfiguration.setAllowedOrigins(Arrays.asList(
                 frontendUrl,
                 productionDomain,
-                productionDomainWww));
-        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
+                productionDomainWww,
+                "https://lx12mammamia.xyz",
+                "https://www.lx12mammamia.xyz"));
+        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(
-                Arrays.asList("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+                Arrays.asList("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-CSRF-TOKEN"));
         corsConfiguration.setAllowCredentials(true);
+        corsConfiguration.setMaxAge(3600L);
+        corsConfiguration.setExposedHeaders(Arrays.asList("Set-Cookie", "JSESSIONID"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);

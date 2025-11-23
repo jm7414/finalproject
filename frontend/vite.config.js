@@ -34,7 +34,7 @@ export default defineConfig({
     }),
     proxy: {
       '/api': {
-        target: 'https://localhost:8080',  // Spring Boot HTTPS 포트
+        target: process.env.VITE_API_BASE_URL || 'https://localhost:8080',  // 환경변수 사용
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
@@ -50,7 +50,7 @@ export default defineConfig({
         },
       },
       '/NH/api': {
-        target: 'https://localhost:8080',  // Spring Boot HTTPS 포트
+        target: process.env.VITE_API_BASE_URL || 'https://localhost:8080',  // 환경변수 사용
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {

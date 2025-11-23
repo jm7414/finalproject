@@ -152,6 +152,8 @@ async function sendCurrentLocation() {
         await axios.post('/NH/api/neighbor/location/update', {
           latitude: latitude,
           longitude: longitude
+        }, {
+          withCredentials: true  // 추가
         })
         console.log('위치 전송 성공')
       } catch (error) {
@@ -177,7 +179,10 @@ async function fetchActiveMembers() {
   if (!myPlazaNo.value) return
   
   try {
-    const response = await axios.get(`/NH/api/neighbor/plazas/${myPlazaNo.value}/active-members`)
+    const response = await axios.get(
+      `/NH/api/neighbor/plazas/${myPlazaNo.value}/active-members`,
+      { withCredentials: true }  // ← 추가
+    )
     const members = response.data || []
     
     // 각 멤버에 초기 위치 할당
@@ -193,10 +198,14 @@ async function fetchActiveMembers() {
   }
 }
 
+
 // ===== 내 광장 번호 조회 =====
 async function fetchMyPlaza() {
   try {
-    const response = await axios.get('/NH/api/neighbor/plazas/my')
+    const response = await axios.get(
+      '/NH/api/neighbor/plazas/my',
+      { withCredentials: true }  // 추가
+    )
     
     if (response.data && response.data.plazaNo) {
       myPlazaNo.value = response.data.plazaNo
@@ -208,6 +217,7 @@ async function fetchMyPlaza() {
     console.error('내 광장 조회 실패:', error)
   }
 }
+
 
 // ===== 랜덤 위치 생성 (TV 아래 영역, 하단 가려짐 방지) =====
 function getRandomPosition() {

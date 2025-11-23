@@ -16,6 +16,12 @@ export function useMyCurrentLocation(userNoRef) {
     // isSearching 뿐만 아니라 userNo가 준비되었는지도 함께 감시
     const isReady = computed(() => searchStore.isSearching && userNoRef.value > 0); // 0보다 큰지 확인
 
+    // ⭐ userNo 변경 감지 (디버깅용)
+    watch(userNoRef, (newUserNo, oldUserNo) => {
+        if (newUserNo !== oldUserNo) {
+            console.log(`[MyLoc] userNo 변경 감지: ${oldUserNo} → ${newUserNo}`);
+        }
+    }, { immediate: true });
 
     // ===================================================================
     // ⭐ 1. 함수 선언을 모두 위로 올립니다.

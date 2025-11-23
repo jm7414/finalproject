@@ -23,6 +23,6 @@ public class PostRequestDto {
 
     //지겸
     // 공지 여부: '공지' 또는 null
-    private String noticeCheck;
+    private String noticeType;
 
 }
