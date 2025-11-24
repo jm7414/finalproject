@@ -306,7 +306,7 @@ function onLocationSelected() {
   selectedMethod.value = ''
   hasExistingLocation.value = true
 }
-
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3000'
 // 수정: 광장 만들기 (50m 고정 + 에러 메시지 표시)
 async function createPlaza() {
   if (!selectedLocation.value) {
@@ -323,7 +323,7 @@ async function createPlaza() {
 
   isCreating.value = true
 
-  axios.post('/NH/api/neighbor/plazas/create', {
+  axios.post(`${API_BASE}/NH/api/neighbor/plazas/create`, {
     plazaName: plazaName.value.trim(),
     centerLat: parseFloat(selectedLocation.value.y),
     centerLng: parseFloat(selectedLocation.value.x),
