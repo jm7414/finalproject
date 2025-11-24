@@ -73,12 +73,22 @@ jobs:
         id: backend-url
         run: |
           BACKEND_URL=$(gcloud run services describe dementia-care-backend --region ${{ env.REGION }} --format "value(status.url)")
+          if [ -z "$BACKEND_URL" ]; then
+            echo "❌ Backend URL을 가져올 수 없습니다!"
+            exit 1
+          fi
+          echo "✅ Backend URL: $BACKEND_URL"
           echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
 
       - name: Get FastAPI URL
         id: fastapi-url
         run: |
           FASTAPI_URL=$(gcloud run services describe dementia-care-fastapi --region ${{ env.REGION }} --format "value(status.url)")
+          if [ -z "$FASTAPI_URL" ]; then
+            echo "❌ FastAPI URL을 가져올 수 없습니다!"
+            exit 1
+          fi
+          echo "✅ FastAPI URL: $FASTAPI_URL"
           echo "fastapi_url=$FASTAPI_URL" >> $GITHUB_OUTPUT
 
       - name: Setup Docker for Artifact Registry
@@ -88,6 +98,10 @@ jobs:
       - name: Build Frontend Docker Image
         run: |
           cd frontend
+          echo "🔨 프론트엔드 빌드 시작..."
+          echo "  - Backend URL: ${{ steps.backend-url.outputs.backend_url }}"
+          echo "  - FastAPI URL: ${{ steps.fastapi-url.outputs.fastapi_url }}"
+          echo "  - Kakao Key: [설정됨]"
           docker build \
             --build-arg VITE_API_BASE_URL=${{ steps.backend-url.outputs.backend_url }} \
             --build-arg VITE_FASTAPI_URL=${{ steps.fastapi-url.outputs.fastapi_url }} \

@@ -766,7 +766,7 @@ const checkMovement = async () => {
     if (!connectedPatientNo.value) {
       return
     }
-    const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL}/sensor`)
+    const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/sensor`)
     const data = await res.json()
     if (data.pir === 1) {
       console.log(`움직임 감지됨`)
