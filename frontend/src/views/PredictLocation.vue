@@ -794,7 +794,7 @@ async function fetchVWorldData(location, columns) {
         buffer: '10',
         crs: 'EPSG:4326',
         key: VWORLD_API_KEY,
-        domain: 'api.vworld.kr'
+        domain: 'lx12mammamia.xyz'
     })
 
     const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
