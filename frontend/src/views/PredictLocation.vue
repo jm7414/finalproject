@@ -336,7 +336,7 @@
             </div>
         </div>
         <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
-        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="patientUserNo"
+        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="1"
             :missingLocation="missingLocation" :missingTime="missingTimeDB" @close="closeAgentSimulation" />
         <ConfirmModal ref="modal" />
     </div>
@@ -370,12 +370,6 @@ const showAgentSimulation = ref(false)
 
 // 모달 열기 함수 - 유효성 검사 추가
 const openAgentSimulation = () => {
-    // ⭐ 필수 값 유효성 검사
-    if (!patientUserNo.value) {
-        console.error('❌ patientUserNo가 없습니다:', patientUserNo.value)
-        alert('환자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-        return
-    }
 
     if (!missingLocation.value.lat || !missingLocation.value.lon) {
         console.error('❌ missingLocation이 없습니다:', missingLocation.value)
@@ -794,7 +788,7 @@ async function fetchVWorldData(location, columns) {
         buffer: '10',
         crs: 'EPSG:4326',
         key: VWORLD_API_KEY,
-        domain: 'api.vworld.kr'
+        domain: 'lx12mammamia.xyz'
     })
 
     const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`

@@ -118,7 +118,7 @@ class PredictionRequest(BaseModel):
     max_search_radius: Optional[int] = 2000
     min_cluster_separation: Optional[int] = 200
     road_network_radius: Optional[int] = 2500
-    csv_path: Optional[str] = "all_locations.csv"
+    csv_path: Optional[str] = "guro_locations.csv"
 
 
 class Waypoint(BaseModel):
@@ -1227,11 +1227,11 @@ async def predict_destinations(request: PredictionRequest):
     
     # 시간대 필터링
     print(f"⏰ 시간대 필터링 (±{request.time_window_hours}시간)...")
-    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=6)
+    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=4)
     print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
     
     if len(time_filtered_gps) < 100:
-        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=6)
+        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=4)
         print(f"   범위 확대: {len(time_filtered_gps)}개")
     
     if len(time_filtered_gps) < 50:

@@ -335,7 +335,7 @@ async function createPlaza() {
       centerLat: parseFloat(selectedLocation.value.y),
       centerLng: parseFloat(selectedLocation.value.x),
       radiusMeters: 50  // 고정 50m
-    })
+    },{ withCredentials: true })
 
     alert('광장이 성공적으로 만들어졌습니다! 🎉')
     
