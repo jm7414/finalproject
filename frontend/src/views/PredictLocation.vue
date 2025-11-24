@@ -772,6 +772,11 @@ async function processLocation(location, zoneLevel, locationIndex, columns) {
  * VWorld Data API 호출
  */
 async function fetchVWorldData(location, columns) {
+    // 현재 호스트에 따라 domain 설정
+    const currentDomain = window.location.hostname === 'localhost' 
+        ? 'localhost' 
+        : window.location.hostname
+    
     const dataParams = new URLSearchParams({
         service: 'data',
         version: '2.0',
@@ -788,7 +793,7 @@ async function fetchVWorldData(location, columns) {
         buffer: '10',
         crs: 'EPSG:4326',
         key: VWORLD_API_KEY,
-        domain: 'lx12mammamia.xyz'
+        domain: currentDomain
     })
 
     const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
@@ -873,6 +878,35 @@ async function generateAddress2(jimok, address1) {
         const result = `${jimokNaturalText}에 있을 것 같아요!`
         return result
     }
+}
+
+/**
+ * Kakao Geocoder를 사용한 좌표→주소 변환 (폴백용)
+ */
+async function getKakaoAddressFromCoord(lat, lon) {
+    return new Promise((resolve) => {
+        if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
+            console.error('Kakao Geocoder 서비스가 로드되지 않았습니다.')
+            resolve(null)
+            return
+        }
+
+        const geocoder = new window.kakao.maps.services.Geocoder()
+
+        geocoder.coord2Address(lon, lat, (result, status) => {
+            if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+                const addressInfo = result[0].address
+                resolve({
+                    sido: addressInfo.region_1depth_name || '',
+                    gungu: addressInfo.region_2depth_name || '',
+                    eup: addressInfo.region_3depth_name || ''
+                })
+            } else {
+                console.warn('Kakao Geocoder: 주소 조회 실패')
+                resolve(null)
+            }
+        })
+    })
 }
 
 /**
