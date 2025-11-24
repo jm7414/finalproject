@@ -126,6 +126,18 @@
     <button class="btn btn-payment w-100 mb-2 py-2" @click="handlePayment" :disabled="!canProceed">결제하기</button>
     <p class="text-center text-secondary small mb-0">결제 시 위 약관에 모두 동의한 것으로 간주됩니다</p>
 
+    <!-- 하단 토스트 알림 -->
+    <div
+      v-if="feedbackType && feedbackMessage"
+      class="feedback-toast"
+      :class="{
+        'feedback-error': feedbackType === 'error',
+        'feedback-success': feedbackType === 'success'
+      }"
+    >
+      <span class="small">{{ feedbackMessage }}</span>
+    </div>
+
     <!-- 약관 정보 모달 (Teleport 사용) -->
     <Teleport to="body">
       <div v-if="showTermsModal" class="modal-overlay-global" @click.self="closeTermsModal">
@@ -271,6 +283,28 @@ const modalTerms = ref({ service: false, privacy: false })
 const cardInfo = ref({ number: '', expiry: '', cvc: '', holder: '' })
 const guardianNo = ref<number|null>(null)
 
+/** 하단 토스트 피드백 상태 */
+type FeedbackType = '' | 'error' | 'success'
+const feedbackType = ref<FeedbackType>('')
+const feedbackMessage = ref('')
+let feedbackTimer: number | undefined
+
+const showFeedback = (type: FeedbackType, message: string) => {
+  feedbackType.value = type
+  feedbackMessage.value = message
+
+  if (feedbackTimer) {
+    window.clearTimeout(feedbackTimer)
+  }
+
+  if (type) {
+    feedbackTimer = window.setTimeout(() => {
+      feedbackType.value = ''
+      feedbackMessage.value = ''
+    }, 2500)
+  }
+}
+
 /** plan 파싱 */
 function parsePlanFromRoute() {
   const p = (route.query.plan || route.params.plan || '').toString()
@@ -346,7 +380,9 @@ async function ensureGuardianNo() {
 
 /** 결제 → 카드 모달 오픈 */
 const handlePayment = () => {
-  if (!canProceed.value) return
+  if (!canProceed.value) {
+    return
+  }
   if (paymentMethod.value === 'card') {
     showCardModal.value = true
     document.body.style.overflow = 'hidden'
@@ -362,8 +398,9 @@ const closeCardModal = () => {
 /** 실제 결제 확정 */
 const submitPayment = async () => {
   if (!isCardInfoValid.value) return
+
   if (!guardianNo.value) { 
-    alert('보호자 정보를 찾을 수 없습니다.')
+    showFeedback('error', '보호자 정보를 찾을 수 없습니다.\n다시 로그인 후 시도해 주세요.')
     return 
   }
 
@@ -387,20 +424,23 @@ const submitPayment = async () => {
     })
     const data = await res.json().catch(() => ({} as any))
     if (!res.ok) { 
-      alert(data?.message || `결제 실패 (${res.status})`)
+      showFeedback('error', data?.message || `결제가 실패했습니다. (${res.status})`)
       return 
     }
 
     if (data?.status === 'PAID') {
       closeCardModal()
-      alert('구독이 완료 되었습니다.')
-      router.replace('/gdmypage')
+      showFeedback('success', '구독이 완료되었습니다.')
+      // 토스트가 살짝 보이도록 짧게 딜레이 후 이동
+      setTimeout(() => {
+        router.replace('/gdmypage')
+      }, 800)
     } else {
-      alert(data?.message || '결제 처리 결과를 확인할 수 없습니다.')
+      showFeedback('error', data?.message || '결제 처리 결과를 확인할 수 없습니다.')
     }
   } catch (e) {
     console.error(e)
-    alert('결제 처리 중 오류가 발생했습니다.')
+    showFeedback('error', '결제 처리 중 오류가 발생했습니다.')
   }
 }
 </script>
@@ -547,6 +587,30 @@ const submitPayment = async () => {
 .terms-content { 
   background: #fff; 
   border: 1px solid rgba(255,255,255,0.5); 
+}
+
+/* 하단 토스트 알림 */
+.feedback-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 80px;
+  transform: translateX(-50%);
+  min-width: 260px;
+  max-width: 90%;
+  padding: .6rem .9rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,.18);
+  z-index: 11000;
+}
+.feedback-error {
+  background: rgba(220,53,69,.96);
+  color: #fff;
+}
+.feedback-success {
+  background: rgba(25,135,84,.96);
+  color: #fff;
 }
 </style>
 
