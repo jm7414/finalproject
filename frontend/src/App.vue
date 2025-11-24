@@ -3,15 +3,18 @@
     <RouterView />
   </DesktopLayout>
 
-  <div v-else class="mobile-shell">
+<div v-else class="mobile-shell">
     <div class="app-layout">
+      <!-- 조건 수정 -->
       <AppHeader v-if="showMobileHeader" />
-      <NeighborHeader v-if="isNeighborPage" /> <!-- ← 이 줄 추가 -->
+      <NeighborHeader v-if="isNeighborPage || isPredictLocationFromNeighbor" />
+      
       <main class="main-content" :class="mobileMainContentClass">
         <RouterView />
       </main>
+      
       <AppFooter v-if="showMobileFooter" />
-      <NeighborFooter v-if="isNeighborPage" />
+      <NeighborFooter v-if="isNeighborPage || isPredictLocationFromNeighbor" />
     </div>
   </div>
 
@@ -154,6 +157,11 @@ const isGeoFencingPage = computed(() => {
   return route.name === 'geo-fencing'
 })
 
+// PredictLocation 페이지에서 이웃에서 왔는지 확인
+const isPredictLocationFromNeighbor = computed(() => {
+  return route.name === 'predict-location' && route.query.source === 'neighbor'
+})
+
 const showMobileHeader = computed(() => {
   if (isDesktopLayout.value) return false
   return !(isAddSchedulePage.value ||
@@ -165,6 +173,7 @@ const showMobileHeader = computed(() => {
     isDpSchedule.value ||
     isDpConnect.value ||
     isNeighborPage.value ||
+    isPredictLocationFromNeighbor.value || // 지현 추가
     isGame.value)
 })
 
@@ -177,8 +186,10 @@ const showMobileFooter = computed(() => {
     isDpSchedule.value ||
     isDpConnect.value ||
     isNeighborPage.value ||
+    isPredictLocationFromNeighbor.value || // 지현 추가
     isGame.value)
 })
+
 
 const mobileMainContentClass = computed(() => {
   return {

@@ -33,6 +33,36 @@
       </button>
       <button @click="cancel" class="cancel-btn">취소하기</button>
     </div>
+
+    <!-- (지현 수정) AlertModal -->
+    <div v-if="showAlert" class="modal-overlay" @click.self="closeAlert">
+      <div class="modal-content">
+        <div class="modal-icon" :class="`icon-${alertType}`">
+          <i :class="alertIcon"></i>
+        </div>
+        <h3 class="modal-title">{{ alertTitle }}</h3>
+        <p class="modal-message">{{ alertMessage }}</p>
+        <button class="modal-btn" :class="`btn-${alertType}`" @click="handleAlertConfirm">
+          확인
+        </button>
+      </div>
+    </div>
+
+    <!-- (지현 수정) ConfirmModal -->
+    <div v-if="showConfirm" class="modal-overlay" @click.self="closeConfirm">
+      <div class="modal-content">
+        <h3 class="modal-title">취소 확인</h3>
+        <p class="modal-message">공지 작성을 취소하시겠습니까?</p>
+        <div class="modal-buttons">
+          <button class="modal-btn btn-cancel" @click="handleConfirmCancel">
+            취소
+          </button>
+          <button class="modal-btn btn-continue" @click="closeConfirm">
+            계속 작성
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -58,7 +88,56 @@ const content = ref('');
 const contentLength = computed(() => content.value.length);
 const loading = ref(false);
 
-// 수정 모드일 때 기존 데이터 로드
+// (지현 수정) AlertModal 상태
+const showAlert = ref(false);
+const alertTitle = ref('');
+const alertMessage = ref('');
+const alertType = ref('info');
+let alertCallback = null;
+
+const alertIcon = computed(() => {
+  const icons = {
+    success: 'bi bi-check-circle-fill',
+    error: 'bi bi-x-circle-fill',
+    warning: 'bi bi-exclamation-triangle-fill',
+    info: 'bi bi-info-circle-fill'
+  };
+  return icons[alertType.value];
+});
+
+// (지현 수정) ConfirmModal 상태
+const showConfirm = ref(false);
+
+// (지현 수정) 모달 표시 함수
+function showAlertModal(type, titleText, messageText, callback = null) {
+  alertType.value = type;
+  alertTitle.value = titleText;
+  alertMessage.value = messageText;
+  alertCallback = callback;
+  showAlert.value = true;
+}
+
+function closeAlert() {
+  showAlert.value = false;
+}
+
+function handleAlertConfirm() {
+  closeAlert();
+  if (alertCallback) {
+    alertCallback();
+    alertCallback = null;
+  }
+}
+
+function closeConfirm() {
+  showConfirm.value = false;
+}
+
+function handleConfirmCancel() {
+  closeConfirm();
+  emit('cancel');
+}
+
 onMounted(() => {
   if (props.isEdit && props.notice) {
     title.value = props.notice.title || '';
@@ -67,8 +146,9 @@ onMounted(() => {
 });
 
 async function submitNotice() {
+  // (지현 수정) alert -> 모달로 변경
   if (!title.value.trim() || !content.value.trim()) {
-    alert('제목과 내용을 모두 입력해주세요.');
+    showAlertModal('warning', '입력 오류', '제목과 내용을 모두 입력해주세요.');
     return;
   }
 
@@ -76,44 +156,42 @@ async function submitNotice() {
 
   try {
     if (props.isEdit) {
-      // 수정 모드
       await axios.put(`/NH/api/neighbor/notices/${props.notice.noticeNo}`, {
         title: title.value,
         content: content.value
       });
-      alert('공지가 성공적으로 수정되었습니다!');
-      emit('notice-updated');
+      // (지현 수정) alert -> 모달로 변경
+      showAlertModal('success', '수정 완료', '공지가 성공적으로 수정되었습니다!', () => {
+        emit('notice-updated');
+      });
     } else {
-      // 작성 모드
       await axios.post('/NH/api/neighbor/notices', {
         title: title.value,
         content: content.value
       });
-      alert('공지가 성공적으로 작성되었습니다!');
-      emit('notice-created');
+      // (지현 수정) alert -> 모달로 변경
+      showAlertModal('success', '작성 완료', '공지가 성공적으로 작성되었습니다!', () => {
+        emit('notice-created');
+      });
     }
   } catch (error) {
     console.error('공지 처리 중 오류가 발생했습니다:', error);
     
+    // (지현 수정) alert -> 모달로 변경
     if (error.response && error.response.status === 403) {
-      alert('방장만 공지를 작성/수정할 수 있습니다.');
+      showAlertModal('error', '권한 오류', '방장만 공지를 작성/수정할 수 있습니다.');
     } else {
-      alert('작업에 실패했습니다. 다시 시도해주세요.');
+      showAlertModal('error', '오류 발생', '작업에 실패했습니다. 다시 시도해주세요.');
     }
   } finally {
     loading.value = false;
   }
 }
 
+// (지현 수정) confirm -> 모달로 변경
 function cancel() {
   if (title.value || content.value) {
-    const message = props.isEdit 
-      ? '공지 작성을 취소 하시겠습니까?' 
-      : '공지 작성을 취소 하시겠습니까?';
-    
-    if (confirm(message)) {
-      emit('cancel');
-    }
+    showConfirm.value = true;
   } else {
     emit('cancel');
   }
@@ -240,5 +318,87 @@ function cancel() {
   background: #FFFFFF;
   color: #404040;
   border: 1px solid #D4D4D4;
+}
+
+/* (지현 수정) 모달 스타일 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.icon-success i { color: #a7cc10; }
+.icon-error i { color: #e74c3c; }
+.icon-warning i { color: #f39c12; }
+.icon-info i { color: #3498db; }
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: #333;
+}
+
+.modal-message {
+  font-size: 15px;
+  color: #555;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.modal-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.modal-btn:hover {
+  opacity: 0.9;
+}
+
+.btn-success { background: #a7cc10; color: white; }
+.btn-error { background: #e74c3c; color: white; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-info { background: #3498db; color: white; }
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-cancel {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-continue {
+  background: #a7cc10;
+  color: white;
 }
 </style>
