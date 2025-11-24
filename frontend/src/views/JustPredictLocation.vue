@@ -1058,6 +1058,11 @@ async function processLocation(location, zoneLevel, locationIndex, columns) {
 }
 
 async function fetchVWorldData(location, columns) {
+    // 현재 호스트에 따라 domain 설정
+    const currentDomain = window.location.hostname === 'localhost' 
+        ? 'localhost' 
+        : window.location.hostname
+    
     const dataParams = new URLSearchParams({
         service: 'data',
         version: '2.0',
@@ -1074,7 +1079,7 @@ async function fetchVWorldData(location, columns) {
         buffer: '10',
         crs: 'EPSG:4326',
         key: VWORLD_API_KEY,
-        domain: 'api.vworld.kr'
+        domain: currentDomain
     })
 
     const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`

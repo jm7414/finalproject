@@ -1,4 +1,4 @@
-image.png에서 보면 C:\final-project\python\venv\Scripts\Activate.ps1 이라고 되어있는 노란색 글자가
+image.png에서 보면 C:\final-projec-server\python\venv\Scripts\Activate.ps1 이라고 되어있는 노란색 글자가
 venv\Scripts\Activate.ps1은 동일한데 앞에 파일 경로만 현재 최종프로젝트 폴더의 python폴더까지 열어서 진행하면 앞에 PS C:\final-project\python> 이렇게 시작하는 부분이 현재 디렉토리입니다.
 
 venv까지 올렸기 때문에 사진에서 두번째줄 명령어만 실행시키면 됩니다.(이걸 가상환경을 실행시킨다고 합니다.)
