@@ -1,6 +1,107 @@
+<template>
+  <div v-if="loading" class="status-container">
+    <p>데이터를 불러오는 중입니다...</p>
+  </div>
+
+  <div v-else-if="error" class="status-container">
+    <p>{{ error }}</p>
+  </div>
+
+  <div v-else-if="post" class="page-container">
+    <section class="post-section">
+      <div class="post-header">
+        <img :src="post.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img" />
+        <div class="author-details">
+          <div class="author-name">{{ post.author }}</div>
+          <div class="post-time">{{ formatRelativeTime(post.createdAt) }}</div>
+        </div>
+        <div class="post-actions">
+          <button @click="sharePost" class="action-btn">🔗</button>
+          <div
+            v-if="currentUser && (post.userId === currentUser.userNo || currentUser.userNo === 1)"
+            class="more-options-group"
+          >
+            <button @click="toggleOptionsMenu" class="action-btn">⋮</button>
+            <div v-if="isOptionsMenuVisible" class="options-menu">
+              <div @click="editPost">수정</div>
+              <div @click="deletePost" class="delete">삭제</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h1 class="post-title">{{ post.title }}</h1>
+      <p class="post-content">{{ post.content }}</p>
+      <div v-if="post.image" class="post-image-container">
+        <img :src="post.image" alt="게시물 이미지" class="post-image" />
+      </div>
+      <div class="post-footer">
+        <div class="stats">
+          <span @click="toggleLike" class="like-btn">❤️ {{ post.likes }}</span>
+          <span>👁️‍🗨️ {{ post.views }}</span>
+        </div>
+        <span class="comment-count">댓글 {{ comments.length }}개</span>
+      </div>
+    </section>
+
+    <section class="comment-input-section">
+      <input
+        type="text"
+        class="comment-input"
+        placeholder="댓글을 입력하세요..."
+        v-model="newCommentContent"
+        @keyup.enter="submitComment"
+      />
+      <button @click="submitComment" class="submit-btn">게시</button>
+    </section>
+
+    <section class="comment-list-section">
+      <div v-if="comments.length > 0">
+        <div v-for="comment in comments" :key="comment.commentId" class="comment-item">
+          <img :src="comment.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img-sm" />
+          <div class="comment-body">
+            <div class="comment-header">
+              <span class="author-name-sm">{{ comment.author }}</span>
+              <span class="post-time-sm">{{ formatRelativeTime(comment.createdAt) }}</span>
+            </div>
+            <p class="comment-content">{{ comment.content }}</p>
+          </div>
+          <button
+            v-if="currentUser && (comment.userId === currentUser.userNo || currentUser.userNo === 1)"
+            @click="deleteComment(comment.commentId)"
+            class="comment-delete-btn"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <div v-else class="no-comments">
+        <p>첫 댓글을 남겨보세요.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- 모달 (삭제일 때만 삭제/취소 두 버튼) -->
+  <div v-if="modal.show" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-box">
+      <div class="modal-message">{{ modal.message }}</div>
+      <div class="modal-btns">
+        <button
+          v-if="modal.isDelete"
+          class="modal-btn delete"
+          @click="handleDeleteConfirm"
+        >삭제</button>
+        <button
+          class="modal-btn"
+          @click="closeModal"
+        >{{ modal.isDelete ? '취소' : '확인' }}</button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup>
-// 제공해주신 스크립트 코드를 그대로 사용합니다.
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -8,6 +109,7 @@ import defaultProfileImage from '@/assets/default-profile.png';
 
 const route = useRoute();
 const router = useRouter();
+
 const postId = ref(route.params.id);
 const post = ref(null);
 const loading = ref(true);
@@ -15,11 +117,28 @@ const error = ref(null);
 const isOptionsMenuVisible = ref(false);
 const currentUser = ref(null);
 
-// --- 댓글 관련 변수 ---
 const comments = ref([]);
 const newCommentContent = ref('');
 
-// --- 시간 포맷팅 유틸리티 함수 ---
+const modal = ref({
+  show: false,
+  message: '',
+  onDelete: null,
+  isDelete: false,
+});
+
+// 삭제/취소 모달. 삭제 아닐 땐 확인만 보여주기
+function showModal(message, onDelete = null, isDelete = false) {
+  modal.value = { show: true, message, onDelete, isDelete };
+}
+function closeModal() {
+  modal.value.show = false;
+}
+function handleDeleteConfirm() {
+  closeModal();
+  if (typeof modal.value.onDelete === 'function') modal.value.onDelete();
+}
+
 function formatRelativeTime(dateString) {
   const now = new Date();
   const date = new Date(dateString);
@@ -34,54 +153,18 @@ function formatRelativeTime(dateString) {
   return new Intl.DateTimeFormat('ko-KR').format(date);
 }
 
-
-// --- 컴포넌트가 시작될 때 실행될 함수들 ---
 onMounted(() => {
-  // 3가지 요청을 동시에 보내서 로딩 시간을 단축합니다.
-  Promise.all([
-    fetchCurrentUser(),
-    fetchPost(),
-    fetchComments()
-
-  ]);
-  console.log("컴포넌트 마운트됨. 데이터 로딩 시작..."); // 시작 로그
-
-  // 3가지 요청을 동시에 보냅니다.
-  Promise.all([
-    fetchCurrentUser(),
-    fetchPost(),
-    fetchComments()
-  ])
-  .then(() => {
-    // 모든 요청이 성공적으로 완료된 후에 이 부분이 실행됩니다.
-    console.log("✅ 모든 초기 데이터 로딩 완료:");
-    console.log("   - 현재 사용자(currentUser):", currentUser.value);
-    console.log("   - 게시물(post):", post.value);
-    console.log("   - 댓글(comments):", comments.value);
-  })
-  .catch(error => {
-    // Promise.all 내의 요청 중 하나라도 실패하면 이 부분이 실행됩니다.
-    console.error("❌ 초기 데이터 로딩 중 오류 발생:", error);
-    // 각 fetch 함수 내부에서도 오류 로깅을 하고 있으므로,
-    // 여기서 추가적인 상세 로깅이 필요 없을 수 있습니다.
-    // 하지만 어떤 요청에서 문제가 발생했는지 확인하기 위해 남겨두는 것이 좋습니다.
-    console.log("   - 현재 사용자(currentUser) 상태:", currentUser.value);
-    console.log("   - 게시물(post) 상태:", post.value);
-    console.log("   - 댓글(comments) 상태:", comments.value);
-  });
-
-  console.log("onMounted 훅 실행 완료.");
+  Promise.all([fetchCurrentUser(), fetchPost(), fetchComments()])
+    .then(() => console.log('✅ 데이터 로딩 완료'))
+    .catch(err => console.error('❌ 데이터 로딩 중 오류:', err));
 });
 
-// --- 데이터 로딩 함수들 ---
 async function fetchCurrentUser() {
   try {
-    const response = await axios.get(`/api/user/me`, {
-      withCredentials: true
-    });
+    const response = await axios.get(`/api/user/me`, { withCredentials: true });
     currentUser.value = response.data;
-  } catch (error) {
-    console.error("현재 사용자 정보를 가져오는데 실패했습니다.", error);
+  } catch (err) {
+    console.error('현재 사용자 정보를 가져오는데 실패했습니다.', err);
     currentUser.value = null;
   }
 }
@@ -90,9 +173,7 @@ async function fetchPost() {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`/api/posts/${postId.value}`, {
-      withCredentials: true
-    });
+    const response = await axios.get(`/api/posts/${postId.value}`, { withCredentials: true });
     post.value = response.data;
   } catch (err) {
     console.error('게시물 데이터를 불러오는 데 실패했습니다:', err);
@@ -104,16 +185,13 @@ async function fetchPost() {
 
 async function fetchComments() {
   try {
-    const response = await axios.get(`/api/posts/${postId.value}/comments`, {
-      withCredentials: true
-    });
+    const response = await axios.get(`/api/posts/${postId.value}/comments`, { withCredentials: true });
     comments.value = response.data;
-  } catch (error) {
-    console.error("댓글 목록을 불러오는 데 실패했습니다:", error);
+  } catch (err) {
+    console.error('댓글 목록을 불러오는 데 실패했습니다:', err);
   }
 }
 
-// --- 게시물 관련 액션 함수들 ---
 function toggleOptionsMenu() {
   isOptionsMenuVisible.value = !isOptionsMenuVisible.value;
 }
@@ -122,28 +200,27 @@ function editPost() {
   router.push(`/post/edit/${postId.value}`);
 }
 
+// 삭제: 삭제 모달은 삭제/취소 두 버튼, 삭제 아닌 경우는 확인 버튼만
 async function deletePost() {
-  if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+  showModal('정말로 이 게시물을 삭제하시겠습니까?', async () => {
     try {
-      await axios.delete(`/api/posts/${postId.value}`, {
-        withCredentials: true
-      });
-      alert('게시물이 삭제되었습니다.');
+      await axios.delete(`/api/posts/${postId.value}`, { withCredentials: true });
+      showModal('게시물이 삭제되었습니다.', null, false);
       router.push('/CommunityView');
     } catch (err) {
       console.error('게시물 삭제 중 오류 발생:', err);
-      alert('게시물 삭제에 실패했습니다.');
+      showModal('게시물 삭제에 실패했습니다.', null, false);
     }
-  }
+  }, true);
 }
 
 function sharePost() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(window.location.href)
-      .then(() => alert('게시물 링크가 복사되었습니다.'))
-      .catch(err => alert('링크 복사에 실패했습니다.'));
+      .then(() => showModal('게시물 링크가 복사되었습니다.', null, false))
+      .catch(() => showModal('링크 복사에 실패했습니다.', null, false));
   } else {
-    alert('이 게시물을 공유합니다!');
+    showModal('이 게시물을 공유합니다!', null, false);
   }
   isOptionsMenuVisible.value = false;
 }
@@ -151,26 +228,21 @@ function sharePost() {
 async function toggleLike() {
   if (!post.value) return;
   try {
-    const response = await axios.post(
-      `/api/posts/${post.value.postId}/like`,
-      null,
-      { withCredentials: true }
-    );
+    const response = await axios.post(`/api/posts/${post.value.postId}/like`, null, { withCredentials: true });
     post.value.likes = response.data;
-  } catch (error) {
-    console.error("좋아요 처리 중 오류가 발생했습니다:", error);
-    if (error.response && error.response.status === 401) {
-      alert("좋아요를 누르려면 로그인이 필요합니다.");
+  } catch (err) {
+    console.error('좋아요 처리 중 오류가 발생했습니다:', err);
+    if (err.response && err.response.status === 401) {
+      showModal('좋아요를 누르려면 로그인이 필요합니다.', null, false);
     } else {
-      alert("좋아요 처리에 실패했습니다. 다시 시도해주세요.");
+      showModal('좋아요 처리에 실패했습니다. 다시 시도해주세요.', null, false);
     }
   }
 }
 
-// --- 댓글 관련 액션 함수들 ---
 async function submitComment() {
   if (!newCommentContent.value.trim()) {
-    alert("댓글 내용을 입력해주세요.");
+    showModal('댓글 내용을 입력해주세요.', null, false);
     return;
   }
   try {
@@ -182,115 +254,29 @@ async function submitComment() {
     comments.value.unshift(response.data);
     newCommentContent.value = '';
     if (post.value) post.value.comments++;
-  } catch (error) {
-    console.error("댓글 작성 중 오류 발생:", error);
-    alert("댓글 작성에 실패했습니다.");
+  } catch (err) {
+    console.error('댓글 작성 중 오류 발생:', err);
+    showModal('댓글 작성에 실패했습니다.', null, false);
   }
 }
 
 async function deleteComment(commentId) {
-  if (confirm("정말로 이 댓글을 삭제하시겠습니까?")) {
+  showModal('정말로 이 댓글을 삭제하시겠습니까?', async () => {
     try {
-      await axios.delete(`/api/comments/${commentId}`, {
-        withCredentials: true
-      });
+      await axios.delete(`/api/comments/${commentId}`, { withCredentials: true });
       comments.value = comments.value.filter(comment => comment.commentId !== commentId);
       if (post.value) post.value.comments--;
-      alert("댓글이 삭제되었습니다.");
-    } catch (error) {
-      console.error("댓글 삭제 중 오류 발생:", error);
-      alert("댓글 삭제에 실패했습니다.");
+      showModal('댓글이 삭제되었습니다.', null, false);
+    } catch (err) {
+      console.error('댓글 삭제 중 오류 발생:', err);
+      showModal('댓글 삭제에 실패했습니다.', null, false);
     }
-  }
+  }, true);
 }
 </script>
 
-<template>
-  <div v-if="loading" class="status-container">
-    <p>데이터를 불러오는 중입니다...</p>
-  </div>
-
-  <div v-else-if="error" class="status-container">
-    <p>{{ error }}</p>
-  </div>
-
-  <div v-else-if="post" class="page-container">
-    <section class="post-section">
-      <div class="post-header">
-        <img :src="post.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img">
-        <div class="author-details">
-          <div class="author-name">{{ post.author }}</div>
-          <div class="post-time">{{ formatRelativeTime(post.createdAt) }}</div>
-        </div>
-        <div class="post-actions">
-          <button @click="sharePost" class="action-btn">🔗</button>
-          <div v-if="currentUser && (post.userId === currentUser.userNo || currentUser.userNo === 1)" class="more-options-group">
-            <button @click="toggleOptionsMenu" class="action-btn">⋮</button>
-            <div v-if="isOptionsMenuVisible" class="options-menu">
-              <div @click="editPost">수정</div>
-              <div @click="deletePost" class="delete">삭제</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <h1 class="post-title">{{ post.title }}</h1>
-      <p class="post-content">{{ post.content }}</p>
-      
-      <div v-if="post.image" class="post-image-container">
-        <img :src="post.image" alt="게시물 이미지" class="post-image">
-      </div>
-      
-      <div class="post-footer">
-        <div class="stats">
-          <span @click="toggleLike" class="like-btn">❤️ {{ post.likes }}</span>
-          <span>👁️‍🗨️ {{ post.views }}</span>
-        </div>
-        <span class="comment-count">댓글 {{ comments.length }}개</span>
-      </div>
-    </section>
-
-    <section class="comment-input-section">
-      <input 
-        type="text" 
-        class="comment-input" 
-        placeholder="댓글을 입력하세요..." 
-        v-model="newCommentContent"
-        @keyup.enter="submitComment"
-      >
-      <button @click="submitComment" class="submit-btn">게시</button>
-    </section>
-
-    <section class="comment-list-section">
-      <div v-if="comments.length > 0">
-        <div v-for="comment in comments" :key="comment.commentId" class="comment-item">
-          <img :src="comment.authorProfileImage || defaultProfileImage" alt="프로필" class="author-profile-img-sm">
-          <div class="comment-body">
-            <div class="comment-header">
-              <span class="author-name-sm">{{ comment.author }}</span>
-              <span class="post-time-sm">{{ formatRelativeTime(comment.createdAt) }}</span>
-            </div>
-            <p class="comment-content">{{ comment.content }}</p>
-          </div>
-           <button 
-             v-if="currentUser && (comment.userId === currentUser.userNo || currentUser.userNo === 1)"
-             @click="deleteComment(comment.commentId)"
-             class="comment-delete-btn">
-
-           </button>
-        </div>
-      </div>
-      <div v-else class="no-comments">
-        <p>첫 댓글을 남겨보세요.</p>
-      </div>
-    </section>
-  </div>
-
-  
-</template>
-
 <style scoped>
-/* 전체 페이지 컨테이너 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 .page-container {
   width: 100%;
   margin-top: 70px;
@@ -308,20 +294,17 @@ async function deleteComment(commentId) {
   color: #525252;
 }
 
-/* 게시글 섹션 */
 .post-section {
   background: #FFFFFF;
   padding: 16px;
   margin-right: 10px;
   border-bottom: 1px solid #F5F5F5;
 }
-
 .post-header {
   display: flex;
   align-items: center;
   margin-bottom: 16px;
 }
-
 .author-profile-img {
   width: 48px;
   height: 48px;
@@ -329,29 +312,24 @@ async function deleteComment(commentId) {
   object-fit: cover;
   margin-right: 12px;
 }
-
 .author-details {
   flex-grow: 1;
 }
-
 .author-name {
   font-size: 16px;
   color: #171717;
   font-weight: 500;
 }
-
 .post-time {
   font-size: 14px;
   color: #737373;
 }
-
 .post-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-right: 1px;
 }
-
 .action-btn {
   border: none;
   background: none;
@@ -359,24 +337,21 @@ async function deleteComment(commentId) {
   cursor: pointer;
   color: #525252;
 }
-
 .more-options-group {
   position: relative;
 }
-
 .options-menu {
   position: absolute;
   top: 100%;
   right: 0;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: 8px;
   z-index: 10;
   width: 100px;
   text-align: center;
 }
-
 .options-menu div {
   padding: 8px;
   cursor: pointer;
@@ -388,14 +363,12 @@ async function deleteComment(commentId) {
 .options-menu .delete {
   color: #E81224;
 }
-
 .post-title {
   font-size: 20px;
   font-weight: bold;
   color: #171717;
   margin: 16px 0;
 }
-
 .post-content {
   font-size: 16px;
   line-height: 1.6;
@@ -403,7 +376,6 @@ async function deleteComment(commentId) {
   white-space: pre-wrap;
   margin-bottom: 16px;
 }
-
 .post-image-container {
   width: 100%;
   background: #D4D4D4;
@@ -411,13 +383,11 @@ async function deleteComment(commentId) {
   margin: 16px 0;
   overflow: hidden;
 }
-
 .post-image {
   width: 100%;
   height: auto;
   display: block;
 }
-
 .post-footer {
   display: flex;
   justify-content: space-between;
@@ -425,24 +395,19 @@ async function deleteComment(commentId) {
   padding: 12px 0;
   border-top: 1px solid #F5F5F5;
 }
-
 .stats {
   display: flex;
   gap: 16px;
   font-size: 14px;
   color: #525252;
 }
-
 .like-btn {
   cursor: pointer;
 }
-
 .comment-count {
   font-size: 14px;
   color: #737373;
 }
-
-/* 댓글 입력 섹션 */
 .comment-input-section {
   display: flex;
   padding: 17px 16px;
@@ -450,7 +415,6 @@ async function deleteComment(commentId) {
   border-bottom: 1px solid #F5F5F5;
   gap: 8px;
 }
-
 .comment-input {
   flex-grow: 1;
   height: 38px;
@@ -458,6 +422,7 @@ async function deleteComment(commentId) {
   border-radius: 9999px;
   padding: 0 16px;
   font-size: 14px;
+  font-family: 'Inter', sans-serif;
 }
 .comment-input::placeholder {
   color: #ADAEBC;
@@ -465,7 +430,6 @@ async function deleteComment(commentId) {
 .comment-input:focus {
   outline: 1px solid #8E97FD;
 }
-
 .submit-btn {
   width: 60px;
   height: 36px;
@@ -475,13 +439,11 @@ async function deleteComment(commentId) {
   border-radius: 9999px;
   font-size: 14px;
   cursor: pointer;
+  font-family: 'Inter', sans-serif;
 }
-
-/* 댓글 목록 섹션 */
 .comment-list-section {
   background: #FFFFFF;
 }
-
 .comment-item {
   display: flex;
   padding: 16px;
@@ -489,42 +451,38 @@ async function deleteComment(commentId) {
   gap: 12px;
   position: relative;
 }
-
 .author-profile-img-sm {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
 }
-
 .comment-body {
   flex-grow: 1;
 }
-
 .comment-header {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
 }
-
 .author-name-sm {
   font-size: 14px;
   font-weight: 500;
   color: #171717;
+  font-family: 'Inter', sans-serif;
 }
-
 .post-time-sm {
   font-size: 12px;
   color: #737373;
+  font-family: 'Inter', sans-serif;
 }
-
 .comment-content {
   font-size: 14px;
   line-height: 1.6;
   color: #404040;
+  font-family: 'Inter', sans-serif;
 }
-
 .comment-delete-btn {
   position: absolute;
   top: 16px;
@@ -535,10 +493,74 @@ async function deleteComment(commentId) {
   cursor: pointer;
   font-weight: bold;
 }
-
 .no-comments {
   padding: 40px;
   text-align: center;
   color: #737373;
+}
+
+/* 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 32px rgba(142, 151, 253, 0.15);
+  padding: 24px 16px 14px 16px;
+  min-width: 240px;
+  max-width: 340px;
+  width: 88%;
+  border: 2px solid #e8edfb;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.modal-message {
+  font-size: 14px;
+  color: #444;
+  margin-bottom: 18px;
+  font-family: 'Inter', sans-serif;
+  white-space: pre-line;
+}
+/* 버튼 그룹 가로 정렬 */
+.modal-btns {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+.modal-btn {
+  background: #8E97FD;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 0;
+  width: 92px;
+  cursor: pointer;
+  transition: background 0.21s;
+  font-family: 'Inter', sans-serif;
+}
+.modal-btn:hover {
+  background: #5f70d3;
+}
+.modal-btn.delete {
+  background: #E81224;
+}
+.modal-btn.delete:hover {
+  background: #B2151D;
+  color: #fff;
 }
 </style>

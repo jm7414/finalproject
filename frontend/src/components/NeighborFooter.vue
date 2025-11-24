@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
-
 // 이웃용 푸터: 일정, 홈, 공지 3개 탭
 const navItems = ref([
   { name: '일정', path: '/nhCalender', svg: `<path d="M20 5H19V3H17V5H9V3H7V5H6C4.9 5 4 5.9 4 7L4 21C4 22.1 4.9 23 6 23H20C21.1 23 22 22.1 22 21V7C22 5.9 21.1 5 20 5ZM20 21H6V11H20V21ZM20 9H6V7H20V9ZM10 15H8V13H10V15ZM14 15H12V13H14V15ZM18 15H16V13H18V15ZM10 19H8V17H10V19ZM14 19H12V17H14V19ZM18 19H16V17H18V19Z" />` },
@@ -10,14 +9,19 @@ const navItems = ref([
   { name: '공지', path: '/nhNotice', svg: `<path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" />` },
 ]);
 
-
 const router = useRouter();
 const route = useRoute();
 
-
-// 현재 경로에 따라 활성 아이템 결정
+// ✅ 현재 경로에 따라 활성 아이템 결정 (수정됨)
 const activeItem = computed(() => {
   const currentPath = route.path;
+  
+  // PredictLocation에서 이웃으로 온 경우 → '공지' 활성화
+  if (route.name === 'predict-location' && route.query.source === 'neighbor') {
+    return '공지';
+  }
+  
+  // 기존 로직
   if (currentPath === '/NH') {
     return '홈';
   } else if (currentPath === '/nhCalender') {
@@ -25,23 +29,20 @@ const activeItem = computed(() => {
   } else if (currentPath === '/nhNotice') {
     return '공지';
   }
+  
   return null;
 });
 
-
 function navigate(item) {
-  // path가 null이면 동작하지 않음
   if (item.path) {
     router.push(item.path);
   }
-  // path가 null이면 아무 동작도 하지 않음
 }
 </script>
 
-
 <template>
-<footer class="neighbor-footer">
-  <nav class="nav-container">
+  <footer class="neighbor-footer">
+    <nav class="nav-container">
       <div
         v-for="item in navItems"
         :key="item.name"
@@ -60,7 +61,6 @@ function navigate(item) {
   </footer>
 </template>
 
-
 <style scoped>
 .neighbor-footer {
   position: absolute;
@@ -72,7 +72,6 @@ function navigate(item) {
   z-index: 1000;
 }
 
-
 .nav-container {
   display: flex;
   width: 100%;
@@ -80,7 +79,6 @@ function navigate(item) {
   background-color: #FFFFFF;
   box-shadow: 0 -2px 10px rgba(84, 87, 92, 0.1);
 }
-
 
 .nav-item {
   flex: 1;
@@ -95,14 +93,12 @@ function navigate(item) {
   position: relative;
 }
 
-
 .icon-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
 }
-
 
 .icon-background {
   width: 44px;
@@ -114,11 +110,9 @@ function navigate(item) {
   transition: background-color 0.3s ease;
 }
 
-
 .icon-background.active {
   background-color: #a7cc10;
 }
-
 
 .nav-icon {
   width: 24px;
@@ -127,11 +121,9 @@ function navigate(item) {
   transition: all 0.3s ease;
 }
 
-
 .icon-background.active .nav-icon {
   fill: #FFFFFF;
 }
-
 
 .nav-text {
   font-family: 'Inter', sans-serif;
@@ -140,7 +132,6 @@ function navigate(item) {
   transition: all 0.3s ease;
   margin-top: 4px;
 }
-
 
 .nav-text.active {
   color: #a7cc10;

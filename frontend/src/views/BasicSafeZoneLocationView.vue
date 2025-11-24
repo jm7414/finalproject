@@ -422,7 +422,7 @@ function goBack() {
 .page {
   height: 100%;
   background: #f9fafb;
-  padding: 20px 0 20px 0;
+  padding: 70px 0 20px 0;
   position: relative;
   z-index: 1;
   overflow-y: auto;

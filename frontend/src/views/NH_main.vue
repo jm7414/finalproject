@@ -14,19 +14,9 @@
     <!-- 경로당 배경 이미지 + 활성 멤버 -->
     <div class="card border-0 shadow-sm position-relative overflow-hidden mb-4 rounded-4">
       <div class="plaza-background" style="height:280px;">
-        <!-- 활성 멤버 프로필 표시 영역 -->
         <div class="active-members-container">
-          <div
-            v-for="member in activeMembers"
-            :key="member.userNo"
-            class="member-avatar"
-            :style="member.position"
-          >
-            <img 
-              :src="member.profilePhoto || '/default-avatar.png'" 
-              :alt="member.name"
-              class="member-photo"
-            />
+          <div v-for="member in activeMembers" :key="member.userNo" class="member-avatar" :style="member.position">
+            <img :src="member.profilePhoto || '/default-avatar.png'" :alt="member.name" class="member-photo" />
             <span class="member-name">{{ member.name }}</span>
           </div>
         </div>
@@ -43,10 +33,16 @@
       </button>
     </div>
 
+    <!-- 환자에서 들어왔을 때만 보이는 버튼 (쿼리 기반) -->
+    <div v-if="showPatientReturnBtn" class="mb-3">
+      <button class="btn w-100 rounded-pill patient-return-btn" @click="goToDP">
+        <i class="bi bi-person-heart me-1"></i>
+        내 첫화면으로 돌아가기
+      </button>
+    </div>
+
     <!-- 모임 일정 -->
     <h6 class="fw-bold mb-2">모임 일정</h6>
-
-    <!-- 일정 2개 -->
     <div v-if="upcomingSchedules.length > 0">
       <div v-for="(schedule, index) in upcomingSchedules" :key="index" class="card border-2 rounded-3 p-3 mb-2"
         style="border-color:#e9ecef">
@@ -58,8 +54,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 일정 없음 -->
     <div v-else class="card border-0 shadow-sm rounded-4 mb-2">
       <div class="card-body text-center text-muted">
         <p>일정이 없습니다.</p>
@@ -75,7 +69,6 @@
       </button>
     </div>
 
-    <!-- 친구 추가 & 광장 만들기 버튼 -->
     <div class="row g-2 mb-3">
       <div class="col-6">
         <button class="btn w-100 rounded-pill neighbor-btn-primary" @click="router.push('/makeFriends')">
@@ -91,12 +84,10 @@
       </div>
     </div>
 
-   <!-- AI 챗봇 버튼 -->
-<button class="fab-ai" @click="router.push('/chat')">
-  <span class="fab-ai-label">AI챗봇</span>
-</button>
-
-    <!-- 내정보 수정 모달 -->
+    <!-- AI 챗봇 버튼 -->
+    <button class="fab-ai" @click="router.push('/chat')">
+      <span class="fab-ai-label">AI챗봇</span>
+    </button>
     <NH_ModifyProfileModal :show="showEditProfileModal" @close="showEditProfileModal = false"
       @saved="reloadUserProfile" />
   </div>
@@ -104,218 +95,123 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { logout } from '@/utils/auth'
 import NH_ModifyProfileModal from '@/components/NH_ModifyProfileModal.vue'
 import axios from 'axios'
 
 const router = useRouter()
-const upcomingSchedules = ref([])
+const route = useRoute()
+
 const showEditProfileModal = ref(false)
 const activeMembers = ref([])
 const myPlazaNo = ref(null)
+const upcomingSchedules = ref([])
 
-// 활성 멤버 수 계산
 const activeMemberCount = computed(() => activeMembers.value.length)
 
-// ===== 실시간 위치 전송 로직 =====
-let locationInterval = null
+// 환자에서 들어온 경우만 복귀 버튼 표시 (쿼리값 기반)
+const showPatientReturnBtn = computed(() => route.query.fromPatient === '1')
 
+// 복귀 버튼 클릭 시 환자메인으로 이동
+function goToDP() {
+  router.push('/DP')
+}
+
+let locationInterval = null
 function startLocationTracking() {
   sendCurrentLocation()
-  locationInterval = setInterval(() => {
-    sendCurrentLocation()
-  }, 30000)
+  locationInterval = setInterval(() => { sendCurrentLocation() }, 30000)
 }
-
 function stopLocationTracking() {
-  if (locationInterval) {
-    clearInterval(locationInterval)
-    locationInterval = null
-  }
+  if (locationInterval) { clearInterval(locationInterval); locationInterval = null }
 }
-
 async function sendCurrentLocation() {
-  if (!navigator.geolocation) {
-    console.warn('이 브라우저는 위치 서비스를 지원하지 않습니다.')
-    return
-  }
-  
+  if (!navigator.geolocation) return
   navigator.geolocation.getCurrentPosition(
     async (position) => {
-      const latitude = position.coords.latitude
-      const longitude = position.coords.longitude
-      
-      console.log('현재 위치:', latitude, longitude)
-      
+      const { latitude, longitude } = position.coords
       try {
-        await axios.post('/NH/api/neighbor/location/update', {
-          latitude: latitude,
-          longitude: longitude
-        }, {
-          withCredentials: true  // 추가
-        })
-        console.log('위치 전송 성공')
-      } catch (error) {
-        console.error('위치 전송 실패:', error)
-      }
+        await axios.post('/NH/api/neighbor/location/update', { latitude, longitude }, { withCredentials: true })
+      } catch (error) { }
     },
-    (error) => {
-      console.error('위치 조회 오류:', error.message)
-      if (error.code === error.PERMISSION_DENIED) {
-        console.warn('위치 권한이 거부되었습니다.')
-      }
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
+    () => { },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   )
 }
 
-// ===== 활성 멤버 조회 =====
 async function fetchActiveMembers() {
   if (!myPlazaNo.value) return
-  
   try {
-    const response = await axios.get(
-      `/NH/api/neighbor/plazas/${myPlazaNo.value}/active-members`,
-      { withCredentials: true }  // ← 추가
-    )
+    const response = await axios.get(`/NH/api/neighbor/plazas/${myPlazaNo.value}/active-members`, { withCredentials: true })
     const members = response.data || []
-    
-    // 각 멤버에 초기 위치 할당
     activeMembers.value = members.map(member => ({
       ...member,
       position: getRandomPosition()
     }))
-    
-    console.log('활성 멤버:', activeMembers.value)
-  } catch (error) {
-    console.error('활성 멤버 조회 실패:', error)
-    activeMembers.value = []
-  }
+  } catch { activeMembers.value = [] }
 }
-
-
-// ===== 내 광장 번호 조회 =====
 async function fetchMyPlaza() {
   try {
-    const response = await axios.get(
-      '/NH/api/neighbor/plazas/my',
-      { withCredentials: true }  // 추가
-    )
-    
+    const response = await axios.get('/NH/api/neighbor/plazas/my', { withCredentials: true })
     if (response.data && response.data.plazaNo) {
       myPlazaNo.value = response.data.plazaNo
       await fetchActiveMembers()
-    } else {
-      console.log('속한 광장이 없습니다.')
     }
-  } catch (error) {
-    console.error('내 광장 조회 실패:', error)
-  }
+  } catch { }
 }
-
-
-// ===== 랜덤 위치 생성 (TV 아래 영역, 하단 가려짐 방지) =====
 function getRandomPosition() {
-  // TV 아래 영역: 상단 40% ~ 하단 75% 사이 (프로필이 가려지지 않도록 조정)
-  const top = Math.random() * 35 + 40 // 40% ~ 75%
-  const left = Math.random() * 80 + 10 // 10% ~ 90%
-  
-  return {
-    top: `${top}%`,
-    left: `${left}%`
-  }
+  const top = Math.random() * 35 + 40
+  const left = Math.random() * 80 + 10
+  return { top: `${top}%`, left: `${left}%` }
 }
-
-// ===== 랜덤 이동 애니메이션 시작 =====
 let movementInterval = null
-
 function startRandomMovement() {
   movementInterval = setInterval(() => {
     activeMembers.value = activeMembers.value.map(member => ({
       ...member,
       position: getRandomPosition()
     }))
-  }, 5000) // 5초마다 위치 변경
+  }, 5000)
 }
-
-function stopRandomMovement() {
-  if (movementInterval) {
-    clearInterval(movementInterval)
-    movementInterval = null
-  }
-}
-
+function stopRandomMovement() { if (movementInterval) { clearInterval(movementInterval); movementInterval = null } }
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString + 'T00:00:00')
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  return `${month}/${day}`
+  return `${date.getMonth() + 1}/${date.getDate()}`
 }
-
 const handleLogout = async () => {
   const success = await logout()
-  if (success) {
-    router.push('/login')
-  } else {
-    alert('로그아웃에 실패했습니다.')
-  }
+  if (success) { router.push('/login') }
+  else { alert('로그아웃에 실패했습니다.') }
 }
-
 const fetchUpcomingSchedules = async () => {
   try {
     const response = await fetch('/NH/api/schedule/upcoming')
-    if (!response.ok) {
-      throw new Error(`API 오류: ${response.status}`)
-    }
+    if (!response.ok) throw new Error(`API 오류: ${response.status}`)
     const data = await response.json()
     upcomingSchedules.value = data || []
-  } catch (error) {
-    console.error('일정 조회 실패:', error)
-    upcomingSchedules.value = []
-  }
+  } catch { upcomingSchedules.value = [] }
 }
-
-const reloadUserProfile = () => {
-  // 내정보 수정 후, 필요한 동작
-}
+const reloadUserProfile = () => { }
 
 onMounted(async () => {
   try {
     await nextTick()
     await fetchUpcomingSchedules()
     await fetchMyPlaza()
-    
-    // 위치 전송 시작
     startLocationTracking()
-    
-    // 랜덤 이동 애니메이션 시작
     startRandomMovement()
-    
-    // 10초마다 활성 멤버 갱신
-    setInterval(() => {
-      fetchActiveMembers()
-    }, 10000)
-  } catch (e) {
-    console.error(e)
-  }
+    setInterval(() => { fetchActiveMembers() }, 10000)
+  } catch (e) { console.error(e) }
 })
 
-onUnmounted(() => {
-  stopLocationTracking()
-  stopRandomMovement()
-})
+onUnmounted(() => { stopLocationTracking(); stopRandomMovement() })
 </script>
 
 <style scoped>
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
-/* 경로당 배경 이미지 */
 .plaza-background {
   width: 100%;
   background-image: url('/NeighborPlaza.png');
@@ -325,14 +221,12 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* 활성 멤버 컨테이너 */
 .active-members-container {
   width: 100%;
   height: 100%;
   position: relative;
 }
 
-/* 멤버 아바타 */
 .member-avatar {
   position: absolute;
   display: flex;
@@ -343,11 +237,13 @@ onUnmounted(() => {
   animation: bounce 2s ease-in-out infinite;
 }
 
-/* 바운스 애니메이션 */
 @keyframes bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -385,7 +281,36 @@ onUnmounted(() => {
   margin-top: -25px;
 }
 
-/* 내 만남의 광장 버튼 */
+.patient-return-btn {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  color: #fff;
+  font-family: 'SUIT', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(251, 113, 133, 0.18);
+  border: none;
+  padding: 14px 0;
+  transition: background 0.3s, box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patient-return-btn i {
+  font-size: 1.2rem;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.patient-return-btn:hover,
+.patient-return-btn:focus {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  box-shadow: 0 8px 24px rgba(251, 113, 133, 0.28);
+  transform: translateY(-2px) scale(1.03);
+  color: #fff;
+  outline: none;
+}
+
 .neighbor-btn-plaza {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   color: white;
@@ -403,7 +328,6 @@ onUnmounted(() => {
   box-shadow: 0 6px 16px rgba(251, 191, 36, 0.5);
 }
 
-/* 기존 버튼 스타일 */
 .neighbor-btn-primary {
   background: linear-gradient(135deg, #a7cc10 0%, #8fb80e 100%);
   color: white;
@@ -434,13 +358,14 @@ onUnmounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(167, 204, 16, 0.2);
 }
+
 .fab-ai {
   position: fixed;
   bottom: 150px;
-  right: calc((100vw - 414px) / 2 + 16px);  /* 카드 오른쪽 안쪽 */
-  width: 64px;                           /* 동그라미 크기 */
-  height: 64px;                          /* 동그라미 크기 */
-  border-radius: 50%; 
+  right: calc((100vw - 414px) / 2 + 16px);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
