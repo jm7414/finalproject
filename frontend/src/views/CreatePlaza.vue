@@ -5,8 +5,10 @@
     <div v-if="hasExistingLocation" class="location-preview">
       <div class="preview-header">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="#a7cc10" stroke-width="2"/>
-          <circle cx="12" cy="10" r="3" stroke="#a7cc10" stroke-width="2"/>
+          <path
+            d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z"
+            stroke="#a7cc10" stroke-width="2" />
+          <circle cx="12" cy="10" r="3" stroke="#a7cc10" stroke-width="2" />
         </svg>
         <span>설정된 위치</span>
         <button class="change-location-btn" @click="showMethodSelection">변경</button>
@@ -22,8 +24,10 @@
       <div class="no-location-header">
         <div>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="#6b7280" stroke-width="2"/>
-            <circle cx="12" cy="10" r="3" stroke="#6b7280" stroke-width="2"/>
+            <path
+              d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z"
+              stroke="#6b7280" stroke-width="2" />
+            <circle cx="12" cy="10" r="3" stroke="#6b7280" stroke-width="2" />
           </svg>
           <span>설정된 위치</span>
         </div>
@@ -37,14 +41,14 @@
     <!-- 위치 설정 방법 선택 -->
     <div v-if="showMethods" class="method-selection">
       <h3 class="method-title">위치 설정 방법을 선택하세요</h3>
-      
+
       <!-- 방법 1: 직접 검색 -->
       <div class="method-card" :class="{ active: selectedMethod === 'search' }" @click="selectMethod('search')">
         <div class="method-header">
           <div class="method-icon search-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-              <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+              <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" />
+              <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" />
             </svg>
           </div>
           <div class="method-info">
@@ -52,16 +56,11 @@
             <p class="method-desc">주소나 장소명을 입력하여 검색</p>
           </div>
         </div>
-        
+
         <div v-if="selectedMethod === 'search'" class="method-content">
           <div class="input-item">
-            <input
-              v-model="locationQuery"
-              type="text"
-              placeholder="예) 서울시 강남구 역삼동"
-              @focus="showResults = true"
-              @keyup.enter="searchLocation"
-            />
+            <input v-model="locationQuery" type="text" placeholder="예) 서울시 강남구 역삼동" @focus="showResults = true"
+              @keyup.enter="searchLocation" />
           </div>
         </div>
       </div>
@@ -71,8 +70,8 @@
         <div class="method-header">
           <div class="method-icon current-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" />
             </svg>
           </div>
           <div class="method-info">
@@ -80,12 +79,12 @@
             <p class="method-desc">현재 내 위치를 기준으로 설정</p>
           </div>
         </div>
-        
+
         <div v-if="selectedMethod === 'current'" class="method-content">
           <button class="current-location-btn" @click="useMyLocation" :disabled="isLoadingLocation">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" />
             </svg>
             {{ isLoadingLocation ? '위치 조회 중...' : '현 위치로 설정' }}
           </button>
@@ -111,20 +110,15 @@
     <div v-if="hasExistingLocation" class="card">
       <div class="input-item">
         <div class="label">광장 이름</div>
-        <input
-          v-model="plazaName"
-          type="text"
-          placeholder="예) 우리 동네 광장"
-          maxlength="30"
-        />
+        <input v-model="plazaName" type="text" placeholder="예) 우리 동네 광장" maxlength="30" />
       </div>
     </div>
 
     <!-- 설명 -->
     <div class="description-card">
       <p class="description-text">
-        <strong>만남의 광장 만들기</strong><br/>
-        이웃들과 만나는 장소를 설정하여 광장을 만듭니다.<br/>
+        <strong>만남의 광장 만들기</strong><br />
+        이웃들과 만나는 장소를 설정하여 광장을 만듭니다.<br />
         광장 범위(50m) 안에 있는 이웃들을 실시간으로 확인할 수 있습니다.
       </p>
     </div>
@@ -172,22 +166,22 @@ const canProceed = computed(() => {
 // 내 현재 위치 사용
 async function useMyLocation() {
   if (isLoadingLocation.value) return
-  
+
   isLoadingLocation.value = true
-  
+
   try {
     if (!navigator.geolocation) {
       alert('이 브라우저는 위치 서비스를 지원하지 않습니다.')
       return
     }
-    
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const latitude = position.coords.latitude
         const longitude = position.coords.longitude
-        
+
         const addressInfo = await reverseGeocode(latitude, longitude)
-        
+
         selectedLocation.value = {
           place_name: addressInfo.name,
           address_name: addressInfo.address,
@@ -195,7 +189,7 @@ async function useMyLocation() {
           x: longitude,
           y: latitude
         }
-        
+
         onLocationSelected()
         isLoadingLocation.value = false
       },
@@ -228,7 +222,7 @@ function reverseGeocode(latitude, longitude) {
       })
       return
     }
-    
+
     const geocoder = new window.kakao.maps.services.Geocoder()
     geocoder.coord2Address(longitude, latitude, (result, status) => {
       if (status === window.kakao.maps.services.Status.OK && result && result[0]) {
@@ -319,7 +313,7 @@ async function createPlaza() {
     alert('위치를 선택해주세요.')
     return
   }
-  
+
   if (!plazaName.value.trim()) {
     alert('광장 이름을 입력해주세요.')
     return
@@ -329,36 +323,29 @@ async function createPlaza() {
 
   isCreating.value = true
 
-  try {
-    const response = await axios.post('/NH/api/neighbor/plazas/create', {
-      plazaName: plazaName.value.trim(),
-      centerLat: parseFloat(selectedLocation.value.y),
-      centerLng: parseFloat(selectedLocation.value.x),
-      radiusMeters: 50  // 고정 50m
-    },{ withCredentials: true })
-
+  axios.post('/NH/api/neighbor/plazas/create', {
+    plazaName: plazaName.value.trim(),
+    centerLat: parseFloat(selectedLocation.value.y),
+    centerLng: parseFloat(selectedLocation.value.x),
+    radiusMeters: 50
+  }).then(() => {
     alert('광장이 성공적으로 만들어졌습니다! 🎉')
-    
+
     // sessionStorage 정리
     sessionStorage.removeItem('plazaLocation')
-    
-    // 광장 상세 페이지로 이동
-    router.push(`/plazaDetail/${response.data.plazaNo}`)
-    
-  } catch (error) {
-    console.error('광장 생성 실패:', error)
-    
-    // 수정: 백엔드 에러 메시지 표시
+
+    // 광장 메인
+    router.push(`/myPlaza`)
+
+  }).catch(error => {
     if (error.response?.data?.message) {
       alert(error.response.data.message)
     } else if (error.response?.status === 400) {
       alert('이미 광장에 속해 있습니다. 광장은 1개만 소속 가능합니다.')
-    } else {
-      alert('광장 생성에 실패했습니다.')
-    }
-  } finally {
+    } 
+  }).finally(() => {
     isCreating.value = false
-  }
+  })
 }
 
 function goBack() {
@@ -640,7 +627,7 @@ input:focus {
   margin-bottom: 12px;
 }
 
-.no-location-header > div {
+.no-location-header>div {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -684,7 +671,7 @@ input:focus {
   margin-bottom: 12px;
 }
 
-.preview-header > span {
+.preview-header>span {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -740,7 +727,8 @@ input:focus {
   margin-bottom: 100px;
 }
 
-.primary, .ghost {
+.primary,
+.ghost {
   flex: 1;
   padding: 14px;
   border-radius: 8px;
