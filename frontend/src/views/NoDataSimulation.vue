@@ -362,6 +362,8 @@ async function fetchVWorldData(location) {
 
         const data = await response.json()
 
+        console.log(`VWORLD에서 가져온 데이터 ::${JSON.stringify(data)}`)
+
         if (data.response?.result?.length > 0) {
             return { address: data.response.result[0].text }
         }

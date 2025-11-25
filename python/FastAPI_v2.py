@@ -1025,11 +1025,11 @@ async def predict_destinations(request: PredictionRequest):
     
     # 시간대 필터링
     print(f"⏰ 시간대 필터링 (±{request.time_window_hours}시간)...")
-    time_filtered_gps = filter_by_similar_time(gps_data, target_time, request.time_window_hours)
+    time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=4)
     print(f"✅ 시간대 데이터: {len(time_filtered_gps)}개")
     
     if len(time_filtered_gps) < 100:
-        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=3)
+        time_filtered_gps = filter_by_similar_time(gps_data, target_time, time_window_hours=4)
         print(f"   범위 확대: {len(time_filtered_gps)}개")
     
     if len(time_filtered_gps) < 50:
