@@ -3,15 +3,18 @@
     <RouterView />
   </DesktopLayout>
 
-  <div v-else class="mobile-shell">
+<div v-else class="mobile-shell">
     <div class="app-layout">
+      <!-- 조건 수정 -->
       <AppHeader v-if="showMobileHeader" />
-      <NeighborHeader v-if="isNeighborPage" /> <!-- ← 이 줄 추가 -->
+      <NeighborHeader v-if="isNeighborPage || isPredictLocationFromNeighbor" />
+      
       <main class="main-content" :class="mobileMainContentClass">
         <RouterView />
       </main>
+      
       <AppFooter v-if="showMobileFooter" />
-      <NeighborFooter v-if="isNeighborPage" />
+      <NeighborFooter v-if="isNeighborPage || isPredictLocationFromNeighbor" />
     </div>
   </div>
 
@@ -48,7 +51,6 @@ import AppFooter from './components/AppFooter.vue';
 import NeighborHeader from './components/NeighborHeader.vue';
 import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
-import DoorOpenAlertModal from './components/DoorOpenAlertModal.vue';
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
@@ -174,9 +176,9 @@ const isGeoFencingPage = computed(() => {
   return route.name === 'geo-fencing'
 })
 
-// 기본 안심존 설정 페이지인지 확인하는 computed 속성
-const isBasicSafeZonePage = computed(() => {
-  return route.name === 'basic-safe-zone-location' || route.name === 'basic-safe-zone-radius'
+// PredictLocation 페이지에서 이웃에서 왔는지 확인
+const isPredictLocationFromNeighbor = computed(() => {
+  return route.name === 'predict-location' && route.query.source === 'neighbor'
 })
 
 const showMobileHeader = computed(() => {
@@ -190,6 +192,7 @@ const showMobileHeader = computed(() => {
     isDpSchedule.value ||
     isDpConnect.value ||
     isNeighborPage.value ||
+    isPredictLocationFromNeighbor.value || // 지현 추가
     isGame.value)
 })
 
@@ -202,8 +205,10 @@ const showMobileFooter = computed(() => {
     isDpSchedule.value ||
     isDpConnect.value ||
     isNeighborPage.value ||
+    isPredictLocationFromNeighbor.value || // 지현 추가
     isGame.value)
 })
+
 
 const mobileMainContentClass = computed(() => {
   return {
@@ -220,17 +225,15 @@ const mobileMainContentClass = computed(() => {
       SightingReport.value ||
       SightingReportWrite.value ||
       ReportEdit.value ||
-      isGeoFencingPage.value ||
-      isBasicSafeZonePage.value,
+      isGeoFencingPage.value,
     'neighbor-page': isNeighborPage.value
   }
 })
 
 /* ===== 안심존 이탈 알림 시스템 ===== */
 
-// 알림 모달 상태 + 문열림
+// 알림 모달 상태
 const showSafeZoneAlert = ref(false)
-const doorOpenAlert = ref(false)
 const alertPatientName = ref('')
 
 // 안심존 모니터링 상태
@@ -243,12 +246,6 @@ const lastSafeZoneData = ref(null) // 이전 안심존 데이터 (변경 감지�
 // 안심존 이탈 알림 닫기
 function closeSafeZoneAlert() {
   showSafeZoneAlert.value = false
-  alertPatientName.value = ''
-}
-
-// 문열림 알림 닫기
-function closeDoorOpenAlert() {
-  doorOpenAlert.value = false
   alertPatientName.value = ''
 }
 
@@ -721,18 +718,14 @@ onMounted(async () => {
     setTimeout(async () => {
       // ⭐ 4. (중요) 안심존 모니터링 전에 사용자 정보부터 가져와서 ref에 채웁니다.
       currentUser.value = await getCurrentUser();
-      console.log('[App.vue] onMounted에서 currentUser 초기화:', currentUser.value);
       await startSafeZoneMonitoring()
       startAlertPolling(currentUser.value?.role); // 실종알림
     }, 500)
-  } else {
-    // 로그인/회원가입 페이지에서는 currentUser를 null로 설정
-    currentUser.value = null;
   }
 
   // 움직임 감지 센서 일단 일부러 시간 길게 설정해놨습니다
   checkMovement()
-  intervalId = setInterval(checkMovement, 1000)
+  intervalId = setInterval(checkMovement, 1500000000000000000000000)
 })
 
 // 컴포넌트 언마운트 시 모니터링 중지
@@ -750,10 +743,9 @@ onBeforeUnmount(() => {
 // 라우트 변경 감지
 const prevRoute = ref(null)
 watch(route, async (newRoute, oldRoute) => {
-  // 로그인/회원가입 페이지로 이동할 때 모니터링 중지 및 currentUser 초기화
+  // 로그인/회원가입 페이지로 이동할 때 모니터링 중지
   if (newRoute.name === 'login' || newRoute.name === 'SignUp') {
     stopSafeZoneMonitoring()
-    currentUser.value = null // 로그아웃 시 currentUser 초기화
     prevRoute.value = newRoute
     return
   }
@@ -771,29 +763,6 @@ watch(route, async (newRoute, oldRoute) => {
     }, 500)
     prevRoute.value = newRoute
     return
-  }
-
-  // ⭐ 인증이 필요한 페이지로 이동할 때마다 currentUser 갱신 (다른 계정으로 재로그인 대응)
-  if (newRoute.meta?.requiresAuth) {
-    try {
-      const user = await getCurrentUser();
-      if (user) {
-        // userNo가 변경되었는지 확인
-        if (!currentUser.value || currentUser.value.userNo !== user.userNo) {
-          console.log('[App.vue] currentUser 갱신 감지:', {
-            이전: currentUser.value?.userNo,
-            현재: user.userNo
-          });
-          currentUser.value = user;
-        }
-      } else {
-        // 인증 실패 시 null로 설정
-        currentUser.value = null;
-      }
-    } catch (error) {
-      console.error('[App.vue] currentUser 갱신 실패:', error);
-      currentUser.value = null;
-    }
   }
 
   // 다른 경우에도 모니터링이 중지되어 있다면 재시작 시도

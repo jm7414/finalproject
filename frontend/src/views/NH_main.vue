@@ -33,7 +33,7 @@
       </button>
     </div>
 
-    <!-- 환자에서 들어왔을 때만 보이는 버튼 (쿼리 기반) -->
+    <!-- 환자에서 들어왔을 때만 보이는 버튼 (로컬스토리지/쿼리값 기반) -->
     <div v-if="showPatientReturnBtn" class="mb-3">
       <button class="btn w-100 rounded-pill patient-return-btn" @click="goToDP">
         <i class="bi bi-person-heart me-1"></i>
@@ -110,10 +110,20 @@ const upcomingSchedules = ref([])
 
 const activeMemberCount = computed(() => activeMembers.value.length)
 
-// 환자에서 들어온 경우만 복귀 버튼 표시 (쿼리값 기반)
-const showPatientReturnBtn = computed(() => route.query.fromPatient === '1')
+// ** 로컬 스토리지 (sessionStorage) 로 쿼리값 보존하여 버튼 활성화 유지 **
+const fromPatientFlag = ref(false)
 
-// 복귀 버튼 클릭 시 환자메인으로 이동
+onMounted(() => {
+  if (route.query.fromPatient === '1') {
+    fromPatientFlag.value = true
+    sessionStorage.setItem('fromPatient', '1')
+  } else if (sessionStorage.getItem('fromPatient') === '1') {
+    fromPatientFlag.value = true
+  }
+})
+
+const showPatientReturnBtn = computed(() => fromPatientFlag.value)
+
 function goToDP() {
   router.push('/DP')
 }
@@ -182,7 +192,10 @@ const formatDate = (dateString) => {
 }
 const handleLogout = async () => {
   const success = await logout()
-  if (success) { router.push('/login') }
+  if (success) {
+    sessionStorage.removeItem('fromPatient')
+    router.push('/login')
+  }
   else { alert('로그아웃에 실패했습니다.') }
 }
 const fetchUpcomingSchedules = async () => {
@@ -212,6 +225,7 @@ onUnmounted(() => { stopLocationTracking(); stopRandomMovement() })
 <style scoped>
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
+/* 이하 CSS는 1, 2번코드 동일 */
 .plaza-background {
   width: 100%;
   background-image: url('/NeighborPlaza.png');

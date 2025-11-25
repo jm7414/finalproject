@@ -356,7 +356,7 @@ const modal = ref(null)
 // 카카오지도 및 API 키 설정
 // ========================================================================================
 const mapContainer = ref(null)
-const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = '7e0332c38832a4584b3335bed6ae30d8'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
@@ -370,6 +370,12 @@ const showAgentSimulation = ref(false)
 
 // 모달 열기 함수 - 유효성 검사 추가
 const openAgentSimulation = () => {
+    // ⭐ 필수 값 유효성 검사
+    if (!patientUserNo.value) {
+        console.error('❌ patientUserNo가 없습니다:', patientUserNo.value)
+        alert('환자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+        return
+    }
 
     if (!missingLocation.value.lat || !missingLocation.value.lon) {
         console.error('❌ missingLocation이 없습니다:', missingLocation.value)
@@ -547,7 +553,7 @@ async function fetchPredictionData() {
 
         // POST 요청
         const response = await axios.post(
-            `${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/api/predict-destinations`,
+            `http://localhost:8000/api/predict-destinations`,
             requestBody,
             {
                 withCredentials: true,
@@ -774,11 +780,6 @@ async function processLocation(location, zoneLevel, locationIndex, columns) {
  * VWorld Data API 호출
  */
 async function fetchVWorldData(location, columns) {
-    // 현재 호스트에 따라 domain 설정
-    const currentDomain = window.location.hostname === 'localhost' 
-        ? 'localhost' 
-        : window.location.hostname
-    
     const dataParams = new URLSearchParams({
         service: 'data',
         version: '2.0',
@@ -795,7 +796,7 @@ async function fetchVWorldData(location, columns) {
         buffer: '10',
         crs: 'EPSG:4326',
         key: VWORLD_API_KEY,
-        domain: currentDomain
+        domain: 'api.vworld.kr'
     })
 
     const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
@@ -900,35 +901,6 @@ async function generateAddress2(jimok, address1) {
         const result = `${jimokNaturalText}에 있을 것 같아요!`
         return result
     }
-}
-
-/**
- * Kakao Geocoder를 사용한 좌표→주소 변환 (폴백용)
- */
-async function getKakaoAddressFromCoord(lat, lon) {
-    return new Promise((resolve) => {
-        if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
-            console.error('Kakao Geocoder 서비스가 로드되지 않았습니다.')
-            resolve(null)
-            return
-        }
-
-        const geocoder = new window.kakao.maps.services.Geocoder()
-
-        geocoder.coord2Address(lon, lat, (result, status) => {
-            if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
-                const addressInfo = result[0].address
-                resolve({
-                    sido: addressInfo.region_1depth_name || '',
-                    gungu: addressInfo.region_2depth_name || '',
-                    eup: addressInfo.region_3depth_name || ''
-                })
-            } else {
-                console.warn('Kakao Geocoder: 주소 조회 실패')
-                resolve(null)
-            }
-        })
-    })
 }
 
 /**
@@ -1097,37 +1069,19 @@ async function requestAllRoutes() {
                 // ⭐ waypoints 변환
                 let waypointsStr = ''
                 if (d.waypoints && Array.isArray(d.waypoints) && d.waypoints.length > 0) {
-                    let selectedWaypoints = [];
-                    const totalWaypoints = d.waypoints.length;
-
-                    if (totalWaypoints <= 5) {
-                        // 5개 이하면 전체 사용
-                        selectedWaypoints = d.waypoints;
-                    } else {
-                        // 5개 초과 시 균등 간격으로 5개 추출
-                        const maxWaypoints = 5;
-                        const step = totalWaypoints / maxWaypoints;
-
-                        for (let j = 0; j < maxWaypoints; j++) {
-                            const idx = Math.floor(step * (j + 1)) - 1;  // 5번째, 10번째, 15번째... 인덱스
-                            selectedWaypoints.push(d.waypoints[idx]);
-                        }
-                    }
-
-                    const waypointsCoords = selectedWaypoints.map(wp => {
+                    const waypointsCoords = d.waypoints.map(wp => {
                         if (!wp.lon || !wp.lat) {
-                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp);
-                            return null;
+                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp)
+                            return null
                         }
-                        return `${wp.lon},${wp.lat}`;
-                    }).filter(coord => coord !== null);
+                        return `${wp.lon},${wp.lat}`
+                    }).filter(coord => coord !== null)
 
                     if (waypointsCoords.length > 0) {
-                        waypointsStr = waypointsCoords.join('_');
-                        console.log(`✅ ${totalWaypoints}개 waypoints → ${waypointsCoords.length}개로 샘플링`);
+                        waypointsStr = waypointsCoords.join('_')
                     }
                 } else {
-                    console.log(`ℹ️  경유지 없음`);
+                    console.log(`ℹ️  경유지 없음`)
                 }
 
                 // ⭐ 요청 본문 구성`
