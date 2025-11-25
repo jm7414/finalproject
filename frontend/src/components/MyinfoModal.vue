@@ -176,14 +176,17 @@ const showConnectCode = () => {
 // 로그아웃 처리
 const handleLogout = async () => {
   const success = await logout()
-  
   if (success) {
+    // 환자 관련 로컬스토리지 / 세션스토리지 초기화
+    sessionStorage.removeItem('fromPatient')
+        
     closeModal()
     router.push('/login')
   } else {
     alert('로그아웃에 실패했습니다.')
   }
 }
+
 </script>
 
 <style scoped>

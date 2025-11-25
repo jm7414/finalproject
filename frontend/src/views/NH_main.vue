@@ -33,7 +33,7 @@
       </button>
     </div>
 
-    <!-- 환자에서 들어왔을 때만 보이는 버튼 (쿼리 기반) -->
+    <!-- 환자에서 들어왔을 때만 보이는 버튼 (로컬스토리지/쿼리값 기반) -->
     <div v-if="showPatientReturnBtn" class="mb-3">
       <button class="btn w-100 rounded-pill patient-return-btn" @click="goToDP">
         <i class="bi bi-person-heart me-1"></i>
@@ -44,8 +44,7 @@
     <!-- 모임 일정 -->
     <h6 class="fw-bold mb-2">모임 일정</h6>
     <div v-if="upcomingSchedules.length > 0">
-      <div v-for="(schedule, index) in upcomingSchedules" :key="index" class="card border-2 rounded-3 p-3 mb-2"
-        style="border-color:#e9ecef">
+      <div v-for="(schedule, index) in upcomingSchedules" :key="index" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="small text-secondary mb-1">{{ formatDate(schedule.scheduleDate) }}</span>
           <div class="d-flex align-items-center gap-2">
@@ -88,13 +87,17 @@
     <button class="fab-ai" @click="router.push('/chat')">
       <span class="fab-ai-label">AI챗봇</span>
     </button>
-    <NH_ModifyProfileModal :show="showEditProfileModal" @close="showEditProfileModal = false"
-      @saved="reloadUserProfile" />
+
+    <NH_ModifyProfileModal 
+      :show="showEditProfileModal" 
+      @close="showEditProfileModal = false" 
+      @saved="reloadUserProfile" 
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { logout } from '@/utils/auth'
 import NH_ModifyProfileModal from '@/components/NH_ModifyProfileModal.vue'
@@ -110,10 +113,20 @@ const upcomingSchedules = ref([])
 
 const activeMemberCount = computed(() => activeMembers.value.length)
 
-// 환자에서 들어온 경우만 복귀 버튼 표시 (쿼리값 기반)
-const showPatientReturnBtn = computed(() => route.query.fromPatient === '1')
+// ** 로컬 스토리지 (sessionStorage) 로 쿼리값 보존하여 버튼 활성화 유지 **
+const fromPatientFlag = ref(false)
 
-// 복귀 버튼 클릭 시 환자메인으로 이동
+onMounted(() => {
+  if (route.query.fromPatient === '1') {
+    fromPatientFlag.value = true
+    sessionStorage.setItem('fromPatient', '1')
+  } else if (sessionStorage.getItem('fromPatient') === '1') {
+    fromPatientFlag.value = true
+  }
+})
+
+const showPatientReturnBtn = computed(() => fromPatientFlag.value)
+
 function goToDP() {
   router.push('/DP')
 }
@@ -151,6 +164,7 @@ async function fetchActiveMembers() {
     }))
   } catch { activeMembers.value = [] }
 }
+
 async function fetchMyPlaza() {
   try {
     const response = await axios.get('/NH/api/neighbor/plazas/my', { withCredentials: true })
@@ -160,6 +174,7 @@ async function fetchMyPlaza() {
     }
   } catch { }
 }
+
 function getRandomPosition() {
   const top = Math.random() * 35 + 40
   const left = Math.random() * 80 + 10
@@ -174,17 +189,25 @@ function startRandomMovement() {
     }))
   }, 5000)
 }
+
 function stopRandomMovement() { if (movementInterval) { clearInterval(movementInterval); movementInterval = null } }
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString + 'T00:00:00')
   return `${date.getMonth() + 1}/${date.getDate()}`
 }
+
 const handleLogout = async () => {
   const success = await logout()
-  if (success) { router.push('/login') }
-  else { alert('로그아웃에 실패했습니다.') }
+  if (success) {
+    // 환자 상태 제거
+    sessionStorage.removeItem('fromPatient')
+    router.push('/login')
+  } else {
+    alert('로그아웃에 실패했습니다.')
+  }
 }
+
 const fetchUpcomingSchedules = async () => {
   try {
     const response = await fetch('/NH/api/schedule/upcoming')
