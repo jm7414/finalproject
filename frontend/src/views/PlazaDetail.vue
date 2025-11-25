@@ -159,8 +159,7 @@ import PlazaDetailAlertModal from '@/components/PlazaDetailAlertModal.vue'
 
 const router = useRouter()
 const route = useRoute()
-
-const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = '52b0ab3fb35c5b7adc31c9772065891'
 const mapEl = ref(null)
 const plazaNo = ref(parseInt(route.params.plazaNo))
 
@@ -815,4 +814,3 @@ async function leavePlaza() {
   box-shadow: 0 4px 12px rgba(167, 204, 16, 0.3);
 }
 </style>
-

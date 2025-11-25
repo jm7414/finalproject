@@ -40,8 +40,6 @@
     <!-- 위치 설정 방법 선택 -->
     <div v-if="showMethods" class="method-selection">
       <h3 class="method-title">위치 설정 방법을 선택하세요</h3>
-
-      <!-- 방법 1: 직접 검색 -->
       <div class="method-card" :class="{ active: selectedMethod === 'search' }" @click="selectMethod('search')">
         <div class="method-header">
           <div class="method-icon search-icon">
@@ -138,8 +136,7 @@ import axios from 'axios'
 import CreatePlazaAlertModal from '@/components/CreatePlazaAlertModal.vue'
 
 const router = useRouter()
-
-const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
+const KAKAO_JS_KEY = '52b0ab3fbb35c5b7adc31c9772065891'
 const locationQuery = ref('')
 const searchResults = ref([])
 const selectedLocation = ref(null)

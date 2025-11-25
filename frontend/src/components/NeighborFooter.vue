@@ -15,21 +15,22 @@ const route = useRoute();
 // ✅ 현재 경로에 따라 활성 아이템 결정 (수정됨)
 const activeItem = computed(() => {
   const currentPath = route.path;
-  
+
   // PredictLocation에서 이웃으로 온 경우 → '공지' 활성화
   if (route.name === 'predict-location' && route.query.source === 'neighbor') {
     return '공지';
   }
-  
+
   // 기존 로직
   if (currentPath === '/NH') {
     return '홈';
-  } else if (currentPath === '/nhCalender') {
+  } else if (currentPath === '/nhCalender' || currentPath === '/nhAddSchedule') {
+    // ✅ /nhAddSchedule도 '일정' 탭 활성화
     return '일정';
   } else if (currentPath === '/nhNotice') {
     return '공지';
   }
-  
+
   return null;
 });
 
@@ -43,18 +44,14 @@ function navigate(item) {
 <template>
   <footer class="neighbor-footer">
     <nav class="nav-container">
-      <div
-        v-for="item in navItems"
-        :key="item.name"
-        class="nav-item"
-        @click="navigate(item)"
-      >
+      <div v-for="item in navItems" :key="item.name" class="nav-item" @click="navigate(item)">
         <div class="icon-wrapper">
           <div class="icon-background" :class="{ active: activeItem === item.name }">
-            <svg class="nav-icon" :class="{ active: activeItem === item.name }" viewBox="0 0 28 28" v-html="item.svg"></svg>
+            <svg class="nav-icon" :class="{ active: activeItem === item.name }" viewBox="0 0 28 28"
+              v-html="item.svg"></svg>
           </div>
         </div>
-        
+
         <span class="nav-text" :class="{ active: activeItem === item.name }">{{ item.name }}</span>
       </div>
     </nav>

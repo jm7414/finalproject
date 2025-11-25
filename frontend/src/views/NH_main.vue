@@ -44,7 +44,8 @@
     <!-- 모임 일정 -->
     <h6 class="fw-bold mb-2">모임 일정</h6>
     <div v-if="upcomingSchedules.length > 0">
-      <div v-for="(schedule, index) in upcomingSchedules" :key="index" class="card border-2 rounded-3 p-3 mb-2" style="border-color:#e9ecef">
+      <div v-for="(schedule, index) in upcomingSchedules" :key="index" class="card border-2 rounded-3 p-3 mb-2"
+        style="border-color:#e9ecef">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="small text-secondary mb-1">{{ formatDate(schedule.scheduleDate) }}</span>
           <div class="d-flex align-items-center gap-2">
@@ -87,17 +88,13 @@
     <button class="fab-ai" @click="router.push('/chat')">
       <span class="fab-ai-label">AI챗봇</span>
     </button>
-
-    <NH_ModifyProfileModal 
-      :show="showEditProfileModal" 
-      @close="showEditProfileModal = false" 
-      @saved="reloadUserProfile" 
-    />
+    <NH_ModifyProfileModal :show="showEditProfileModal" @close="showEditProfileModal = false"
+      @saved="reloadUserProfile" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { logout } from '@/utils/auth'
 import NH_ModifyProfileModal from '@/components/NH_ModifyProfileModal.vue'
@@ -164,7 +161,6 @@ async function fetchActiveMembers() {
     }))
   } catch { activeMembers.value = [] }
 }
-
 async function fetchMyPlaza() {
   try {
     const response = await axios.get('/NH/api/neighbor/plazas/my', { withCredentials: true })
@@ -174,7 +170,6 @@ async function fetchMyPlaza() {
     }
   } catch { }
 }
-
 function getRandomPosition() {
   const top = Math.random() * 35 + 40
   const left = Math.random() * 80 + 10
@@ -189,25 +184,20 @@ function startRandomMovement() {
     }))
   }, 5000)
 }
-
 function stopRandomMovement() { if (movementInterval) { clearInterval(movementInterval); movementInterval = null } }
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString + 'T00:00:00')
   return `${date.getMonth() + 1}/${date.getDate()}`
 }
-
 const handleLogout = async () => {
   const success = await logout()
   if (success) {
-    // 환자 상태 제거
     sessionStorage.removeItem('fromPatient')
     router.push('/login')
-  } else {
-    alert('로그아웃에 실패했습니다.')
   }
+  else { alert('로그아웃에 실패했습니다.') }
 }
-
 const fetchUpcomingSchedules = async () => {
   try {
     const response = await fetch('/NH/api/schedule/upcoming')
@@ -235,6 +225,7 @@ onUnmounted(() => { stopLocationTracking(); stopRandomMovement() })
 <style scoped>
 @import url('https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css');
 
+/* 이하 CSS는 1, 2번코드 동일 */
 .plaza-background {
   width: 100%;
   background-image: url('/NeighborPlaza.png');
