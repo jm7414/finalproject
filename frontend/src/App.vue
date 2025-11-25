@@ -677,16 +677,27 @@ function stopSafeZoneMonitoring() {
 // ==========================================================
 let intervalId = null
 
-// Ctrl + 1 누르면 문열림 모달 테스트용으로 띄우기
+// Ctrl + Shift + 1 또는 Alt + 1 누르면 문열림 모달 테스트용으로 띄우기
 function handleKeydown(event) {
-  // 시연용: Ctrl+1 또는 (맥) Command+1
-  if ((event.ctrlKey || event.metaKey) && event.key === '1') {
-    event.preventDefault()
-    // 환자 이름 세팅 (없으면 빈 문자열)
-    alertPatientName.value = patientName.value || ''
-    // 모달 열기
-    doorOpenAlert.value = true
-  }
+  const isOneKey =
+    event.key === '1' ||
+    event.code === 'Digit1' ||
+    event.code === 'Numpad1'
+
+  // Ctrl + Shift + 1  이거나  Alt + 1
+  const isShortcut =
+    (event.ctrlKey && event.shiftKey && isOneKey) ||
+    (event.altKey && isOneKey)
+
+  if (!isShortcut) return
+
+  event.preventDefault()
+
+  // 환자 이름 세팅 (없으면 빈 문자열)
+  alertPatientName.value = patientName.value || ''
+
+  // 문열림 감지 모달 열기
+  doorOpenAlert.value = true
 }
 
 const checkMovement = async () => {
