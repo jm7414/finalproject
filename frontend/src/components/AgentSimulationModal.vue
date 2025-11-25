@@ -408,11 +408,13 @@ const loadSimulationData = async () => {
 
         // ⭐ 여기서 모든 시나리오의 에이전트 주소 조회
         if (scenarios) {
-            console.log('🔄 모든 시나리오의 에이전트 주소 조회 시작...')
+            console.log('🔄 모든 시나리오의 에이전트 주소 조회 시작 (병렬 처리)...')
 
-            // 각 시나리오별로 순회
+            // ⭐ 모든 시나리오의 모든 에이전트를 한 번에 처리
+            const allAddressPromises = []
+
             for (const [scenarioKey, scenarioData] of Object.entries(scenarios)) {
-                console.log(`\n📍 시나리오: ${scenarioKey}`)
+                console.log(`📍 시나리오: ${scenarioKey}`)
 
                 if (!scenarioData.frames || scenarioData.frames.length === 0) {
                     console.log(`⚠️ ${scenarioKey}에 프레임 없음`)
@@ -427,30 +429,27 @@ const loadSimulationData = async () => {
 
                 console.log(`✅ ${scenarioKey}: ${firstFrame.agents.length}개 에이전트 발견`)
 
-                // 각 에이전트의 주소를 순차적으로 조회
-                for (let i = 0; i < firstFrame.agents.length; i++) {
-                    const agent = firstFrame.agents[i]
-
-                    try {
-                        console.log(`⏳ [${scenarioKey}] Agent ${agent.rank} 조회 중... (${i + 1}/${firstFrame.agents.length})`)
-
-                        await fetchAgentAddress(agent)
-
-                        console.log(`✅ [${scenarioKey}] Agent ${agent.rank}: ${agent.address}`)
-                    } catch (e) {
-                        console.error(`❌ [${scenarioKey}] Agent ${agent.rank} 조회 실패:`, e)
-                        agent.address = '조회 실패'
-                    }
-
-                    // API 요청 throttle (300ms마다 1개씩)
-                    await new Promise(resolve => setTimeout(resolve, 300))
-                }
-
-                console.log(`✅ ${scenarioKey} 모든 에이전트 주소 조회 완료!\n`)
+                // 각 에이전트의 주소 조회 Promise를 배열에 추가
+                firstFrame.agents.forEach((agent, i) => {
+                    allAddressPromises.push(
+                        fetchAgentAddress(agent)
+                            .then(() => {
+                                console.log(`✅ [${scenarioKey}] Agent ${agent.rank}: ${agent.address}`)
+                            })
+                            .catch(e => {
+                                console.error(`❌ [${scenarioKey}] Agent ${agent.rank} 조회 실패:`, e)
+                                agent.address = '조회 실패'
+                            })
+                    )
+                })
             }
 
+            // ⭐ 모든 주소 조회를 병렬로 실행
+            console.log(`🚀 총 ${allAddressPromises.length}개 에이전트 병렬 조회 시작...`)
+            await Promise.all(allAddressPromises)
             console.log('✅✅✅ 모든 시나리오 주소 조회 완료')
         }
+
 
         // 전체 데이터 저장
         allScenariosData.value = scenarios
@@ -1306,7 +1305,7 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     padding: 12px;
-    gap:12px;
+    gap: 12px;
 }
 
 .agent-item {

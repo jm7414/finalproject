@@ -827,12 +827,9 @@ class DementiaWanderingModel(Model):
     def step(self):
         self.schedule.step()
 
-def run_simulation_for_scenario(latitude, longitude, time_minutes, distance_m, turn_preference):
+def run_simulation_for_scenario(latitude, longitude, G, time_minutes, distance_m, turn_preference):
     """단일 시나리오 시뮬레이션 실행"""
     print(f"시뮬레이션 시작: {time_minutes}분, {distance_m}m")
-    
-    center_point = (latitude, longitude)
-    G = ox.graph_from_point(center_point, dist=3000, network_type='walk')
     
     start_node = ox.nearest_nodes(G, longitude, latitude)
     
@@ -1391,6 +1388,10 @@ async def run_all_simulations(request: SimulationRequest):
         latitude = request.latitude
         longitude = request.longitude
         
+        # GPS데이터 받은 부분에서 도로망을 한번만 받아옴
+        center_point = (latitude, longitude)
+        G = ox.graph_from_point(center_point, dist=2000, network_type='walk')
+        
         # ⭐ 회전 선호도는 기본값 사용 (GPS 데이터 없이는 분석 불가)
         turn_preference = 'right'
         print(f"🔄 회전 선호도: {turn_preference} (기본값)")
@@ -1414,6 +1415,7 @@ async def run_all_simulations(request: SimulationRequest):
                 run_simulation_for_scenario,
                 latitude,
                 longitude,
+                G,
                 scenario['time'],
                 scenario['distance'],
                 turn_preference
