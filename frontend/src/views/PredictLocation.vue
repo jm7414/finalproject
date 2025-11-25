@@ -161,7 +161,7 @@
                         </p>
                         <p class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
-                            실종장소: {{ missingAddress?.fullAddress || '주소 로딩 중...' }}
+                            실종장소: {{ missingAddress.fullAddress || '구로구 구로동ㅋ' }}
                         </p>
 
                         <!-- <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
@@ -177,19 +177,18 @@
                         <div class="d-flex align-items-center gap-1">
                             <div class="info-badge">
                                 <i class="bi bi-person-badge"></i>
-                                <span class="badge-label">신체 특징</span>
+                                <span class="badge-label">인상착의</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).physicalFeatures
-                                || '170cm 마른 체형' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '170cm 마른 체형' }}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
                             <div class="info-badge">
                                 <i class="bi bi-bag"></i>
-                                <span class="badge-label">착의사항</span>
+                                <span class="badge-label">소지품</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing ||
-                                '정보없음'}}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).belongings ||
+                                '정보없음' }}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -336,8 +335,8 @@
             </div>
         </div>
         <!-- ★★★ 에이전트 시뮬레이션 모달 추가 ★★★ -->
-        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="1"
-            :missingLocation="missingLocation" :missingTime="missingTimeDB" @close="closeAgentSimulation" />
+        <AgentSimulationModal :isVisible="showAgentSimulation" :userNo="1" :missingLocation="missingLocation"
+            :missingTime="missingTimeDB" @close="closeAgentSimulation" />
         <ConfirmModal ref="modal" />
     </div>
 </template>
@@ -596,6 +595,8 @@ async function processDestinationsToZones(apiResponse) {
         lastKnownLocation.value = apiResponse.last_known_location
         missingLocation.value.lat = apiResponse.last_known_location.latitude
         missingLocation.value.lon = apiResponse.last_known_location.longitude
+        console.log(`processDestinationsToZones 호출되어 FastAPI 통신 후 response에 last_known_location 있음`)
+        console.log(`missingLocation value => :: ${missingLocation.value.lat}, ${missingLocation.value.lon}`)
     }
 
     const destinationsByDistance = apiResponse.destinations_by_distance || {}
@@ -800,16 +801,36 @@ async function fetchVWorldData(location, columns) {
         throw new Error(`VWorld Data API HTTP error! status: ${dataRes.status}`)
     }
 
-    const dataText = await dataRes.text()
+    // 1. text로 받기
+    let dataText = await dataRes.text()
+    
+    // 2. 이중 래핑된 JSON 처리
+    if (dataText.startsWith('"') && dataText.endsWith('"')) {
+        dataText = JSON.parse(dataText)
+    }
+    
+    // 3. JSON 파싱
+    const dataResp = JSON.parse(dataText)
+    
+    console.log('VWORLD Response Status:', dataResp?.response?.status)
 
-    let dataResp = JSON.parse(dataText)
-    const properties = dataResp?.response?.result?.featureCollection?.features?.[0]?.properties
+    // 4. features 접근
+    const features = dataResp?.response?.result?.featureCollection?.features
+
+    if (features && features.length > 0) {
+        const props = features[0].properties
+        const addr = `${props.sgg_nm || ''} ${props.emd_nm || ''} ${props.rn_nm || ''}`.trim()
+        console.log('주소 ::', addr)
+    }
+
+    const properties = features?.[0]?.properties
 
     // 응답 구조 정규화하여 반환
     return {
-        status: dataResp?.response?.status || dataResp?.status || 'ERROR',
-        errorText: dataResp?.response?.error?.text || dataResp?.error?.text,
-        properties: properties
+        status: dataResp?.response?.status || 'ERROR',
+        errorText: dataResp?.response?.error?.text,
+        properties: properties,
+        allFeatures: features
     }
 }
 
@@ -1328,32 +1349,32 @@ watch(showAllLocations, (newValue) => {
  * 임시 테스트용 마커 3개를 생성합니다. 함께하기용 나중에 진짜 함께하기가 되면 삭제해야 함
  */
 function createTemporaryMarkers() {
-  // map 객체가 초기화되었는지 확인
-  if (!map) {
-    console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
-    return;
-  }
+    // map 객체가 초기화되었는지 확인
+    if (!map) {
+        console.warn('임시 마커 생성 실패: map 객체가 아직 초기화되지 않았습니다.');
+        return;
+    }
 
-  console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
+    console.log("🗺️ 3개의 임시 테스트 마커를 생성합니다...");
 
-  // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
-  const mapCenter = map.getCenter(); 
-  const testPositions = [
-    new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
-    new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002),  // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
-    new window.kakao.maps.LatLng(mapCenter.getLat() -0.001, mapCenter.getLng() - 0.001)    // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
-  ];
+    // 1. 현재 지도 중심을 기준으로 임의의 위치 3개 설정
+    const mapCenter = map.getCenter();
+    const testPositions = [
+        new window.kakao.maps.LatLng(mapCenter.getLat() + 0.0015, mapCenter.getLng() - 0.001), // 1 mapCenter.getLat() + 0.001, mapCenter.getLng() + 0.001
+        new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.002),  // 3 mapCenter.getLat() - 0.001, mapCenter.getLng()
+        new window.kakao.maps.LatLng(mapCenter.getLat() - 0.001, mapCenter.getLng() - 0.001)    // 2 mapCenter.getLat(), mapCenter.getLng() - 0.001
+    ];
 
-  // 2. 3개의 마커를 생성하여 지도에 바로 표시
-  // (이 마커들은 'markers' 배열에 추가하지 않으므로,
-  // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
-  testPositions.forEach((position, index) => {
-    new window.kakao.maps.Marker({
-        position: position,
-        map: map, // 맵 객체에 바로 표시
-        title: `테스트 마커 ${index + 1}`
-    });
-  });
+    // 2. 3개의 마커를 생성하여 지도에 바로 표시
+    // (이 마커들은 'markers' 배열에 추가하지 않으므로,
+    // 나중에 makeMarker()가 실행되어도 지워지지 않습니다.)
+    testPositions.forEach((position, index) => {
+        new window.kakao.maps.Marker({
+            position: position,
+            map: map, // 맵 객체에 바로 표시
+            title: `테스트 마커 ${index + 1}`
+        });
+    });
 }
 
 /**
@@ -1529,81 +1550,55 @@ async function fetchParticipants() {
 
 // 주소 조회
 async function getMissingAddress() {
+    console.log(`getMissingAddress 함수 호출됨 => 실종된 위치로 주소조회하는 함수`)
+    
     try {
-        console.log(`missingLocation으로 조회 시작 lat : ${missingLocation.value.lat}, lon : ${missingLocation.value.lon}`)
+        console.log(`missingLocation으로 조회 시작 lat: ${missingLocation.value.lat}, lon: ${missingLocation.value.lon}`)
 
-        const columns = 'sido_nm, sgg_nm, emd_nm , ri_nm, rn_nm'
+        const columns = 'sido_nm,sgg_nm,emd_nm,ri_nm,rn_nm'
+        const vworldResult = await fetchVWorldData(missingLocation.value, columns)
 
-        const dataParams = new URLSearchParams({
-            service: 'data',
-            version: '2.0',
-            request: 'GetFeature',
-            format: 'json',
-            errorformat: 'json',
-            size: '10',
-            page: '1',
-            data: 'LT_C_LANDINFOBASEMAP',
-            geomfilter: `POINT(${missingLocation.value.lon} ${missingLocation.value.lat})`,
-            columns: columns,
-            geometry: 'true',
-            attribute: 'true',
-            buffer: '10',
-            crs: 'EPSG:4326',
-            key: VWORLD_API_KEY,
-            domain: 'api.vworld.kr'
-        })
-
-        const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
-        const dataProxyUrl = `https://www.vworld.kr/proxy.do?url=${encodeURIComponent(dataUrl)}`
-
-        const dataRes = await fetch(dataProxyUrl)
-
-        if (!dataRes.ok) {
-            console.error(`VWorld Data API HTTP error! status: ${dataRes.status}`)
-            return { sgg: '', emd: '', ri: '', roadAddress: '' }
-        }
-
-        const data = await dataRes.json()
-
-        if (data.response?.status === 'OK' && data.response?.result?.featureCollection?.features?.length > 0) {
-            const feature = data.response.result.featureCollection.features[0]
-            const props = feature.properties
-
-            const addressParts = [
-                props.sgg_nm,
-                props.emd_nm,
-                props.ri_nm
-            ].filter(Boolean)
-
-            fullAddress = addressParts.join(' ')
-
-            if (props.rn_nm) {
-                fullAddress += ` (${props.rn_nm})`
-            }
-
-            const result = {
-                sgg: props.sgg_nm || '',
-                emd: props.emd_nm || '',
-                ri: props.ri_nm || '',
-                roadAddress: props.rn_nm || '',
-                fullAddress: fullAddress
-            }
-
-            missingAddress.value = result
-            console.log(`조회된 주소 정보:`, result)
-            return result
-
-        } else {
+        // API 응답 검증
+        if (vworldResult.status !== 'OK' || !vworldResult.properties) {
             console.warn('VWorld API에서 주소 정보를 찾을 수 없음')
-            return { sgg: '', emd: '', ri: '', roadAddress: '' }
+            return { sgg: '', emd: '', ri: '', roadAddress: '', fullAddress: '' }
         }
+
+        const props = vworldResult.properties
+
+        // 주소 조합
+        const addressParts = [
+            props.sgg_nm,
+            props.emd_nm,
+            props.ri_nm
+        ].filter(Boolean)
+
+        let fullAddress = addressParts.join(' ')
+        console.log('getMissingAddress에서 받은 fullAddress:', fullAddress)
+
+        if (props.rn_nm) {
+            fullAddress += ` (${props.rn_nm})`
+        }
+
+        const result = {
+            sgg: props.sgg_nm || '',
+            emd: props.emd_nm || '',
+            ri: props.ri_nm || '',
+            roadAddress: props.rn_nm || '',
+            fullAddress: fullAddress
+        }
+
+        // Vue 반응형 상태에 할당
+        missingAddress.value = result
+        console.log(`missingLocation => ${missingAddress.value}`)
+        console.log(`조회된 주소 정보:`, result)
+        return result
 
     } catch (error) {
-        console.error(`실종자 정보에서 위경도값으로 주소 조회중 오류 -> ${error}`)
-        return { sgg: '', emd: '', ri: '', roadAddress: '' }
+        console.error(`실종자 정보에서 위경도값으로 주소 조회 중 오류 -> ${error}`)
+        return { sgg: '', emd: '', ri: '', roadAddress: '', fullAddress: '' }
     }
 }
-
 // ID 찾기
 async function findMissingReportId() {
     const idFromParam = route.params.id;
@@ -1685,36 +1680,45 @@ async function fetchPatientAndMissingReport() {
 function formatDescription(desc) {
     if (!desc) {
         return {
-            physicalFeatures: '정보 없음',
+            clothing: '정보 없음',      // 인상착의
+            belongings: '정보 없음',   // 소지품
+            specialNotes: '정보 없음'  // 특이사항
+        };
+    }
+
+    let parsed = null;
+
+    // desc가 이미 객체인지, 문자열(JSON)인지 둘 다 대응
+    if (typeof desc === 'string') {
+        try {
+            parsed = JSON.parse(desc);
+        } catch (e) {
+            // JSON이 아니면 기존 문자열 파싱 로직으로 보내도 되고,
+            // 여기서는 안전하게 기본값 리턴
+            return {
+                clothing: '정보 없음',
+                belongings: '정보 없음',
+                specialNotes: '정보 없음'
+            };
+        }
+    } else if (typeof desc === 'object') {
+        parsed = desc;
+    } else {
+        return {
             clothing: '정보 없음',
+            belongings: '정보 없음',
             specialNotes: '정보 없음'
         };
     }
 
-    const lines = String(desc).split('\\n');
-
-    const result = {
-        physicalFeatures: '',
-        clothing: '',
-        specialNotes: ''
+    return {
+        // appearance: 인상착의(상의,하의,신발)
+        clothing: parsed.appearance || '정보 없음',
+        // items: 소지품
+        belongings: parsed.items || '정보 없음',
+        // other: 기타 특이사항
+        specialNotes: parsed.other || '정보 없음'
     };
-
-    lines.forEach(line => {
-        if (line.includes(':')) {
-            const [key, ...valueParts] = line.split(':');
-            const value = valueParts.join(':').trim();
-
-            if (key.includes('인상착의') || key.includes('착의사항')) {
-                result.clothing = value;
-            } else if (key.includes('신체') || key.includes('체형')) {
-                result.physicalFeatures = value;
-            } else if (key.includes('특이사항') || key.includes('특이')) {
-                result.specialNotes = value;
-            }
-        }
-    });
-
-    return result;
 }
 
 // ========================================================================================
@@ -1737,19 +1741,21 @@ onMounted(async () => {
         if (fetchSuccess) {
             try {
                 loadKakaoMap(mapContainer.value);
-                setTimeout(() => {
-                    getMissingAddress()
-                    calcElapsedTime()
+                
+                // ✅ setTimeout을 Promise로 감싸서 await 가능하게
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // ✅ getMissingAddress를 await로 기다림
+                await getMissingAddress();
+                console.log(`missingAddress => ${missingAddress.value.fullAddress}`);                
+                calcElapsedTime();
 
-                    if (map) {
-                        // ⭐ 초기화 시에만 force=true로 중심 설정
-                        setCenter(true)
-                        // createTemporaryMarkers()    // 임시 마커추가 함께하기용
-                        makeMarker()
-                        initCircles()
-                        showCirclesByZoneLevel(displayZoneLevel.value)
-                    }
-                }, 1000);
+                if (map) {
+                    setCenter(true);
+                    makeMarker();
+                    initCircles();
+                    showCirclesByZoneLevel(displayZoneLevel.value);
+                }
             } catch (e) {
                 console.error("지도 초기화 중 오류:", e);
                 personError.value = "지도 로딩 중 오류가 발생했습니다.";
