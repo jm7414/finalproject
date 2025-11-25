@@ -3,7 +3,7 @@
     <RouterView />
   </DesktopLayout>
 
-<div v-else class="mobile-shell">
+  <div v-else class="mobile-shell">
     <div class="app-layout">
       <!-- 조건 수정 -->
       <AppHeader v-if="showMobileHeader" />
@@ -51,6 +51,7 @@ import AppFooter from './components/AppFooter.vue';
 import NeighborHeader from './components/NeighborHeader.vue';
 import NeighborFooter from './components/NeighborFooter.vue';
 import SafeZoneAlertModal from './components/SafeZoneAlertModal.vue';
+import DoorOpenAlertModal from './components/DoorOpenAlertModal.vue'; // ⭐ 문열림 모달 추가
 import { RouterView, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMyCurrentLocation } from '@/composables/useMyCurrentLocation';
@@ -192,7 +193,7 @@ const showMobileHeader = computed(() => {
     isDpSchedule.value ||
     isDpConnect.value ||
     isNeighborPage.value ||
-    isPredictLocationFromNeighbor.value || // 지현 추가
+    isPredictLocationFromNeighbor.value ||
     isGame.value)
 })
 
@@ -205,7 +206,7 @@ const showMobileFooter = computed(() => {
     isDpSchedule.value ||
     isDpConnect.value ||
     isNeighborPage.value ||
-    isPredictLocationFromNeighbor.value || // 지현 추가
+    isPredictLocationFromNeighbor.value ||
     isGame.value)
 })
 
@@ -234,6 +235,7 @@ const mobileMainContentClass = computed(() => {
 
 // 알림 모달 상태
 const showSafeZoneAlert = ref(false)
+const doorOpenAlert = ref(false)      // ⭐ 문열림 모달 상태 추가
 const alertPatientName = ref('')
 
 // 안심존 모니터링 상태
@@ -246,6 +248,12 @@ const lastSafeZoneData = ref(null) // 이전 안심존 데이터 (변경 감지�
 // 안심존 이탈 알림 닫기
 function closeSafeZoneAlert() {
   showSafeZoneAlert.value = false
+  alertPatientName.value = ''
+}
+
+// 문열림 알림 닫기 ⭐
+function closeDoorOpenAlert() {
+  doorOpenAlert.value = false
   alertPatientName.value = ''
 }
 
@@ -677,16 +685,23 @@ function stopSafeZoneMonitoring() {
 // ==========================================================
 let intervalId = null
 
-// Ctrl + 1 누르면 문열림 모달 테스트용으로 띄우기
+// Ctrl + Shift + 1 또는 Alt + 1 누르면 문열림 모달 테스트용으로 띄우기
 function handleKeydown(event) {
-  // 시연용: Ctrl+1 또는 (맥) Command+1
-  if ((event.ctrlKey || event.metaKey) && event.key === '1') {
-    event.preventDefault()
-    // 환자 이름 세팅 (없으면 빈 문자열)
-    alertPatientName.value = patientName.value || ''
-    // 모달 열기
-    doorOpenAlert.value = true
-  }
+  const isOneKey =
+    event.key === '1' ||
+    event.code === 'Digit1' ||
+    event.code === 'Numpad1'
+
+  // Alt 키 + 1 아니면 무시
+  if (!event.altKey || !isOneKey) return
+
+  event.preventDefault()
+
+  // 환자 이름 세팅 (없으면 빈 문자열)
+  alertPatientName.value = patientName.value || ''
+
+  // 문열림 감지 모달 열기
+  doorOpenAlert.value = true
 }
 
 const checkMovement = async () => {
@@ -709,7 +724,7 @@ const checkMovement = async () => {
 
 // 컴포넌트 마운트 시 모니터링 시작
 onMounted(async () => {
-  // 키보드 단축키 등록 (Ctrl+1)
+  // 키보드 단축키 등록 (Ctrl+Shift+1 / Alt+1)
   window.addEventListener('keydown', handleKeydown)
 
   // 로그인 페이지가 아닐 때만 모니터링 시작
@@ -722,8 +737,6 @@ onMounted(async () => {
       startAlertPolling(currentUser.value?.role); // 실종알림
     }, 500)
   }
-
-  // 움직임 감지 센서 일단 일부러 시간 길게 설정해놨습니다
   checkMovement()
   intervalId = setInterval(checkMovement, 1500000000000000000000000)
 })
