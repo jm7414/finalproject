@@ -65,6 +65,11 @@ export default defineConfig({
           });
         },
       },
+      '/uploads': {
+        target: process.env.VITE_API_BASE_URL || 'https://localhost:8080',  // 업로드된 이미지 파일
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

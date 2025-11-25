@@ -88,8 +88,8 @@ public class SecurityConfig {
                         // 업로드는 로그인 필요 (세션)
                         .requestMatchers("/api/upload/**").authenticated()
 
-                        // 정적 리소스
-                        .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**").permitAll()
+                        // 정적 리소스 (업로드된 이미지 포함)
+                        .requestMatchers("/index.html", "/favicon.ico", "/assets/**", "/images/**", "/uploads/**").permitAll()
 
                         // 보호자/구독자 전용 페이지 및 API
                         .requestMatchers("/GD", "/api/guardian/**", "/api/posts/**", "/api/missing-posts/**")

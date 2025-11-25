@@ -150,8 +150,6 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-// 환경변수에서 API Base URL 가져오기, 없으면 localhost 사용 (개발용)
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3000'
 
 // 상태 관리
 const saving = ref(false)
@@ -170,10 +168,11 @@ const formData = ref({
 })
 
 // API 엔드포인트
+// 상대 경로를 사용하여 Vite 프록시를 통해 백엔드로 요청
 const ENDPOINTS = {
-  me: `${API_BASE}/api/user/me`,
-  update: `${API_BASE}/api/user/update`,
-  uploadPhoto: `${API_BASE}/api/upload/profile-photo` // 지현수정: 프로필 사진 업로드 API 추가
+  me: '/api/user/me',
+  update: '/api/user/update',
+  uploadPhoto: '/api/upload/profile-photo' // 지현수정: 프로필 사진 업로드 API 추가
 }
 
 // 유틸 함수
