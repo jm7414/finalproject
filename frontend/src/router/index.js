@@ -255,25 +255,25 @@ const router = createRouter({
       path: '/simulation',   // 메인이랑 게시판에서 보내는걸 중복으로 처리함
       name: 'simulation',         // 원래는 /:id 있는거 없는거 2개 있었는데 하나로 합침
       component: Simulation,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용 _이웃추가
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 전용 주형_이웃추가
     },
     {
       path: '/CommunityMissing',
       name: 'CommunityMissing',
       component: CommunityMissing,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 전용 주형_이웃추가
     },
     {
       path: '/post/:id',
       name: 'CommunityPost',
       component: CommunityPost,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 전용 주형_이웃추가
     },
     {
       path: '/CommunityPostWrite',
       name: 'CommunityPostWrite',
       component: CommunityPostWrite,
-      meta: { requiresAuth: true, roles: [1] } // 보호자 전용
+      meta: { requiresAuth: true, roles: [1, 4] } // 보호자 전용 주형_이웃추가
     },
     {
       path: '/CommunityEvent',
