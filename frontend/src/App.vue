@@ -16,14 +16,30 @@
   </div>
 
   <!-- 안심존 이탈 알림 모달 -->
-  <SafeZoneAlertModal :show="showSafeZoneAlert" :patient-name="alertPatientName" @close="closeSafeZoneAlert" />
+  <SafeZoneAlertModal
+    :show="showSafeZoneAlert"
+    :patient-name="alertPatientName"
+    @close="closeSafeZoneAlert"
+  />
 
   <!-- 문열림 감지 알림 모달 -->
-  <DoorOpenAlertModal :show="doorOpenAlert" :patient-name="alertPatientName" @close="closeDoorOpenAlert" />
+  <DoorOpenAlertModal
+    :show="doorOpenAlert"
+    :patient-name="alertPatientName"
+    @close="closeDoorOpenAlert"
+  />
 
-  <ConfirmModal :show="showMissingAlert" title="긴급 실종 알림" :message="alertMessage" confirmText="지금 확인하기"
-    cancelText="나중에 확인하기" @close="handleCloseAlert" @confirm="handleConfirmAndNavigate" @cancel="handleCloseAlert" />
-
+  <!-- 실종자 알림 모달 -->
+  <ConfirmModal
+    :show="showMissingAlert"
+    title="긴급 실종 알림"
+    :message="alertMessage"
+    confirmText="지금 확인하기"
+    cancelText="나중에 확인하기"
+    @close="handleCloseAlert"
+    @confirm="handleConfirmAndNavigate"
+    @cancel="handleCloseAlert"
+  />
 </template>
 
 <script setup>
@@ -659,8 +675,46 @@ function stopSafeZoneMonitoring() {
   lastSafeZoneData.value = null
 }
 
+// ==========================================================
+// [[주형]] 아두이노 움직임 센서 + 키보드 단축키
+// ==========================================================
+let intervalId = null
+
+// Ctrl + 1 누르면 문열림 모달 테스트용으로 띄우기
+function handleKeydown(event) {
+  // 시연용: Ctrl+1 또는 (맥) Command+1
+  if ((event.ctrlKey || event.metaKey) && event.key === '1') {
+    event.preventDefault()
+    // 환자 이름 세팅 (없으면 빈 문자열)
+    alertPatientName.value = patientName.value || ''
+    // 모달 열기
+    doorOpenAlert.value = true
+  }
+}
+
+const checkMovement = async () => {
+  try {
+    if (!connectedPatientNo.value) {
+      return
+    }
+    const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/sensor`)
+    const data = await res.json()
+    if (data.pir === 1) {
+      console.log(`움직임 감지됨`)
+      alertPatientName.value = patientName.value
+      doorOpenAlert.value = true;
+      return
+    }
+  } catch (e) {
+    console.error('Error fetching sensor data:', e)
+  }
+}
+
 // 컴포넌트 마운트 시 모니터링 시작
 onMounted(async () => {
+  // 키보드 단축키 등록 (Ctrl+1)
+  window.addEventListener('keydown', handleKeydown)
+
   // 로그인 페이지가 아닐 때만 모니터링 시작
   if (!isLoginPage.value && !isSignUpPage.value) {
     // 약간의 지연을 주어 인증 상태가 완전히 설정되도록 함
@@ -677,8 +731,8 @@ onMounted(async () => {
   }
 
   // 움직임 감지 센서 일단 일부러 시간 길게 설정해놨습니다
-    checkMovement()
-    intervalId = setInterval(checkMovement, 1000)
+  checkMovement()
+  intervalId = setInterval(checkMovement, 1000)
 })
 
 // 컴포넌트 언마운트 시 모니터링 중지
@@ -688,6 +742,9 @@ onBeforeUnmount(() => {
   // 종료시 움직임센서도 죽어
   clearInterval(intervalId)
   document.body.classList.remove('desktop-mode', 'mobile-mode')
+
+  // 키보드 단축키 제거
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 // 라우트 변경 감지
@@ -754,31 +811,6 @@ watch(isDesktopLayout, (isDesktop) => {
   document.body.classList.toggle('desktop-mode', isDesktop)
   document.body.classList.toggle('mobile-mode', !isDesktop)
 }, { immediate: true })
-
-// ==========================================================
-// [[주형]] 아두이노 움직임 센서 함수(일단 지금은 App.vue에서만 테스트중이고 추후 다른 파일로 옮길 수 있음)
-// onMounted, unOnMounted에 있는 setInterval, clearinterval 뽑아서 가면됨
-// ==========================================================
-let intervalId = null
-
-const checkMovement = async () => {
-  try {
-    if (!connectedPatientNo.value) {
-      return
-    }
-    const res = await fetch(`${import.meta.env.VITE_FASTAPI_URL || 'http://localhost:8000'}/sensor`)
-    const data = await res.json()
-    if (data.pir === 1) {
-      console.log(`움직임 감지됨`)
-      alertPatientName.value = patientName.value
-      doorOpenAlert.value = true;
-      return
-    }
-  } catch (e) {
-    console.error('Error fetching sensor data:', e)
-  }
-}
-
 </script>
 
 <style>
