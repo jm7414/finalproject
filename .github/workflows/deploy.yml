@@ -120,5 +120,6 @@ jobs:
             --memory 1Gi \
             --cpu 1 \
             --timeout 300 \
-            --max-instances 3
+            --max-instances 3 \
+            --set-env-vars="BACKEND_URL=${{ steps.backend-url.outputs.backend_url }}"
 
