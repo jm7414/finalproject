@@ -20,6 +20,14 @@
       </div>
     </div>
 
+    <!-- 토스트 알림 -->
+    <div
+      v-if="notification.show"
+      :class="['toast', notification.type === 'error' ? 'toast-error' : 'toast-success']"
+    >
+      {{ notification.message }}
+    </div>
+
     <!-- 폼 섹션 -->
     <div class="form-section">
       <!-- 일정 제목 -->
@@ -204,7 +212,7 @@
       </div>
     </div>
 
-    <!-- 확인 모달 -->
+    <!-- 확인 모달 (취소용) -->
     <ConfirmModal
       :show="showConfirmModal"
       :title="confirmModalConfig.title"
@@ -247,12 +255,12 @@ const selectedPeriod = ref('오전')
 const selectedHour = ref('01')
 const selectedMinute = ref('00')
 
-// 시간 옵션 (반복되지 않도록 수정)
+// 시간 옵션
 const periods = ['오전', '오후']
 const hours = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'))
 const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
-// 표시용 시간 (placeholder 대체)
+// 표시용 시간
 const displayStartTime = computed(() => scheduleForm.value.startTime || '')
 const displayEndTime = computed(() => scheduleForm.value.endTime || '')
 
@@ -262,7 +270,7 @@ const locationData = ref([])
 // 위치 데이터가 있는지 확인
 const hasLocationData = computed(() => locationData.value.length > 0)
 
-// 확인 모달 관련
+// 확인 모달 (취소 확인용)
 const showConfirmModal = ref(false)
 const confirmModalConfig = ref({
   title: '확인',
@@ -270,6 +278,24 @@ const confirmModalConfig = ref({
   confirmText: '확인',
   cancelText: '취소'
 })
+
+// 토스트 알림 상태
+const notification = ref({
+  show: false,
+  message: '',
+  type: 'info' // 'info' | 'success' | 'error'
+})
+
+function showNotification(message, type = 'info') {
+  notification.value.message = message
+  notification.value.type = type
+  notification.value.show = true
+
+  // 2초 후 자동 숨김
+  setTimeout(() => {
+    notification.value.show = false
+  }, 2000)
+}
 
 // 폼 유효성 검사
 const isFormValid = computed(() => {
@@ -282,7 +308,6 @@ const isFormValid = computed(() => {
 
 // 폼 초기화 함수
 function resetScheduleForm() {
-  // 폼 데이터 초기화
   scheduleForm.value = {
     title: '',
     content: '',
@@ -292,21 +317,17 @@ function resetScheduleForm() {
     location: null
   }
   
-  // 위치 데이터 초기화
   locationData.value = []
-  
-  // 수정 모드 관련 상태 초기화
   isEditMode.value = false
   editScheduleNo.value = null
   
-  // sessionStorage 정리
   sessionStorage.removeItem('scheduleFormData')
   sessionStorage.removeItem('editScheduleNo')
   sessionStorage.removeItem('routeCoordinates')
   sessionStorage.removeItem('bufferCoordinates')
   sessionStorage.removeItem('scheduleLocations')
   sessionStorage.removeItem('routeBufferPolygon')
-  sessionStorage.removeItem('isScheduleInProgress') // 진행 상태 플래그도 제거
+  sessionStorage.removeItem('isScheduleInProgress')
 }
 
 // 뒤로 가기
@@ -323,7 +344,6 @@ function goToMypage() {
 function openTimePicker(type) {
   timePickerType.value = type
   
-  // 기존 시간이 있으면 파싱
   const currentTime = type === 'start' ? scheduleForm.value.startTime : scheduleForm.value.endTime
   if (currentTime) {
     const parts = currentTime.split(' ')
@@ -358,12 +378,9 @@ function confirmTime() {
   closeTimePicker()
 }
 
-
 // 경로 검색 페이지로 이동
 function goToSearchRoute() {
-  // 현재 폼 데이터 저장
   sessionStorage.setItem('scheduleFormData', JSON.stringify(scheduleForm.value))
-  // 일정 추가/수정이 진행 중임을 표시
   sessionStorage.setItem('isScheduleInProgress', 'true')
   router.push({ name: 'search-route' })
 }
@@ -371,39 +388,33 @@ function goToSearchRoute() {
 // 일정 저장
 async function saveSchedule() {
   if (!isFormValid.value) {
-    alert('필수 항목을 모두 입력해주세요.')
+    showNotification('필수 항목을 모두 입력해주세요.', 'error')
     return
   }
 
   try {
-    // sessionStorage에서 경로 및 버퍼 정보 가져오기
     const routeCoordinates = sessionStorage.getItem('routeCoordinates')
     const bufferCoordinates = sessionStorage.getItem('bufferCoordinates')
     const scheduleLocations = sessionStorage.getItem('scheduleLocations')
 
-    // 필수 데이터가 없으면 경고
     if (!routeCoordinates || !bufferCoordinates || !scheduleLocations) {
-      alert('경로 및 안심존 설정이 필요합니다. "일정 위치 추가" 버튼을 눌러 설정해주세요.')
+      showNotification('경로 및 안심존 설정이 필요합니다. "일정 위치 추가" 버튼을 눌러 설정해주세요.', 'error')
       return
     }
 
-    // bufferCoordinates 파싱 및 형식 처리
     const bufferCoordinatesData = JSON.parse(bufferCoordinates)
     let bufferCoordinatesArray
-    let bufferLevel = 1 // 기본값
+    let bufferLevel = 1
     
     if (Array.isArray(bufferCoordinatesData)) {
-      // 기존 형식: [{ latitude, longitude }, ...]
       bufferCoordinatesArray = bufferCoordinatesData
     } else if (bufferCoordinatesData.coordinates) {
-      // 새 형식: { level: 3, coordinates: [{ latitude, longitude }, ...] }
       bufferCoordinatesArray = bufferCoordinatesData.coordinates
       bufferLevel = bufferCoordinatesData.level || 1
     } else {
       throw new Error('지원하지 않는 bufferCoordinates 형식입니다.')
     }
 
-    // 일정 저장 요청 데이터 구성
     const requestData = {
       title: scheduleForm.value.title,
       content: scheduleForm.value.content,
@@ -416,7 +427,6 @@ async function saveSchedule() {
       bufferLevel: bufferLevel
     }
 
-    // 수정 모드인지 추가 모드인지에 따라 API 호출
     const url = isEditMode.value
       ? `/api/schedule/update/${editScheduleNo.value}`
       : `/api/schedule/create`
@@ -425,33 +435,45 @@ async function saveSchedule() {
 
     console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 요청:`, requestData)
 
-    // 백엔드 API 호출
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      credentials: 'include', // 세션 쿠키 포함
+      credentials: 'include',
       body: JSON.stringify(requestData)
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || `일정 ${isEditMode.value ? '수정' : '저장'}에 실패했습니다.`)
+      let errorMessage = `일정 ${isEditMode.value ? '수정' : '저장'}에 실패했습니다.`
+      try {
+        const error = await response.json()
+        if (error && error.message) {
+          errorMessage = error.message
+        }
+      } catch (_) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage)
     }
 
     const result = await response.json()
     console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 성공:`, result)
 
-    // 폼 초기화
     resetScheduleForm()
+    showNotification(successMessage, 'success')
 
-    alert(successMessage)
-    router.push({ name: 'calendar' })
+    // 살짝 딜레이 후 이동하면 토스트가 잠깐 보였다가 사라짐
+    setTimeout(() => {
+      router.push({ name: 'calendar' })
+    }, 300)
 
   } catch (error) {
     console.error(`일정 ${isEditMode.value ? '수정' : '저장'} 오류:`, error)
-    alert(error.message || `일정 ${isEditMode.value ? '수정' : '저장'} 중 오류가 발생했습니다.`)
+    showNotification(
+      error.message || `일정 ${isEditMode.value ? '수정' : '저장'} 중 오류가 발생했습니다.`,
+      'error'
+    )
   }
 }
 
@@ -468,14 +490,13 @@ function cancelSchedule() {
 
 // 확인 모달에서 확인 버튼 클릭 시
 function handleConfirmCancel() {
-  // 폼 초기화 후 캘린더로 이동
   resetScheduleForm()
   router.push({ name: 'calendar' })
 }
 
 // 확인 모달에서 취소 버튼 클릭 시
 function handleCancelCancel() {
-  // 아무것도 하지 않음 (모달만 닫힘)
+  // 그대로 작성 계속
 }
 
 // 확인 모달 닫기
@@ -504,7 +525,6 @@ function formatTimeForDisplay(timeString) {
 // 수정할 일정 데이터 불러오기
 async function loadScheduleForEdit(scheduleNo) {
   try {
-    // 일정 기본 정보 가져오기
     const scheduleResponse = await fetch(`/api/schedule/${scheduleNo}`, {
       method: 'GET',
       credentials: 'include'
@@ -516,14 +536,12 @@ async function loadScheduleForEdit(scheduleNo) {
     
     const schedule = await scheduleResponse.json()
     
-    // 폼에 데이터 채우기
     scheduleForm.value.title = schedule.scheduleTitle
     scheduleForm.value.content = schedule.content || ''
     scheduleForm.value.date = schedule.scheduleDate
     scheduleForm.value.startTime = formatTimeForDisplay(schedule.startTime)
     scheduleForm.value.endTime = formatTimeForDisplay(schedule.endTime)
     
-    // 위치 정보 가져오기
     const locationsResponse = await fetch(`/api/schedule/${scheduleNo}/locations`, {
       method: 'GET',
       credentials: 'include'
@@ -538,11 +556,9 @@ async function loadScheduleForEdit(scheduleNo) {
         sequenceOrder: loc.sequenceOrder || index
       }))
       
-      // sessionStorage에도 저장 (경로 검색 페이지에서 사용)
       sessionStorage.setItem('scheduleLocations', JSON.stringify(locationData.value))
     }
     
-    // 경로 정보 가져오기
     const routeResponse = await fetch(`/api/schedule/${scheduleNo}/route`, {
       method: 'GET',
       credentials: 'include'
@@ -550,45 +566,37 @@ async function loadScheduleForEdit(scheduleNo) {
     
     if (routeResponse.ok) {
       const route = await routeResponse.json()
-      // sessionStorage에 저장
       sessionStorage.setItem('routeCoordinates', route.routeCoordinates)
       sessionStorage.setItem('bufferCoordinates', route.bufferCoordinates)
     }
     
   } catch (error) {
     console.error('일정 불러오기 오류:', error)
-    alert(error.message || '일정을 불러오는 중 오류가 발생했습니다.')
+    showNotification(error.message || '일정을 불러오는 중 오류가 발생했습니다.', 'error')
     router.push({ name: 'calendar' })
   }
 }
 
 onMounted(async () => {
-  // 수정 모드 확인
   const editScheduleNoFromStorage = sessionStorage.getItem('editScheduleNo')
   if (editScheduleNoFromStorage) {
     isEditMode.value = true
     editScheduleNo.value = parseInt(editScheduleNoFromStorage)
-    // 일정 수정 진행 중임을 표시
     sessionStorage.setItem('isScheduleInProgress', 'true')
     await loadScheduleForEdit(editScheduleNo.value)
     return
   }
   
-  // 일정 추가/수정이 진행 중인지 확인
   const isInProgress = sessionStorage.getItem('isScheduleInProgress')
   
-  // 진행 중이 아닌 경우에만 폼 초기화 (새로 시작하는 경우)
   if (!isInProgress) {
     resetScheduleForm()
     
-    // 캘린더에서 선택된 날짜가 있는지 확인
     const selectedDate = sessionStorage.getItem('selectedDate')
     if (selectedDate) {
-      // 캘린더에서 선택된 날짜 사용
       scheduleForm.value.date = selectedDate
       sessionStorage.removeItem('selectedDate')
     } else {
-      // 기본값으로 오늘 날짜 설정
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
@@ -596,11 +604,9 @@ onMounted(async () => {
       scheduleForm.value.date = `${year}-${month}-${day}`
     }
     
-    // 새로 시작하는 경우 진행 상태 플래그 설정
     sessionStorage.setItem('isScheduleInProgress', 'true')
   }
   
-  // 진행 중인 경우: 경로 검색에서 돌아온 경우 폼 데이터 복원
   if (isInProgress) {
     const savedFormData = sessionStorage.getItem('scheduleFormData')
     if (savedFormData) {
@@ -609,7 +615,6 @@ onMounted(async () => {
       sessionStorage.removeItem('scheduleFormData')
     }
     
-    // 위치 데이터 로드 (GeoFencingView에서 돌아온 경우)
     const scheduleLocations = sessionStorage.getItem('scheduleLocations')
     if (scheduleLocations) {
       try {
@@ -674,6 +679,34 @@ onMounted(async () => {
   font-weight: 700;
   color: #111827;
   margin: 0;
+}
+
+/* 토스트 알림 */
+.toast {
+  position: fixed;
+  top: 72px; /* 헤더 바로 아래 */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  z-index: 1100;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+}
+
+.toast-success {
+  background: #ecfdf5;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.toast-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 /* 폼 */
@@ -1044,5 +1077,4 @@ onMounted(async () => {
   background: #f9fafb;
   border-color: #4f46e5;
 }
-
 </style>

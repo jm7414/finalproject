@@ -1,6 +1,5 @@
 <template>
   <div class="add-schedule-page">
-    <!-- 폼 섹션 -->
     <div class="form-section">
       <!-- 일정 제목 -->
       <div class="form-group">
@@ -33,7 +32,7 @@
           required
         />
       </div>
-      <!-- 액션 버튼 (폼 내부에 배치, margin-top만 조금) -->
+      <!-- 액션 버튼 -->
       <div class="action-buttons">
         <button class="save-btn" @click="saveNeighborSchedule" :disabled="!isFormValid || loading">
           {{ loading ? '저장 중...' : '저장' }}
@@ -43,7 +42,20 @@
         </button>
       </div>
     </div>
-    <!-- 확인 모달 -->
+    <!-- (지현 수정) 경고/성공 모달 -->
+    <div v-if="showAlert" class="modal-overlay" @click.self="closeAlertModal">
+      <div class="modal-content">
+        <div class="modal-icon" :class="`icon-${alertType}`">
+          <i :class="alertIcon"></i>
+        </div>
+        <h3 class="modal-title">{{ alertTitle }}</h3>
+        <p class="modal-message">{{ alertMessage }}</p>
+        <button class="modal-btn" :class="`btn-${alertType}`" @click="handleAlertConfirm">
+          확인
+        </button>
+      </div>
+    </div>
+    <!-- 기존 취소 확인 모달 -->
     <ConfirmModal
       :show="showConfirmModal"
       :title="confirmModalConfig.title"
@@ -79,6 +91,41 @@ const confirmModalConfig = ref({
   cancelText: '취소'
 })
 
+// (지현 수정) 알림 모달 상태
+const showAlert = ref(false)
+const alertTitle = ref('')
+const alertMessage = ref('')
+const alertType = ref('info')
+let alertCallback = null
+
+const alertIcon = computed(() => {
+  const icons = {
+    success: 'bi bi-check-circle-fill',
+    error: 'bi bi-x-circle-fill',
+    warning: 'bi bi-exclamation-triangle-fill',
+    info: 'bi bi-info-circle-fill'
+  };
+  return icons[alertType.value];
+})
+
+function showAlertModal(type, title, message, callback = null) {
+  alertType.value = type
+  alertTitle.value = title
+  alertMessage.value = message
+  alertCallback = callback
+  showAlert.value = true
+}
+function closeAlertModal() {
+  showAlert.value = false
+}
+function handleAlertConfirm() {
+  closeAlertModal()
+  if (alertCallback) {
+    alertCallback()
+    alertCallback = null
+  }
+}
+
 // 필수값 검사
 const isFormValid = computed(() => {
   return scheduleForm.value.title.trim() !== '' && scheduleForm.value.date !== ''
@@ -91,8 +138,9 @@ function resetScheduleForm() {
 }
 
 function saveNeighborSchedule() {
+  // (지현 수정) alert → 모달로 대체
   if (!isFormValid.value) {
-    alert('제목과 날짜를 입력해주세요.')
+    showAlertModal('warning', '입력 오류', '제목과 날짜를 입력해주세요.')
     return
   }
   loading.value = true
@@ -102,13 +150,14 @@ function saveNeighborSchedule() {
     scheduleDate: scheduleForm.value.date
   }).then(() => {
     resetScheduleForm()
-    alert('일정이 저장되었습니다.')
-    router.push({ name: 'NH_Calender' })
+    showAlertModal('success', '저장 완료', '일정이 저장되었습니다.', () => {
+      router.push({ name: 'NH_Calender' })
+    })
   }).catch(error => {
     if (error.response && error.response.status === 403) {
-      alert('광장 멤버만 일정을 작성할 수 있습니다.')
+      showAlertModal('error', '권한 오류', '광장 멤버만 일정을 작성할 수 있습니다.')
     } else {
-      alert(error.response?.data?.message || '일정 저장 중 오류가 발생했습니다.')
+      showAlertModal('error', '오류 발생', error.response?.data?.message || '일정 저장 중 오류가 발생했습니다.')
     }
   }).finally(() => {
     loading.value = false
@@ -171,7 +220,7 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  height: calc(100vh - 70px); /* 하단 네비/푸터 공간 빼고, 화면 내에 꽉 맞게 */
+  height: calc(100vh - 70px);
   overflow-y: auto;
 }
 
@@ -254,7 +303,56 @@ onMounted(() => {
   background: #f6f7ed;
 }
 
-@media (max-width: 420px) {
-  .form-section { padding-left: 9px; padding-right: 9px; }
+/* (지현 수정) 모달 스타일 */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
 }
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 320px;
+  text-align: center;
+}
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+.icon-success i { color: #a7cc10; }
+.icon-error i { color: #e74c3c; }
+.icon-warning i { color: #f39c12; }
+.icon-info i { color: #3498db; }
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: #333;
+}
+.modal-message {
+  font-size: 15px;
+  color: #555;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+.modal-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.modal-btn:hover {
+  opacity: 0.9;
+}
+.btn-success { background: #a7cc10; color: white; }
+.btn-error { background: #e74c3c; color: white; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-info { background: #3498db; color: white; }
 </style>

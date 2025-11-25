@@ -1,9 +1,6 @@
 <template>
   <div class="page">
     <div class="header">
-      <button @click="goBack" class="btn-back">
-        <i class="bi bi-arrow-left"></i>
-      </button>
       <h1>내 만남의 광장</h1>
     </div>
 
@@ -115,9 +112,6 @@ function goToCreatePlaza() {
   router.push('/createPlaza')
 }
 
-function goBack() {
-  router.back()
-}
 </script>
 
 <style scoped>
@@ -144,30 +138,6 @@ function goBack() {
   padding: 20px;
   position: relative;
   text-align: center;
-}
-
-.btn-back {
-  position: absolute;
-  left: 15px;
-  top: 15px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
-}
-
-.btn-back:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .header h1 {

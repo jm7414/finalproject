@@ -2,23 +2,18 @@
   <div class="page">
     <!-- 헤더 -->
     <div class="header-section">
-      <button @click="goBack" class="btn-back">
-        <i class="bi bi-arrow-left"></i>
-      </button>
       <h2 class="header-title">{{ plazaInfo.plazaName || '광장' }}</h2>
       <p class="header-subtitle">현재 {{ activeMemberCount }}명이 광장에 있습니다</p>
     </div>
-
     <!-- 카카오 지도 -->
     <div class="map-container">
       <div ref="mapEl" class="map"></div>
     </div>
-
     <!-- 광장 정보 카드 -->
     <div class="info-card">
       <div class="info-header">
         <div class="info-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="#a7cc10" stroke-width="2"/>
             <circle cx="12" cy="10" r="3" stroke="#a7cc10" stroke-width="2"/>
           </svg>
@@ -30,33 +25,29 @@
         <div v-if="isOwner" class="owner-badge">방장</div>
       </div>
     </div>
-
     <!-- 활성 멤버 목록 -->
     <div class="section">
       <div class="section-header">
         <h3 class="section-title">
-          <i class="bi bi-geo-alt-fill" style="color:#a7cc10"></i>
+          <i class="bi bi-geo-alt-fill" style="color:#a7cc10"/>
           광장 안에 있는 이웃 ({{ activeMembers.length }})
         </h3>
         <button @click="refreshActiveMembers" class="btn-refresh">
-          <i class="bi bi-arrow-clockwise"></i>
+          <i class="bi bi-arrow-clockwise"/>
         </button>
       </div>
-
       <div v-if="loadingActive" class="loading-state">
         <div class="spinner"></div>
         <p>위치 조회 중...</p>
       </div>
-
       <div v-else-if="activeMembers.length === 0" class="empty-state">
-        <i class="bi bi-person-x" style="font-size:2.5rem; color:#c2d477"></i>
+        <i class="bi bi-person-x" style="font-size:2.5rem; color:#c2d477"/>
         <p>현재 광장 안에 있는 이웃이 없습니다</p>
       </div>
-
       <div v-else class="member-list">
         <div v-for="member in activeMembers" :key="member.userNo" class="member-item active">
           <div class="member-avatar">
-            <img v-if="member.profilePhoto" :src="member.profilePhoto" alt="프로필" />
+            <img v-if="member.profilePhoto" :src="member.profilePhoto" alt="프로필"/>
             <div v-else class="avatar-placeholder">
               {{ member.name.charAt(0) }}
             </div>
@@ -69,7 +60,7 @@
             <div class="member-distance">중심으로부터 {{ Math.round(member.distanceFromCenter) }}m</div>
           </div>
           <div class="member-marker">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M21 10C21 17 12 23 12 23S3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" fill="#16a34a" stroke="#fff" stroke-width="2"/>
               <circle cx="12" cy="10" r="3" fill="#fff"/>
             </svg>
@@ -77,25 +68,22 @@
         </div>
       </div>
     </div>
-
     <!-- 전체 멤버 목록 -->
     <div class="section">
       <div class="section-header">
         <h3 class="section-title">
-          <i class="bi bi-people-fill" style="color:#a7cc10"></i>
+          <i class="bi bi-people-fill" style="color:#a7cc10"/>
           광장 멤버 ({{ allMembers.length }})
         </h3>
       </div>
-
       <div v-if="loadingMembers" class="loading-state">
         <div class="spinner"></div>
         <p>멤버 조회 중...</p>
       </div>
-
       <div v-else class="member-list">
         <div v-for="member in allMembers" :key="member.userNo" class="member-item">
           <div class="member-avatar">
-            <img v-if="member.profilePhoto" :src="member.profilePhoto" alt="프로필" />
+            <img v-if="member.profilePhoto" :src="member.profilePhoto" alt="프로필"/>
             <div v-else class="avatar-placeholder">
               {{ member.userName.charAt(0) }}
             </div>
@@ -107,30 +95,26 @@
         </div>
       </div>
     </div>
-
     <!-- 액션 버튼 -->
     <div class="actions">
       <button v-if="isOwner" class="btn-invite" @click="openInviteModal">
-        <i class="bi bi-person-plus-fill"></i>
+        <i class="bi bi-person-plus-fill"/>
         초대하기
       </button>
       <button class="btn-leave" @click="leavePlaza">
-        <i class="bi bi-box-arrow-right"></i>
+        <i class="bi bi-box-arrow-right"/>
         {{ isOwner ? '광장 삭제' : '탈퇴하기' }}
       </button>
     </div>
-
-    <!-- 지현 수정: 초대 모달 - 친구 목록 제거, 사용자 ID 입력으로 변경 -->
     <!-- 초대 모달 -->
     <div v-if="showInviteModal" class="modal-overlay" @click="showInviteModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>사용자 초대</h3>
           <button @click="showInviteModal = false" class="btn-close">
-            <i class="bi bi-x-lg"></i>
+            <i class="bi bi-x-lg"/>
           </button>
         </div>
-
         <div class="modal-body">
           <div class="invite-form">
             <label class="form-label">초대할 사용자 ID</label>
@@ -142,17 +126,28 @@
               @keyup.enter="inviteUser"
             />
             <p class="form-hint">
-              <i class="bi bi-info-circle-fill me-1"></i>
+              <i class="bi bi-info-circle-fill me-1"/>
               초대하려는 사용자의 ID를 입력해주세요
             </p>
             <button @click="inviteUser" class="btn-invite-submit">
-              <i class="bi bi-person-plus-fill me-1"></i>
+              <i class="bi bi-person-plus-fill me-1"/>
               초대하기
             </button>
           </div>
         </div>
       </div>
     </div>
+    <!-- 범용 Alert/Confirm 모달 -->
+    <PlazaDetailAlertModal
+      :show="alertModal.show"
+      :title="alertModal.title"
+      :message="alertModal.message"
+      :type="alertModal.type"
+      :mode="alertModal.mode"
+      @close="closeAlertModal"
+      @confirm="handleAlertConfirm"
+      @cancel="handleAlertCancel"
+    />
   </div>
 </template>
 
@@ -160,6 +155,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import PlazaDetailAlertModal from '@/components/PlazaDetailAlertModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -178,7 +174,6 @@ const plazaInfo = ref({
 
 const allMembers = ref([])
 const activeMembers = ref([])
-// 지현 수정: myFriends 제거, inviteUserId 추가
 const inviteUserId = ref('')
 const isOwner = ref(false)
 const loadingMembers = ref(false)
@@ -193,127 +188,113 @@ let locationInterval = null
 
 const activeMemberCount = computed(() => activeMembers.value.length)
 
+const alertModal = ref({
+  show: false,
+  title: '',
+  message: '',
+  type: 'info',
+  mode: 'alert',
+  onConfirm: null,
+  onCancel: null
+})
+
+function showAlert(type, title, message, onConfirm = null) {
+  alertModal.value = {
+    show: true,
+    title,
+    message,
+    type,
+    mode: 'alert',
+    onConfirm,
+    onCancel: null
+  }
+}
+function showConfirm(type, title, message, onConfirm, onCancel = null) {
+  alertModal.value = {
+    show: true,
+    title,
+    message,
+    type,
+    mode: 'confirm',
+    onConfirm,
+    onCancel
+  }
+}
+function closeAlertModal() {
+  alertModal.value.show = false
+}
+function handleAlertConfirm() {
+  closeAlertModal()
+  if (alertModal.value.onConfirm) alertModal.value.onConfirm()
+}
+function handleAlertCancel() {
+  closeAlertModal()
+  if (alertModal.value.onCancel) alertModal.value.onCancel()
+}
+
 onMounted(async () => {
   await initMap()
   await loadPlazaInfo()
   await loadAllMembers()
   await loadActiveMembers()
-  
-  // 10초마다 활성 멤버 자동 갱신
   refreshInterval = setInterval(() => {
     loadActiveMembers()
   }, 10000)
-  
-  // 실시간 위치 전송 시작
   startLocationTracking()
 })
 
 onUnmounted(() => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval)
-  }
-  
-  // 위치 전송 중지
+  if (refreshInterval) clearInterval(refreshInterval)
   stopLocationTracking()
 })
 
-// 실시간 위치 추적 시작
 function startLocationTracking() {
   sendCurrentLocation()
   locationInterval = setInterval(() => {
     sendCurrentLocation()
   }, 30000)
 }
-
-// 위치 추적 중지
 function stopLocationTracking() {
   if (locationInterval) {
     clearInterval(locationInterval)
     locationInterval = null
   }
 }
-
-// 현재 위치를 서버로 전송
 async function sendCurrentLocation() {
-  if (!navigator.geolocation) {
-    console.warn('이 브라우저는 위치 서비스를 지원하지 않습니다.')
-    return
-  }
-  
+  if (!navigator.geolocation) return
   navigator.geolocation.getCurrentPosition(
     async (position) => {
       const latitude = position.coords.latitude
       const longitude = position.coords.longitude
-      
-      console.log('현재 위치:', latitude, longitude)
-      
       try {
-        await axios.post('/NH/api/neighbor/location/update', {
-          latitude: latitude,
-          longitude: longitude
-        })
-        console.log('위치 전송 성공')
-      } catch (error) {
-        console.error('위치 전송 실패:', error)
-      }
+        await axios.post('/NH/api/neighbor/location/update', { latitude, longitude })
+      } catch (error) {}
     },
-    (error) => {
-      console.error('위치 조회 오류:', error.message)
-      if (error.code === error.PERMISSION_DENIED) {
-        console.warn('위치 권한이 거부되었습니다.')
-      }
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
+    (error) => {},
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   )
 }
-
-// 카카오맵 초기화
 async function initMap() {
-  if (!window.kakao || !window.kakao.maps) {
-    await loadKakaoMap()
-  }
-
+  if (!window.kakao || !window.kakao.maps) await loadKakaoMap()
   const container = mapEl.value
-  const options = {
-    center: new window.kakao.maps.LatLng(37.5665, 126.9780),
-    level: 3
-  }
-
+  const options = { center: new window.kakao.maps.LatLng(37.5665, 126.9780), level: 3 }
   map = new window.kakao.maps.Map(container, options)
 }
-
 function loadKakaoMap() {
   return new Promise((resolve) => {
-    if (window.kakao && window.kakao.maps) {
-      resolve()
-      return
-    }
-
+    if (window.kakao && window.kakao.maps) { resolve(); return }
     const script = document.createElement('script')
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`
     document.head.appendChild(script)
-
-    script.onload = () => {
-      window.kakao.maps.load(() => {
-        resolve()
-      })
-    }
+    script.onload = () => { window.kakao.maps.load(() => { resolve() }) }
   })
 }
-
-// 광장 정보 조회
 async function loadPlazaInfo() {
   try {
     const response = await axios.get(`/NH/api/neighbor/plazas/${plazaNo.value}`)
     plazaInfo.value = response.data
-
     const center = new window.kakao.maps.LatLng(plazaInfo.value.centerLat, plazaInfo.value.centerLng)
     map.setCenter(center)
-
     circle = new window.kakao.maps.Circle({
       center: center,
       radius: plazaInfo.value.radius,
@@ -324,117 +305,86 @@ async function loadPlazaInfo() {
       fillColor: '#a7cc10',
       fillOpacity: 0.2
     })
-
     circle.setMap(map)
   } catch (error) {
-    console.error('광장 정보 조회 실패:', error)
-    alert('광장 정보를 불러올 수 없습니다.')
+    showAlert('error', '오류', '광장 정보를 불러올 수 없습니다.')
   }
 }
-
-// 전체 멤버 조회
 async function loadAllMembers() {
   loadingMembers.value = true
   try {
     const response = await axios.get(`/NH/api/neighbor/plazas/${plazaNo.value}/members`)
     allMembers.value = response.data
-
     const myUser = allMembers.value.find(m => m.memberName === '방장')
-    if (myUser) {
-      isOwner.value = true
-    }
+    if (myUser) isOwner.value = true
   } catch (error) {
-    console.error('멤버 조회 실패:', error)
+    showAlert('error', '오류', '멤버 정보를 불러올 수 없습니다.')
   } finally {
     loadingMembers.value = false
   }
 }
-
-// 활성 멤버 조회
 async function loadActiveMembers() {
   loadingActive.value = true
   try {
     const response = await axios.get(`/NH/api/neighbor/plazas/${plazaNo.value}/active-members`)
     activeMembers.value = response.data
-
     markers.forEach(marker => marker.setMap(null))
     markers = []
-
     activeMembers.value.forEach(member => {
       const position = new window.kakao.maps.LatLng(member.latitude, member.longitude)
-      
-      const marker = new window.kakao.maps.Marker({
-        position: position,
-        map: map,
-        title: member.name
-      })
-
+      const marker = new window.kakao.maps.Marker({ position: position, map: map, title: member.name })
       markers.push(marker)
     })
   } catch (error) {
-    console.error('활성 멤버 조회 실패:', error)
+    showAlert('error', '오류', '활성 멤버 정보를 불러올 수 없습니다.')
   } finally {
     loadingActive.value = false
   }
 }
-
-// 활성 멤버 수동 새로고침
 async function refreshActiveMembers() {
   await loadActiveMembers()
 }
-
-// 지현 수정: 초대 모달 열기 - 친구 목록 조회 제거
-// 초대 모달 열기
 function openInviteModal() {
   showInviteModal.value = true
   inviteUserId.value = ''
 }
-
-// 지현 수정: 사용자 ID로 초대하는 함수로 변경
-// 사용자 초대
 async function inviteUser() {
   if (!inviteUserId.value.trim()) {
-    alert('사용자 ID를 입력해주세요.')
+    showAlert('warning', '입력 오류', '사용자 ID를 입력해주세요.')
     return
   }
-
   try {
     await axios.post(`/NH/api/neighbor/plazas/${plazaNo.value}/invite/${inviteUserId.value}`)
-    alert('초대가 완료되었습니다! 🎉')
-    showInviteModal.value = false
-    inviteUserId.value = ''
-    await loadAllMembers()
+    showAlert('success', '초대 완료', '초대가 완료되었습니다! 🎉', () => {
+      showInviteModal.value = false
+      inviteUserId.value = ''
+      loadAllMembers()
+    })
   } catch (error) {
-    console.error('초대 실패:', error)
-    alert(error.response?.data?.message || '초대에 실패했습니다.')
+    showAlert('error', '초대 실패', error.response?.data?.message || '초대에 실패했습니다.')
   }
 }
-
-// 광장 탈퇴/삭제
 async function leavePlaza() {
   const message = isOwner.value 
     ? '광장을 삭제하시겠습니까? 모든 멤버가 나가게 됩니다.' 
     : '광장에서 탈퇴하시겠습니까?'
-  
-  if (!confirm(message)) return
-
-  try {
-    if (isOwner.value) {
-      await axios.delete(`/NH/api/neighbor/plazas/${plazaNo.value}`)
-      alert('광장이 삭제되었습니다.')
-    } else {
-      await axios.post(`/NH/api/neighbor/plazas/${plazaNo.value}/leave`)
-      alert('광장에서 탈퇴했습니다.')
+  showConfirm('warning', '확인', message, async () => {
+    try {
+      if (isOwner.value) {
+        await axios.delete(`/NH/api/neighbor/plazas/${plazaNo.value}`)
+        showAlert('success', '삭제 완료', '광장이 삭제되었습니다.', () => {
+          router.push('/myPlaza')
+        })
+      } else {
+        await axios.post(`/NH/api/neighbor/plazas/${plazaNo.value}/leave`)
+        showAlert('success', '탈퇴 완료', '광장에서 탈퇴했습니다.', () => {
+          router.push('/myPlaza')
+        })
+      }
+    } catch (error) {
+      showAlert('error', '오류', error.response?.data?.message || '처리에 실패했습니다.')
     }
-    router.push('/myPlaza')
-  } catch (error) {
-    console.error('탈퇴 실패:', error)
-    alert(error.response?.data?.message || '처리에 실패했습니다.')
-  }
-}
-
-function goBack() {
-  router.back()
+  })
 }
 </script>
 
@@ -462,30 +412,6 @@ function goBack() {
   color: white;
   padding: 20px 20px 25px 20px;
   position: relative;
-}
-
-.btn-back {
-  position: absolute;
-  left: 15px;
-  top: 15px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
-}
-
-.btn-back:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .header-title {
@@ -889,3 +815,4 @@ function goBack() {
   box-shadow: 0 4px 12px rgba(167, 204, 16, 0.3);
 }
 </style>
+

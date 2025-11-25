@@ -4,73 +4,116 @@
       <div class="main-div-8">
         <div class="main-button" 
              :class="{ active: activeTab === 'Post' }" 
+             :style="activeTab === 'Post' ? { borderBottomColor: themeColors.primary } : {}"
              @click="changeTab('Post')">
-          <span class="post-button">공지</span>
+          <span class="post-button"
+                :style="{ 
+                  color: activeTab === 'Post' ? themeColors.activeText : themeColors.inactiveText,
+                  fontWeight: activeTab === 'Post' ? '700' : '500'
+                }">
+            공지
+          </span>
         </div>
 
         <div class="missing-button" 
              :class="{ active: activeTab === 'Missing' }" 
+             :style="activeTab === 'Missing' ? { borderBottomColor: themeColors.primary } : {}"
              @click="changeTab('Missing')">
-          <span class="event-button">실종</span>
+          <span class="event-button"
+                :style="{ 
+                  color: activeTab === 'Missing' ? themeColors.activeText : themeColors.inactiveText,
+                  fontWeight: activeTab === 'Missing' ? '700' : '500'
+                }">
+            실종
+          </span>
         </div>
 
         <div class="main-div-9" 
              :class="{ active: activeTab === 'Event' }" 
+             :style="activeTab === 'Event' ? { borderBottomColor: themeColors.primary } : {}"
              @click="changeTab('Event')">
-          <span class="main-div-a">이벤트</span>
+          <span class="main-div-a"
+                :style="{ 
+                  color: activeTab === 'Event' ? themeColors.activeText : themeColors.inactiveText,
+                  fontWeight: activeTab === 'Event' ? '700' : '500'
+                }">
+            이벤트
+          </span>
         </div>
       </div>
     </div>
 
     <div class="content-area">
-      <!-- 공지 탭: 목록, 작성, 수정 -->
       <div v-if="activeTab === 'Post'">
-        <!-- 공지 목록 -->
         <NH_NoticeBoard 
           v-if="noticeView === 'list'"
           :isPlazaMaster="isPlazaMaster"
+          :theme="theme"
           @write-notice="goToNoticeWrite"
           @edit-notice="goToNoticeEdit"
         />
         
-        <!-- 공지 작성 -->
+        <!-- key 추가로 강제 재렌더링 -->
         <NH_NoticeWrite 
           v-if="noticeView === 'write'"
+          :key="'write-' + noticeViewKey"
+          :theme="theme"
           @notice-created="handleNoticeCreated"
           @cancel="goToNoticeList"
         />
         
-        <!-- 공지 수정 -->
         <NH_NoticeWrite 
           v-if="noticeView === 'edit'"
+          :key="'edit-' + noticeViewKey"
           :notice="editingNotice"
           :isEdit="true"
+          :theme="theme"
           @notice-updated="handleNoticeUpdated"
           @cancel="goToNoticeList"
         />
       </div>
 
-      <!-- 실종 탭 -->
-      <CommunityMissing v-if="activeTab === 'Missing'" />
-      
-      <!-- 이벤트 탭 -->
-      <NH_CommunityEvent v-if="activeTab === 'Event'" />
+      <CommunityMissing v-if="activeTab === 'Missing'" :theme="theme" />
+      <NH_CommunityEvent v-if="activeTab === 'Event'" :theme="theme" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import NH_NoticeBoard from '@/components/NH_NoticeBoard.vue';
 import NH_NoticeWrite from '@/components/NH_NoticeWrite.vue';
 import CommunityMissing from '@/components/CommunityMissing.vue';
 import NH_CommunityEvent from '@/components/NH_CommunityEvent.vue';
 import axios from 'axios';
 
+const props = defineProps({
+  theme: {
+    type: String,
+    default: 'neighbor',
+    validator: (value) => ['guardian', 'neighbor'].includes(value)
+  }
+});
+
+const themeColors = computed(() => {
+  return props.theme === 'neighbor' 
+    ? {
+        primary: '#a7cc10',
+        activeText: '#171717',
+        inactiveText: '#737373'
+      }
+    : {
+        primary: '#4A62DD',
+        activeText: '#171717',
+        inactiveText: '#737373'
+      };
+});
+
 const activeTab = ref('Post');
-const noticeView = ref('list'); // 'list', 'write', 'edit'
+const noticeView = ref('list');
 const isPlazaMaster = ref(false);
-const editingNotice = ref(null); // 수정할 공지 데이터
+const editingNotice = ref(null);
+const noticeViewKey = ref(0); // key 카운터 추가
 
 onMounted(async () => {
   await fetchMyPlazaRole();
@@ -96,17 +139,20 @@ function changeTab(tabName) {
 function goToNoticeWrite() {
   noticeView.value = 'write';
   editingNotice.value = null;
+  noticeViewKey.value++; // key 변경으로 강제 재렌더링
 }
 
 function goToNoticeEdit(notice) {
   console.log('수정할 공지:', notice);
   editingNotice.value = notice;
   noticeView.value = 'edit';
+  noticeViewKey.value++; // key 변경으로 강제 재렌더링
 }
 
 function goToNoticeList() {
   noticeView.value = 'list';
   editingNotice.value = null;
+  noticeViewKey.value++; // key 변경
 }
 
 function handleNoticeCreated() {
@@ -157,23 +203,9 @@ function handleNoticeUpdated() {
 .post-button, .event-button, .main-div-a {
   font-family: Inter, var(--default-font-family);
   font-size: 14px;
-  font-weight: 500;
   text-align: center;
   white-space: nowrap;
-  color: #737373;
-}
-
-.main-button.active,
-.missing-button.active,
-.main-div-9.active {
-  border-bottom-color: #a7cc10;
-}
-
-.main-button.active .post-button,
-.missing-button.active .event-button,
-.main-div-9.active .main-div-a {
-  color: #171717;
-  font-weight: 700;
+  transition: all 0.2s ease;
 }
 
 .content-area {
