@@ -1,6 +1,39 @@
-<!-- src/views/DailyRecord.vue -->
 <template>
   <div class="container-sm" style="max-width:414px;">
+
+    <!-- ✅ 환자 미연결 모달 -->
+    <div v-if="showNoPatientModal" class="record-modal-backdrop">
+      <div class="record-modal">
+        <div class="record-modal-header">
+          <div class="record-modal-icon">
+            <span>👨‍⚕️</span>
+          </div>
+          <div class="record-modal-title">환자 연결이 필요합니다</div>
+          <div class="record-modal-sub">
+            보호자 계정은 <b>환자와 연결</b> 후에 오늘의 기록을 작성할 수 있어요.
+          </div>
+        </div>
+
+        <div class="record-modal-body">
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn flex-fill record-btn-secondary"
+              @click="goHomeFromNoPatient"
+            >
+              홈으로 가기
+            </button>
+            <button
+              type="button"
+              class="btn flex-fill record-btn-primary"
+              @click="goConnectPatient"
+            >
+              환자 연결하러 가기
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ✅ 이미 오늘 기록이 있을 때 뜨는 안내 모달 -->
     <div v-if="showAlreadyModal" class="record-modal-backdrop">
@@ -73,171 +106,174 @@
       </div>
     </div>
 
-    <!-- 진행률 -->
-    <div class="px-1">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <span class="small text-dark">진행률</span>
-        <span class="small text-dark">{{ stepCompleted }}/5 완료</span>
-      </div>
-      <div class="progress" style="height:6px;">
-        <div
-          class="progress-bar"
-          role="progressbar"
-          :style="{ width: progressPct + '%', backgroundColor: team }"
-        ></div>
-      </div>
-    </div>
-
-    <!-- 탭(스텝 라벨) -->
-    <div class="d-flex gap-3 px-2 mt-3 border-bottom">
-      <button
-        v-for="(tab, i) in tabs"
-        :key="tab.key"
-        class="btn btn-link px-0 pb-2 text-body fw-normal"
-        :class="{ 'fw-semibold': step === i }"
-        @click="goStep(i)"
-        style="text-decoration:none;"
-      >
-        <div class="d-flex flex-column align-items-center">
-          <span>{{ tab.label }}</span>
-          <span
-            v-if="step === i"
-            class="w-100"
-            :style="{ height: '2px', backgroundColor: team, marginTop: '8px' }"
-          ></span>
+    <!-- ✅ 실제 기록 화면은 환자 연결 모달이 없을 때만 보이게 -->
+    <div v-if="!showNoPatientModal">
+      <!-- 진행률 -->
+      <div class="px-1">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-dark">진행률</span>
+          <span class="small text-dark">{{ stepCompleted }}/5 완료</span>
         </div>
-      </button>
-    </div>
-
-    <!-- 질문 카드 -->
-    <div class="card border-0 shadow-sm mt-3">
-      <div class="card-body">
-        <template v-for="q in currentQuestions" :key="q.id">
-          <div class="mb-2 fw-semibold" style="line-height:1.35">
-            {{ q.text }}
-          </div>
-
-          <!-- 예/아니오 -->
-          <div v-if="q.type === 'yesno'" class="mb-2 d-flex flex-wrap gap-2">
-            <button
-              class="btn btn-sm rounded-pill"
-              :class="q.value === true ? 'btn-primary' : 'btn-outline-secondary'"
-              :style="q.value === true ? primaryStyle : null"
-              @click="setAnswer(q, true)"
-            >
-              예
-            </button>
-            <button
-              class="btn btn-sm rounded-pill"
-              :class="q.value === false ? 'btn-primary' : 'btn-outline-secondary'"
-              :style="q.value === false ? primaryStyle : null"
-              @click="setAnswer(q, false)"
-            >
-              아니오
-            </button>
-          </div>
-
-          <!-- 예/아니오 + 상세입력 -->
+        <div class="progress" style="height:6px;">
           <div
-            v-if="q.type === 'yesno' && q.value === true && q.detail !== undefined"
-            class="mb-3"
-          >
-            <input
-              v-if="q.detailKind === 'number'"
-              class="form-control"
-              type="number"
-              step="0.1"
-              :placeholder="q.detailPlaceholder || '입력'"
-              v-model.trim="q.detail"
-            />
-            <input
-              v-else-if="q.detailKind === 'textline'"
-              class="form-control"
-              type="text"
-              :placeholder="q.detailPlaceholder || '입력'"
-              v-model.trim="q.detail"
-            />
-            <textarea
-              v-else
-              class="form-control"
-              rows="3"
-              :placeholder="q.detailPlaceholder || '상세 내용을 입력하세요'"
-              v-model.trim="q.detail"
-            ></textarea>
-          </div>
-
-          <!-- 단일선택 -->
-          <div v-else-if="q.type === 'single'" class="mb-3 d-flex flex-wrap gap-2">
-            <button
-              v-for="opt in q.options"
-              :key="opt"
-              class="btn btn-sm rounded-pill"
-              :class="q.value === opt ? 'btn-primary' : 'btn-outline-secondary'"
-              :style="q.value === opt ? primaryStyle : null"
-              @click="setAnswer(q, opt)"
-            >
-              {{ opt }}
-            </button>
-          </div>
-
-          <!-- 복수선택 -->
-          <div v-else-if="q.type === 'multi'" class="mb-3 d-flex flex-wrap gap-2">
-            <button
-              v-for="opt in q.options"
-              :key="opt"
-              class="btn btn-sm rounded-pill"
-              :class="q.value?.includes(opt) ? 'btn-primary' : 'btn-outline-secondary'"
-              :style="q.value?.includes(opt) ? primaryStyle : null"
-              @click="toggleMulti(q, opt)"
-            >
-              {{ opt }}
-            </button>
-          </div>
-
-          <!-- 1~5 척도 -->
-          <div v-else-if="q.type === 'scale5'" class="mb-3 d-flex gap-2">
-            <button
-              v-for="n in [1, 2, 3, 4, 5]"
-              :key="n"
-              class="btn btn-sm rounded-pill"
-              :class="q.value === n ? 'btn-primary' : 'btn-outline-secondary'"
-              :style="q.value === n ? primaryStyle : null"
-              @click="setAnswer(q, n)"
-            >
-              {{ n }}
-            </button>
-          </div>
-
-          <!-- 텍스트 -->
-          <div v-else-if="q.type === 'text'" class="mb-3">
-            <textarea
-              class="form-control"
-              rows="3"
-              :placeholder="q.placeholder || '내용을 입력하세요'"
-              v-model.trim="q.value"
-            ></textarea>
-          </div>
-        </template>
+            class="progress-bar"
+            role="progressbar"
+            :style="{ width: progressPct + '%', backgroundColor: team }"
+          ></div>
+        </div>
       </div>
-    </div>
 
-    <!-- 하단 네비게이션 -->
-    <div class="d-flex gap-2 mt-3 mb-4">
-      <button
-        class="btn btn-outline-secondary flex-grow-1"
-        :disabled="step === 0"
-        @click="prevStep"
-      >
-        이전
-      </button>
-      <button
-        class="btn flex-grow-1 text-white"
-        :style="primaryStyle"
-        :disabled="!isCurrentStepComplete"
-        @click="nextOrSubmit"
-      >
-        {{ step === tabs.length - 1 ? '완료' : '다음' }}
-      </button>
+      <!-- 탭(스텝 라벨) -->
+      <div class="d-flex gap-3 px-2 mt-3 border-bottom">
+        <button
+          v-for="(tab, i) in tabs"
+          :key="tab.key"
+          class="btn btn-link px-0 pb-2 text-body fw-normal"
+          :class="{ 'fw-semibold': step === i }"
+          @click="goStep(i)"
+          style="text-decoration:none;"
+        >
+          <div class="d-flex flex-column align-items-center">
+            <span>{{ tab.label }}</span>
+            <span
+              v-if="step === i"
+              class="w-100"
+              :style="{ height: '2px', backgroundColor: team, marginTop: '8px' }"
+            ></span>
+          </div>
+        </button>
+      </div>
+
+      <!-- 질문 카드 -->
+      <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body">
+          <template v-for="q in currentQuestions" :key="q.id">
+            <div class="mb-2 fw-semibold" style="line-height:1.35">
+              {{ q.text }}
+            </div>
+
+            <!-- 예/아니오 -->
+            <div v-if="q.type === 'yesno'" class="mb-2 d-flex flex-wrap gap-2">
+              <button
+                class="btn btn-sm rounded-pill"
+                :class="q.value === true ? 'btn-primary' : 'btn-outline-secondary'"
+                :style="q.value === true ? primaryStyle : null"
+                @click="setAnswer(q, true)"
+              >
+                예
+              </button>
+              <button
+                class="btn btn-sm rounded-pill"
+                :class="q.value === false ? 'btn-primary' : 'btn-outline-secondary'"
+                :style="q.value === false ? primaryStyle : null"
+                @click="setAnswer(q, false)"
+              >
+                아니오
+              </button>
+            </div>
+
+            <!-- 예/아니오 + 상세입력 -->
+            <div
+              v-if="q.type === 'yesno' && q.value === true && q.detail !== undefined"
+              class="mb-3"
+            >
+              <input
+                v-if="q.detailKind === 'number'"
+                class="form-control"
+                type="number"
+                step="0.1"
+                :placeholder="q.detailPlaceholder || '입력'"
+                v-model.trim="q.detail"
+              />
+              <input
+                v-else-if="q.detailKind === 'textline'"
+                class="form-control"
+                type="text"
+                :placeholder="q.detailPlaceholder || '입력'"
+                v-model.trim="q.detail"
+              />
+              <textarea
+                v-else
+                class="form-control"
+                rows="3"
+                :placeholder="q.detailPlaceholder || '상세 내용을 입력하세요'"
+                v-model.trim="q.detail"
+              ></textarea>
+            </div>
+
+            <!-- 단일선택 -->
+            <div v-else-if="q.type === 'single'" class="mb-3 d-flex flex-wrap gap-2">
+              <button
+                v-for="opt in q.options"
+                :key="opt"
+                class="btn btn-sm rounded-pill"
+                :class="q.value === opt ? 'btn-primary' : 'btn-outline-secondary'"
+                :style="q.value === opt ? primaryStyle : null"
+                @click="setAnswer(q, opt)"
+              >
+                {{ opt }}
+              </button>
+            </div>
+
+            <!-- 복수선택 -->
+            <div v-else-if="q.type === 'multi'" class="mb-3 d-flex flex-wrap gap-2">
+              <button
+                v-for="opt in q.options"
+                :key="opt"
+                class="btn btn-sm rounded-pill"
+                :class="q.value?.includes(opt) ? 'btn-primary' : 'btn-outline-secondary'"
+                :style="q.value?.includes(opt) ? primaryStyle : null"
+                @click="toggleMulti(q, opt)"
+              >
+                {{ opt }}
+              </button>
+            </div>
+
+            <!-- 1~5 척도 -->
+            <div v-else-if="q.type === 'scale5'" class="mb-3 d-flex gap-2">
+              <button
+                v-for="n in [1, 2, 3, 4, 5]"
+                :key="n"
+                class="btn btn-sm rounded-pill"
+                :class="q.value === n ? 'btn-primary' : 'btn-outline-secondary'"
+                :style="q.value === n ? primaryStyle : null"
+                @click="setAnswer(q, n)"
+              >
+                {{ n }}
+              </button>
+            </div>
+
+            <!-- 텍스트 -->
+            <div v-else-if="q.type === 'text'" class="mb-3">
+              <textarea
+                class="form-control"
+                rows="3"
+                :placeholder="q.placeholder || '내용을 입력하세요'"
+                v-model.trim="q.value"
+              ></textarea>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- 하단 네비게이션 -->
+      <div class="d-flex gap-2 mt-3 mb-4">
+        <button
+          class="btn btn-outline-secondary flex-grow-1"
+          :disabled="step === 0"
+          @click="prevStep"
+        >
+          이전
+        </button>
+        <button
+          class="btn flex-grow-1 text-white"
+          :style="primaryStyle"
+          :disabled="!isCurrentStepComplete"
+          @click="nextOrSubmit"
+        >
+          {{ step === tabs.length - 1 ? '완료' : '다음' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -252,6 +288,9 @@ const router = useRouter()
 const team = '#657AE2'
 const primaryStyle = { background: team, borderColor: team }
 
+/* 환자 미연결 모달 */
+const showNoPatientModal = ref(false)
+
 /* 탭 */
 const tabs = [
   { key: 'meal', label: '식사' },
@@ -263,6 +302,7 @@ const tabs = [
 
 /* 질문 세트 */
 const form = reactive({
+  /* ... (질문 배열들 그대로) ... */
   meal: [
     {
       id: 'skipMeal',
@@ -467,7 +507,6 @@ const progressPct = computed(() => (stepCompleted.value / 5) * 100)
 const isCurrentStepComplete = computed(() => {
   return currentQuestions.value.every(q => {
     if (q.type === 'text') {
-      // 텍스트는 선택적으로 두고 싶으면 true 유지, 필수로 만들고 싶으면 !!q.value.trim()
       return true
     }
     if (q.type === 'multi') {
@@ -477,9 +516,8 @@ const isCurrentStepComplete = computed(() => {
   })
 })
 
-/* 이미 오늘 기록이 있는지 관련 상태 */
+/* 모달 상태 */
 const showAlreadyModal = ref(false)
-/* 오늘 기록 완료 모달 상태 */
 const showCompleteModal = ref(false)
 
 /* helpers */
@@ -576,21 +614,29 @@ async function submit() {
     })
     if (!res.ok) throw new Error(`저장 실패(${res.status})`)
 
-    // ✅ alert 대신 완료 모달 표시
     showCompleteModal.value = true
   } catch (e) {
     alert('[저장 오류] ' + (e?.message || e))
   }
 }
 
-/* 오늘 기록이 있으면 자동 프리필 + 모달 표시 */
+/* 오늘 기록이 있으면 자동 프리필 + 모달 표시, 없으면 그대로 입력 */
 onMounted(async () => {
   try {
-    const me = await fetch('/api/user/my-patient', { credentials: 'include' })
-      .then(r => (r.ok ? r.json() : null))
-      .catch(() => null)
-    const userId = me?.userNo ?? me?.id ?? me
-    if (!userId) return
+    const resMe = await fetch('/api/user/my-patient', { credentials: 'include' })
+    if (!resMe.ok) {
+      // 아예 환자 연결 정보가 없다고 응답하면 바로 모달
+      showNoPatientModal.value = true
+      return
+    }
+
+    const me = await resMe.json().catch(() => null)
+    const userId = me?.userNo ?? me?.id ?? null
+    if (!userId) {
+      showNoPatientModal.value = true
+      return
+    }
+
     const today = new Date().toISOString().slice(0, 10)
 
     const res = await fetch(`/api/record/user/${userId}?date=${today}`, {
@@ -603,7 +649,6 @@ onMounted(async () => {
 
     if (saved) {
       applyContentToForm(saved)
-      // 기록이 있으면 모달 띄우기
       showAlreadyModal.value = true
     }
   } catch (e) {
@@ -614,11 +659,10 @@ onMounted(async () => {
 /* 모달 버튼 동작 (이미 기록 있음) */
 function cancelEdit() {
   showAlreadyModal.value = false
-  router.back() // 필요하면 router.push('/') 로 바꿔도 됨
+  router.back()
 }
 function confirmEdit() {
   showAlreadyModal.value = false
-  // 프리필된 상태에서 그냥 계속 작성/수정
 }
 
 /* 모달 버튼 동작 (기록 완료) */
@@ -627,12 +671,22 @@ function closeCompleteModal() {
 }
 function goHomeAfterComplete() {
   showCompleteModal.value = false
-  router.push('/') // 기존 동작과 동일하게 홈으로 이동
+  router.push('/')
+}
+
+/* 모달 버튼 동작 (환자 미연결) */
+function goHomeFromNoPatient() {
+  showNoPatientModal.value = false
+  router.push('/')
+}
+function goConnectPatient() {
+  // ✅ 여기 경로는 프로젝트에서 실제 "환자 연결" 화면 라우트로 바꿔줘
+  router.push('/gdc')
 }
 </script>
 
 <style scoped>
-/* ✅ 오늘 기록 있음/완료 모달 공통 스타일 */
+/* 모달 공통 스타일은 그대로 재사용 */
 .record-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -652,7 +706,6 @@ function goHomeAfterComplete() {
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.3);
 }
 
-/* 상단 파란 그라데이션 헤더 */
 .record-modal-header {
   padding: 16px 18px 14px;
   text-align: center;
@@ -683,13 +736,11 @@ function goHomeAfterComplete() {
   opacity: 0.9;
 }
 
-/* 본문 + 버튼 영역 */
 .record-modal-body {
   padding: 14px 16px 16px;
   background: #f8f9ff;
 }
 
-/* 버튼들 */
 .record-btn-secondary {
   border-radius: 999px;
   font-size: 0.85rem;
