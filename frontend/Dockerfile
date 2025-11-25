@@ -35,10 +35,8 @@ RUN apk add --no-cache gettext
 # 빌드된 파일들을 nginx로 복사
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# nginx 설정 템플릿 복사
-COPY nginx.conf /etc/nginx/templates/default.conf.template
-
-# entrypoint 스크립트 복사 및 실행 권한 부여
+# nginx 설정 파일과 entrypoint 스크립트 복사
+COPY nginx.conf /nginx.conf.template
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
