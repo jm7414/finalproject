@@ -319,7 +319,7 @@ async function createPlaza() {
     }
   } finally {
     isCreating.value = false
-  })
+  }
 }
 
 function confirmCancel() {
