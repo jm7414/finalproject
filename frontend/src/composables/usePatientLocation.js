@@ -20,10 +20,10 @@ export function usePatientLocation(options = {}) {
     // 즉시 한 번 조회
     fetchPatientLocation()
     
-    // 20초마다 환자 위치 조회
+    // 2초마다 환자 위치 조회 (시연용 최적화)
     locationUpdateInterval.value = setInterval(() => {
       fetchPatientLocation()
-    }, 20000) // 20초
+    }, 2000) // 2초
   }
 
   // 환자 위치 추적 중지

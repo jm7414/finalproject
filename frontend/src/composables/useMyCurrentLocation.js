@@ -32,7 +32,7 @@ export function useMyCurrentLocation(userNoRef) {
         stopSendingLocation(); // 중복 방지
         console.log("[useMyCurrentLocation] '함께 찾기' 참여자 위치 전송을 시작합니다.");
         sendLocation(); // 즉시 1회 실행
-        pollingTimer = setInterval(sendLocation, 5000); // 5초마다 반복
+        pollingTimer = setInterval(sendLocation, 2000); // 2초마다 반복 (시연용 최적화)
     }
 
     // 위치 전송 중지
