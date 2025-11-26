@@ -540,8 +540,8 @@ async function checkSafeZoneStatus(patientNo, patientLocation) {
       const centerLat = safeZoneData.center.lat
       const centerLng = safeZoneData.center.lng
       const radius = safeZoneData.radius
-      // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
-      const effectiveRadius = radius === 30 ? 5 : radius
+      // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
+      const effectiveRadius = radius === 30 ? 10 : radius
 
       const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
       isInside = distance <= effectiveRadius
@@ -589,10 +589,10 @@ async function startSafeZoneMonitoring() {
     // 즉시 한 번 확인
     await checkAndAlert()
 
-    // 20초마다 확인
+    // 2초마다 확인 (시연용 최적화)
     monitoringInterval.value = setInterval(async () => {
       await checkAndAlert()
-    }, 20000) // 20초
+    }, 2000) // 2초
 
   } catch (error) {
     console.error('[안심존] 모니터링 시작 오류:', error)

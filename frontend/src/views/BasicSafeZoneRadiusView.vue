@@ -126,8 +126,8 @@ function updateCircle() {
   }
 
   const radius = radiusSettings[radiusLevel.value]
-  // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
-  const effectiveRadius = radius === 30 ? 5 : radius
+  // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
+  const effectiveRadius = radius === 30 ? 10 : radius
 
   // Turf.js로 원형 폴리곤 생성
   const center = [locationData.longitude, locationData.latitude]
