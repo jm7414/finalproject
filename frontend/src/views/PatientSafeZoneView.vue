@@ -434,6 +434,8 @@ function drawBasicSafeZone(map, boundaryData) {
     if (boundaryData.type === 'Circle') {
       const center = new window.kakao.maps.LatLng(boundaryData.center.lat, boundaryData.center.lng)
       const radius = boundaryData.radius
+      // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
+      const effectiveRadius = radius === 30 ? 5 : radius
       
       // 원형 폴리곤 생성
       const circlePoints = []
@@ -442,8 +444,8 @@ function drawBasicSafeZone(map, boundaryData) {
       
       for (let i = 0; i < steps; i++) {
         const angle = (Math.PI * 2 * i) / steps
-        const dx = radius * Math.cos(angle)
-        const dy = radius * Math.sin(angle)
+        const dx = effectiveRadius * Math.cos(angle)
+        const dy = effectiveRadius * Math.sin(angle)
         
         const lat = boundaryData.center.lat + (dy / earthRadius) * (180 / Math.PI)
         const lng = boundaryData.center.lng + (dx / earthRadius) * (180 / Math.PI) / Math.cos(boundaryData.center.lat * Math.PI / 180)

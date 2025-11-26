@@ -126,11 +126,13 @@ function updateCircle() {
   }
 
   const radius = radiusSettings[radiusLevel.value]
+  // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
+  const effectiveRadius = radius === 30 ? 5 : radius
 
   // Turf.js로 원형 폴리곤 생성
   const center = [locationData.longitude, locationData.latitude]
   const options = { steps: 64, units: 'meters' }
-  const circleGeoJSON = circle(center, radius, options)
+  const circleGeoJSON = circle(center, effectiveRadius, options)
 
   // GeoJSON 좌표를 Kakao 좌표로 변환
   const coordinates = circleGeoJSON.geometry.coordinates[0]
