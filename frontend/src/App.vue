@@ -687,23 +687,33 @@ function stopSafeZoneMonitoring() {
 // ==========================================================
 let intervalId = null
 
-// Ctrl + Shift + 1 또는 Alt + 1 누르면 문열림 모달 테스트용으로 띄우기
+// Alt + 1 → 문열림 모달, Alt + 2 → 안심존 이탈 모달
 function handleKeydown(event) {
   const isOneKey =
     event.key === '1' ||
     event.code === 'Digit1' ||
     event.code === 'Numpad1'
 
-  // Alt 키 + 1 아니면 무시
-  if (!event.altKey || !isOneKey) return
+  const isTwoKey =
+    event.key === '2' ||
+    event.code === 'Digit2' ||
+    event.code === 'Numpad2'
+
+  // Alt 키 아니면 무시
+  if (!event.altKey) return
 
   event.preventDefault()
 
   // 환자 이름 세팅 (없으면 빈 문자열)
   alertPatientName.value = patientName.value || ''
 
-  // 문열림 감지 모달 열기
-  doorOpenAlert.value = true
+  if (isOneKey) {
+    // 문열림 감지 모달 열기
+    doorOpenAlert.value = true
+  } else if (isTwoKey) {
+    // 안심존 이탈 알림 모달 열기
+    showSafeZoneAlert.value = true
+  }
 }
 
 const checkMovement = async () => {
@@ -726,7 +736,7 @@ const checkMovement = async () => {
 
 // 컴포넌트 마운트 시 모니터링 시작
 onMounted(async () => {
-  // 키보드 단축키 등록 (Ctrl+Shift+1 / Alt+1)
+  // 키보드 단축키 등록 (Alt+1 / Alt+2)
   window.addEventListener('keydown', handleKeydown)
 
   // 로그인 페이지가 아닐 때만 모니터링 시작
