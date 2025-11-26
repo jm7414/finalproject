@@ -1482,7 +1482,7 @@ onMounted(async () => {
 
     const idToLoad = await findMissingReportId();
 
-    await loadKakaoMap(mapContainer.value);
+    console.log(`MAP CONTAINER :: ${mapContainer.value}`)
 
     // ✅ setTimeout을 Promise로 감싸서 await 가능하게
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -1497,11 +1497,12 @@ onMounted(async () => {
         if (fetchSuccess) {
             try {
                 // 주형 카카오지도 await 추가
-
+                await nextTick();  // DOM 업데이트 완료 대기
+                await loadKakaoMap(mapContainer.value);
 
                 // ✅ getMissingAddress를 await로 기다림
                 await getMissingAddress();
-                console.log(`missingAddress => ${missingAddress.value.fullAddress}`);
+                console.log(`missingAddress =>`);
                 calcElapsedTime();
 
                 if (map) {
@@ -1536,7 +1537,7 @@ const loadKakaoMap = (container) => {
     return new Promise((resolve, reject) => {
         // 이미 Kakao SDK가 로드되어 있는지 확인
         if (window.kakao && window.kakao.maps) {
-            window.kakao.maps.load(() => {
+            new window.kakao.maps.load(() => {
                 try {
                     if (!container) {
                         throw new Error('Map container가 없습니다');
