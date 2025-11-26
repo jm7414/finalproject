@@ -161,7 +161,7 @@
                         </p>
                         <p class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
-                            실종장소: {{ missingAddress.fullAddress || '구로구 구로동ㅋ' }}
+                            실종장소: {{ missingAddress || '구로구 구로동ㅋ' }}
                         </p>
 
                         <!-- <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
@@ -1141,7 +1141,7 @@ async function requestAllRoutes() {
                 }
 
                 // ⭐ API 요청 지연 (rate limit 방지)
-                await delay(200)
+                await delay(100)
 
             } catch (e) {
                 console.error(`❌ Zone ${zone.level}-${i + 1} 경로 요청 에러:`, e)
@@ -1740,10 +1740,11 @@ onMounted(async () => {
 
         if (fetchSuccess) {
             try {
-                loadKakaoMap(mapContainer.value);
+                // 주형 카카오지도 await 추가
+                await loadKakaoMap(mapContainer.value);
                 
                 // ✅ setTimeout을 Promise로 감싸서 await 가능하게
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 500));
                 
                 // ✅ getMissingAddress를 await로 기다림
                 await getMissingAddress();
@@ -1779,38 +1780,103 @@ onUnmounted(() => {
 });
 
 const loadKakaoMap = (container) => {
-    const script = document.createElement('script')
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false&libraries=services`
-    document.head.appendChild(script)
-
-    script.onload = () => {
-        window.kakao.maps.load(() => {
-            const options = {
-                center: new window.kakao.maps.LatLng(
-                    missingLocation.value.lat || 37.5666805,
-                    missingLocation.value.lon || 126.9784147
-                ),
-                level: 5,
-            }
-
-            map = new window.kakao.maps.Map(container, options)
-            console.log('지도 초기화 완료')
-
-            // 김병욱 - composable(useParticipantLocations.js)에 map 주입해야 함
-            if (setMap) {
-                setMap(map);
-            }
-
-            if (missingLocation.value.lat && missingLocation.value.lon) {
-                centerMarker = new window.kakao.maps.Marker({
-                    position: new window.kakao.maps.LatLng(missingLocation.value.lat, missingLocation.value.lon),
-                    map: map,
-                    image: createCenterMarkerImage()
-                })
-            }
-        })
+  return new Promise((resolve, reject) => {
+    // 이미 Kakao SDK가 로드되어 있는지 확인
+    if (window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(() => {
+        try {
+          if (!container) {
+            throw new Error('Map container가 없습니다');
+          }
+          
+          const options = {
+            center: new window.kakao.maps.LatLng(
+              missingLocation.value.lat || 37.494406,
+              missingLocation.value.lon || 126.887701
+            ),
+            level: 5,
+          };
+          
+          map = new window.kakao.maps.Map(container, options);
+          console.log('✅ 지도 초기화 완료');
+          
+          // composable 설정
+          if (setMap) setMap(map);
+          
+          // 중심 마커 생성
+          if (missingLocation.value.lat && missingLocation.value.lon) {
+            centerMarker = new window.kakao.maps.Marker({
+              position: new window.kakao.maps.LatLng(
+                missingLocation.value.lat,
+                missingLocation.value.lon
+              ),
+              map: map,
+              image: createCenterMarkerImage(),
+            });
+          }
+          
+          resolve(map);
+        } catch (error) {
+          console.error('지도 초기화 실패:', error);
+          reject(error);
+        }
+      });
+      return;
     }
-}
+    
+    // 스크립트 새로 로드
+    const script = document.createElement('script');
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false&libraries=services`;
+    
+    script.onload = () => {
+      window.kakao.maps.load(() => {
+        try {
+          if (!container) {
+            throw new Error('Map container가 없습니다');
+          }
+          
+          const options = {
+            center: new window.kakao.maps.LatLng(
+              missingLocation.value.lat || 37.5666805,
+              missingLocation.value.lon || 126.9784147
+            ),
+            level: 5,
+          };
+          
+          map = new window.kakao.maps.Map(container, options);
+          console.log('✅ 지도 초기화 완료');
+          
+          if (setMap) setMap(map);
+          
+          if (missingLocation.value.lat && missingLocation.value.lon) {
+            centerMarker = new window.kakao.maps.Marker({
+              position: new window.kakao.maps.LatLng(
+                missingLocation.value.lat,
+                missingLocation.value.lon
+              ),
+              map: map,
+              image: createCenterMarkerImage(),
+            });
+          }
+          
+          resolve(map);
+        } catch (error) {
+          console.error('지도 초기화 실패:', error);
+          reject(error);
+        }
+      });
+    };
+    
+    script.onerror = () => {
+      const error = new Error('Kakao Map 스크립트 로드 실패');
+      console.error(error);
+      reject(error);
+    };
+    
+    document.head.appendChild(script);
+  });
+};
+
 
 function createCenterMarkerImage() {
     const svg = `
