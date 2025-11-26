@@ -349,14 +349,13 @@ import { useParticipantLocations } from '@/composables/useParticipantLocations';
 import { useSearchStore } from '@/stores/useSearchStore';
 import AgentSimulationModal from '@/components/AgentSimulationModal.vue'
 import ConfirmModal from '../components/predict_split_Modal.vue'
-
 const modal = ref(null)
 
 // ========================================================================================
 // 카카오지도 및 API 키 설정
 // ========================================================================================
 const mapContainer = ref(null)
-const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '7e0332c38832a4584b3335bed6ae30d8'
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || '52b0ab3fbb35c5b7adc31c9772065891'
 const VWORLD_API_KEY = '6A0CFFEF-45CF-3426-882D-44A63B5A5289'
 const TMAP_API_KEY = 'pu1CWi6rz48GHLWhk7NI239il6I2j9fHaSLFeYoi'
 
@@ -370,12 +369,6 @@ const showAgentSimulation = ref(false)
 
 // 모달 열기 함수 - 유효성 검사 추가
 const openAgentSimulation = () => {
-    // ⭐ 필수 값 유효성 검사
-    if (!patientUserNo.value) {
-        console.error('❌ patientUserNo가 없습니다:', patientUserNo.value)
-        alert('환자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-        return
-    }
 
     if (!missingLocation.value.lat || !missingLocation.value.lon) {
         console.error('❌ missingLocation이 없습니다:', missingLocation.value)
@@ -796,7 +789,7 @@ async function fetchVWorldData(location, columns) {
         buffer: '10',
         crs: 'EPSG:4326',
         key: VWORLD_API_KEY,
-        domain: 'api.vworld.kr'
+        domain: 'lx12mammamia.xyz'
     })
 
     const dataUrl = `https://api.vworld.kr/req/data?${dataParams.toString()}`
@@ -1069,19 +1062,37 @@ async function requestAllRoutes() {
                 // ⭐ waypoints 변환
                 let waypointsStr = ''
                 if (d.waypoints && Array.isArray(d.waypoints) && d.waypoints.length > 0) {
-                    const waypointsCoords = d.waypoints.map(wp => {
-                        if (!wp.lon || !wp.lat) {
-                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp)
-                            return null
+                    let selectedWaypoints = [];
+                    const totalWaypoints = d.waypoints.length;
+
+                    if (totalWaypoints <= 5) {
+                        // 5개 이하면 전체 사용
+                        selectedWaypoints = d.waypoints;
+                    } else {
+                        // 5개 초과 시 균등 간격으로 5개 추출
+                        const maxWaypoints = 5;
+                        const step = totalWaypoints / maxWaypoints;
+
+                        for (let j = 0; j < maxWaypoints; j++) {
+                            const idx = Math.floor(step * (j + 1)) - 1;  // 5번째, 10번째, 15번째... 인덱스
+                            selectedWaypoints.push(d.waypoints[idx]);
                         }
-                        return `${wp.lon},${wp.lat}`
-                    }).filter(coord => coord !== null)
+                    }
+
+                    const waypointsCoords = selectedWaypoints.map(wp => {
+                        if (!wp.lon || !wp.lat) {
+                            console.warn(`⚠️  유효하지 않은 waypoint:`, wp);
+                            return null;
+                        }
+                        return `${wp.lon},${wp.lat}`;
+                    }).filter(coord => coord !== null);
 
                     if (waypointsCoords.length > 0) {
-                        waypointsStr = waypointsCoords.join('_')
+                        waypointsStr = waypointsCoords.join('_');
+                        console.log(`✅ ${totalWaypoints}개 waypoints → ${waypointsCoords.length}개로 샘플링`);
                     }
                 } else {
-                    console.log(`ℹ️  경유지 없음`)
+                    console.log(`ℹ️  경유지 없음`);
                 }
 
                 // ⭐ 요청 본문 구성`
