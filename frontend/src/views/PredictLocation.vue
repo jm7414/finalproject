@@ -149,7 +149,7 @@
                         </div>
                         <p class="age-info">
                             <i class="bi bi-clock"></i>
-                            {{ elapsedTimeText }}
+                            {{ calculatedTime }}
                         </p>
                         <p class="missing-datetime">
                             <i class="bi bi-calendar-event"></i>
@@ -157,7 +157,7 @@
                         </p>
                         <p class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
-                            실종장소: '구로구 구로동 (가마산로)'
+                            실종장소: 구로구 구로동 (가마산로)
                         </p>
 
                     </div>
@@ -171,7 +171,7 @@
                                 <i class="bi bi-person-badge"></i>
                                 <span class="badge-label">인상착의</span>
                             </div>
-                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '170cm 마른 체형' }}</span>
+                            <span class="info-content">{{ formatDescription(personDetail.description).clothing || '170cm마른체형' }}</span>
                         </div>
 
                         <div class="d-flex align-items-center gap-1">
@@ -334,7 +334,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
@@ -1475,7 +1475,7 @@ function formatDescription(desc) {
 // ========================================================================================
 // 카카오맵 초기화
 // ========================================================================================
-
+const calculatedTime = ref(null)
 onMounted(async () => {
     isLoading.value = true;
     selectedType.value = 'info';
@@ -1493,6 +1493,27 @@ onMounted(async () => {
 
         const fetchSuccess = await fetchPatientAndMissingReport();
         await fetchPredictionData();
+
+        if (missingTimeDB.value) {
+            const now = new Date()
+            const missingTime = new Date(missingTimeDB.value)
+            const diffMs = now - missingTime
+
+            const totalMinutes = Math.floor(diffMs / (1000 * 60))
+
+            if (totalMinutes < 1) {
+                calculatedTime.value = '방금 전'
+            } else if (totalMinutes < 60) {
+                calculatedTime.value = `${totalMinutes}분 전`
+            } else if (totalMinutes < 1440) {  // 24시간 = 1440분
+                const hours = Math.floor(totalMinutes / 60)
+                const mins = totalMinutes % 60
+                calculatedTime.value = `${hours}시간 ${mins}분 전`
+            } else {
+                const days = Math.floor(totalMinutes / 1440)
+                calculatedTime.value = `${days}일 전`
+            }
+        }
 
         if (fetchSuccess) {
             try {
