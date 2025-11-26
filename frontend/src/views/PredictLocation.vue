@@ -1826,7 +1826,7 @@ const loadKakaoMap = (container) => {
     
     // 스크립트 새로 로드
     const script = document.createElement('script');
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAOJSKEY}&autoload=false&libraries=services`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false&libraries=services`;
     
     script.onload = () => {
       window.kakao.maps.load(() => {
