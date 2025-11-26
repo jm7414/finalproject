@@ -942,8 +942,8 @@ function checkPatientInSafeZone() {
       const centerLat = boundaryData.center.lat
       const centerLng = boundaryData.center.lng
       const radius = boundaryData.radius
-      // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
-      const effectiveRadius = radius === 30 ? 10 : radius
+      // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
+      const effectiveRadius = radius === 30 ? 5 : radius
       
       // 두 점 간의 거리 계산 (미터 단위)
       const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)

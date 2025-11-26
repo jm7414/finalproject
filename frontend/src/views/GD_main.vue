@@ -664,8 +664,8 @@ async function checkPatientInSafeZone() {
         const centerLat = safeZoneData.center.lat
         const centerLng = safeZoneData.center.lng
         const radius = safeZoneData.radius
-        // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
-        const effectiveRadius = radius === 30 ? 10 : radius
+        // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
+        const effectiveRadius = radius === 30 ? 5 : radius
 
         const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
         isInside = distance <= effectiveRadius

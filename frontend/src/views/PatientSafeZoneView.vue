@@ -312,12 +312,12 @@ async function updateLocationAndStatus() {
   }
 }
 
-// 위치 추적 시작 (30초마다)
+// 위치 추적 시작 (2초마다 - 시연용 최적화)
 function startLocationTracking() {
   updateLocationAndStatus()
   locationUpdateInterval = setInterval(() => {
     updateLocationAndStatus()
-  }, 30000) // 30초
+  }, 2000) // 2초
 }
 
 // 위치 추적 중지
@@ -542,8 +542,8 @@ function checkSafeZoneStatus() {
       const centerLat = boundaryData.center.lat
       const centerLng = boundaryData.center.lng
       const radius = boundaryData.radius
-      // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
-      const effectiveRadius = radius === 30 ? 10 : radius
+      // 시연용: 30m만 임시로 5m로 적용 (60m, 100m는 그대로)
+      const effectiveRadius = radius === 30 ? 5 : radius
       
       const distance = calculateDistance(lat, lng, centerLat, centerLng)
       isInside = distance <= effectiveRadius
