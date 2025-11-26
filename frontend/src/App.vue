@@ -540,10 +540,12 @@ async function checkSafeZoneStatus(patientNo, patientLocation) {
       const centerLat = safeZoneData.center.lat
       const centerLng = safeZoneData.center.lng
       const radius = safeZoneData.radius
+      // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
+      const effectiveRadius = radius === 30 ? 10 : radius
 
       const distance = calculateDistance(patientLat, patientLng, centerLat, centerLng)
-      isInside = distance <= radius
-      console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m, 결과: ${isInside ? '내부' : '외부'}`)
+      isInside = distance <= effectiveRadius
+      console.log(`- 중심점 거리: ${distance.toFixed(2)}m, 반경: ${radius}m (실제체크: ${effectiveRadius}m), 결과: ${isInside ? '내부' : '외부'}`)
     }
 
     return isInside ? 'inside' : 'outside'
