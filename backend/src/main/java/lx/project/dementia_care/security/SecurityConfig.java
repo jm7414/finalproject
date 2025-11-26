@@ -114,8 +114,8 @@ public class SecurityConfig {
                         // 위치 조회 API (보호자/구독자 전용)
                         .requestMatchers(HttpMethod.GET, "/api/location/patient/**").hasAnyRole("GUARDIAN", "SUBSCRIBER")
 
-                        // 환자 정보 조회 API (보호자는 연결된 환자 조회, 환자는 자신 조회)
-                        .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "PATIENT", "SUBSCRIBER")
+                        // 환자 정보 조회 API (보호자/이웃/환자/구독자: 연결된 환자 조회)
+                        .requestMatchers("/api/user/my-patient").hasAnyRole("GUARDIAN", "NEIGHBOR", "PATIENT", "SUBSCRIBER")
 
                         // 환자 전용 페이지 및 API
                         .requestMatchers("/DP", "/api/patient/**").hasAnyRole("PATIENT", "SUBSCRIBER")

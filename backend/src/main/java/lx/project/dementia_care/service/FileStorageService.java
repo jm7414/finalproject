@@ -38,7 +38,13 @@ public class FileStorageService {
         String uniqueFileName = generateUniqueFileName(file.getOriginalFilename());
         
         if ("gcs".equalsIgnoreCase(storageType)) {
-            return uploadToGCS(file, "images/" + uniqueFileName);
+            try {
+                return uploadToGCS(file, "images/" + uniqueFileName);
+            } catch (IOException e) {
+                // GCS 실패 시 로컬로 폴백 (배포 환경에서는 작동 안 할 수 있음)
+                System.err.println("⚠️ GCS 업로드 실패, 로컬 스토리지로 폴백: " + e.getMessage());
+                return uploadToLocal(file, UPLOAD_DIR_IMAGES, uniqueFileName);
+            }
         } else {
             return uploadToLocal(file, UPLOAD_DIR_IMAGES, uniqueFileName);
         }
@@ -51,7 +57,13 @@ public class FileStorageService {
         String uniqueFileName = generateUniqueFileName(file.getOriginalFilename());
         
         if ("gcs".equalsIgnoreCase(storageType)) {
-            return uploadToGCS(file, "profiles/" + uniqueFileName);
+            try {
+                return uploadToGCS(file, "profiles/" + uniqueFileName);
+            } catch (IOException e) {
+                // GCS 실패 시 로컬로 폴백 (배포 환경에서는 작동 안 할 수 있음)
+                System.err.println("⚠️ GCS 업로드 실패, 로컬 스토리지로 폴백: " + e.getMessage());
+                return uploadToLocal(file, UPLOAD_DIR_PROFILES, uniqueFileName);
+            }
         } else {
             return uploadToLocal(file, UPLOAD_DIR_PROFILES, uniqueFileName);
         }
@@ -84,14 +96,17 @@ public class FileStorageService {
      */
     private String uploadToGCS(MultipartFile file, String objectName) throws IOException {
         try {
+            // 프로젝트 ID 확인
+            String actualProjectId = projectId.isEmpty() ? null : projectId;
+            
             Storage storage = StorageOptions.newBuilder()
-                .setProjectId(projectId.isEmpty() ? null : projectId)
+                .setProjectId(actualProjectId)
                 .build()
                 .getService();
 
             BlobId blobId = BlobId.of(bucketName, objectName);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
-                .setContentType(file.getContentType())
+                .setContentType(file.getContentType() != null ? file.getContentType() : "image/jpeg")
                 .build();
 
             storage.create(blobInfo, file.getBytes());
@@ -99,8 +114,24 @@ public class FileStorageService {
             // GCS 공개 URL 반환
             return String.format("https://storage.googleapis.com/%s/%s", bucketName, objectName);
             
+        } catch (com.google.cloud.storage.StorageException e) {
+            // GCS 관련 에러 상세 정보
+            String errorMsg = String.format(
+                "GCS 업로드 실패 [버킷: %s, 프로젝트: %s, 에러: %s]", 
+                bucketName, 
+                projectId.isEmpty() ? "기본값" : projectId,
+                e.getMessage()
+            );
+            throw new IOException(errorMsg, e);
         } catch (Exception e) {
-            throw new IOException("GCS 업로드 실패: " + e.getMessage(), e);
+            // 기타 에러
+            String errorMsg = String.format(
+                "GCS 업로드 실패: %s (버킷: %s, 프로젝트: %s)", 
+                e.getMessage(),
+                bucketName,
+                projectId.isEmpty() ? "기본값" : projectId
+            );
+            throw new IOException(errorMsg, e);
         }
     }
 

@@ -32,7 +32,7 @@ jobs:
             --cpu 1 \
             --timeout 300 \
             --max-instances 5 \
-            --set-env-vars="DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:dementia-care-db,DB_PORT=5432,DB_NAME=finalproject,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},TMAP_API_KEY=${{ secrets.TMAP_API_KEY }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"
+            --set-env-vars="DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:dementia-care-db,DB_PORT=5432,DB_NAME=finalproject,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},TMAP_API_KEY=${{ secrets.TMAP_API_KEY }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},STORAGE_TYPE=gcs,GCS_BUCKET_NAME=dementia-care-uploads,GCP_PROJECT_ID=${{ env.PROJECT_ID }}"
 
   deploy-fastapi:
     runs-on: ubuntu-latest
