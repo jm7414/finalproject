@@ -334,7 +334,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios'
 import { useParticipantLocations } from '@/composables/useParticipantLocations';
@@ -1518,7 +1518,6 @@ onMounted(async () => {
         if (fetchSuccess) {
             try {
                 // 주형 카카오지도 await 추가
-                await nextTick();  // DOM 업데이트 완료 대기
                 await loadKakaoMap(mapContainer.value);
 
                 // ✅ getMissingAddress를 await로 기다림
