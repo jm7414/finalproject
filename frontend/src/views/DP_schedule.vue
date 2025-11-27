@@ -50,6 +50,7 @@
 
 
                         </div>
+                        <input></input>
                         <span class="search-place">장소를 검색해주세요</span>
                     </div>
                 </div>
@@ -176,12 +177,6 @@
             </div>
         </div>
     </div>
-
-
-    <button class="btn btn-primary test-btn" @click="requestRoute"> 경로저장 테스트</button>
-    <button class="btn btn-info test-btn" @click="bufferTest"> 버퍼 테스트 (구로구청 - 짜장중학교) </button>
-
-
 </template>
 
 
@@ -690,17 +685,6 @@ async function scheduleRegistration(userNo, startLoc, endLoc, date, startTime, e
 
     const result = await response.json()
     console.log(`일정 ${isEditMode.value ? '수정' : '저장'} 성공:`, result)
-}
-
-
-// 장소입력 출발~도착
-function voiceSearchStart() {
-    alert(`시작`)
-}
-
-
-function voiceSearchEnd() {
-    alert(`끝`)
 }
 
 
