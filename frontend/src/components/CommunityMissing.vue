@@ -169,10 +169,12 @@ async function navigateToPredictLocation(missingPostId) {
       throw new Error(response.data.message || "함께 찾기에 실패했습니다.");
     }
 
-    // (지현)query 파라미터로 source 추가
+    // 지현 수정: theme prop을 이용하여 source 결정
     router.push({
       path: `/predict-location/${missingPostId}`,
-      query: { source: 'neighbor' }
+      query: { 
+        source: props.theme === 'neighbor' ? 'neighbor' : 'guardian'
+      }
     });
     
     closeMissingDetailModal();
@@ -187,6 +189,7 @@ async function navigateToPredictLocation(missingPostId) {
     }
   }
 }
+
 
 
 function formatTimeAgo(dateString) {
