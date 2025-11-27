@@ -19,7 +19,7 @@
           <div class="avatar">👤</div>
           <div class="caretaker">
             <span class="label">보호자</span>
-            <span class="name">{{ guardianName }}님</span>
+            <span class="name">{{ guardianName || '로딩 중...' }}님</span>
           </div>
         </div>
 
@@ -84,7 +84,7 @@ import AgentSimulationModal from '@/components/DesktopAgentSimulationModal.vue'
 const route = useRoute()
 const router = useRouter()
 const isProcessing = ref(false)
-const guardianName = ref('보호자')
+const guardianName = ref('')
 const showSupportModal = ref(false)
 
 const menuItems = [

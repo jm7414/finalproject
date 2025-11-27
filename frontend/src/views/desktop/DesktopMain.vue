@@ -7,8 +7,10 @@
             <h1>안심존 관리</h1>
             <p class="subtitle">환자의 현재 위치와 안심존을 모니터링하세요.</p>
           </div>
-          <button type="button" class="create-zone-btn" @click="handleStatusChangeClick">환자 상태변환</button>
-          <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
+          <div class="header-buttons">
+            <button type="button" class="create-zone-btn" @click="handleStatusChangeClick">환자 상태변환</button>
+            <button type="button" class="create-zone-btn" @click="openBasicSafeZoneModal">기본 안심존 변경</button>
+          </div>
         </div>
 
         <!-- Kakao Map 영역 -->
@@ -52,9 +54,7 @@
               <div v-else class="avatar-placeholder">🙂</div>
             </div>
             <div class="patient-meta">
-              <strong>{{ patientInfo.name || patient.name }}</strong>
-              <span>{{ patient.age }}세 · {{ patient.gender }}</span>
-              <span>등록일 {{ patient.registeredAt }}</span>
+              <strong>{{ patientInfo.name || '환자 정보 없음' }}</strong>
             </div>
             <ul class="patient-stats">
               <li>
@@ -69,7 +69,7 @@
               </li>
               <li>
                 <span class="label">현재 위치</span>
-                <span class="value">{{ safeZoneStatus.currentArea || '서울시 강남구' }}</span>
+                <span class="value">{{ safeZoneStatus.currentArea || '서울시 구로구' }}</span>
               </li>
             </ul>
           </div>
@@ -257,14 +257,6 @@ import axios from 'axios'
 
 const router = useRouter()
 
-// 더미 데이터 (나중에 실제 API로 교체)
-const patient = {
-  name: '김영희',
-  age: 78,
-  gender: '여성',
-  registeredAt: '2025.01.15'
-}
-
 // 환자 정보 데이터
 const patientInfo = ref({
   name: '',
@@ -343,7 +335,15 @@ async function fetchPatientInfo() {
     if (patient.message) {
       console.warn(patient.message)
       isPatientConnected.value = false
-      patientInfo.value = { name: '', userNo: null, isOnline: false, lastActivity: null, user_status: 0, profileImageUrl: null, imageError: false }
+      patientInfo.value = { 
+        name: '', 
+        userNo: null, 
+        isOnline: false, 
+        lastActivity: null, 
+        user_status: 0, 
+        profileImageUrl: null, 
+        imageError: false 
+      }
       return null
     } else {
       isPatientConnected.value = true
@@ -774,13 +774,15 @@ function updatePreviewSafeZone() {
   const level = selectedLevel.value
   const radiusMap = { 1: 30, 2: 60, 3: 100 }
   const radius = radiusMap[level]
+  // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
+  const effectiveRadius = radius === 30 ? 10 : radius
   
   try {
     if (currentActiveZone.value.type === '기본형') {
       const boundaryData = currentActiveZone.value.data
       const center = [boundaryData.center.lng, boundaryData.center.lat]
       const options = { steps: 64, units: 'meters' }
-      const circleGeoJSON = circle(center, radius, options)
+      const circleGeoJSON = circle(center, effectiveRadius, options)
       
       const coordinates = circleGeoJSON.geometry.coordinates[0]
       const kakaoPath = coordinates.map(coord => 
@@ -1025,7 +1027,7 @@ function checkPatientInSafeZone() {
         color: '#16A34A',
         bgColor: '#DCFCE7',
         lastUpdated: '방금 전',
-        currentArea: '서울시 강남구'
+        currentArea: '서울시 구로구'
       }
     } else {
       safeZoneStatus.value = {
@@ -1034,7 +1036,7 @@ function checkPatientInSafeZone() {
         color: '#EF4444',
         bgColor: '#FEE2E2',
         lastUpdated: '방금 전',
-        currentArea: '서울시 강남구'
+        currentArea: '구로구'
       }
     }
     
@@ -1641,6 +1643,12 @@ onBeforeUnmount(() => {
 .map-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
   align-items: center;
 }
 

@@ -153,10 +153,12 @@ function updateCircle() {
   }
 
   const radius = radiusSettings[radiusLevel.value]
+  // 시연용: 30m만 임시로 10m로 적용 (60m, 100m는 그대로)
+  const effectiveRadius = radius === 30 ? 10 : radius
 
   const center = [locationData.value.longitude, locationData.value.latitude]
   const options = { steps: 64, units: 'meters' }
-  const circleGeoJSON = circle(center, radius, options)
+  const circleGeoJSON = circle(center, effectiveRadius, options)
 
   const coordinates = circleGeoJSON.geometry.coordinates[0]
   const kakaoPath = coordinates.map(coord => {

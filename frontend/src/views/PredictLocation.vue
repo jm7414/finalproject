@@ -161,7 +161,7 @@
                         </p>
                         <p class="missing-location" style="font-size: 12px;">
                             <i class="bi bi-geo-alt"></i>
-                            실종장소: {{ missingAddress || '구로구 구로동ㅋ' }}
+                            실종장소: {{ missingAddress || '정보 없음' }}
                         </p>
 
                         <!-- <p v-if="missingAddress" class="missing-location" style="font-size: 12px;">
